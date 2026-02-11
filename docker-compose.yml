@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: var_postgres
+    environment:
+      POSTGRES_USER: var
+      POSTGRES_PASSWORD: myPassword
+      POSTGRES_DB: varprice
+    ports:
+      - "55432:5432"   # <-- важно: другой host-порт
+    volumes:
+      - var_pg_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: var_web
+    environment:
+      ASPNETCORE_URLS: "http://+:8080"
+      # внутри docker-сети порт Postgres остаётся 5432
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=varprice;Username=var;Password=myPassword"
+      Crawler__SitemapIndexUrl: "https://varus.ua/sitemap-index.xml"
+      Crawler__VegetablesUrlContains: "/ovochi"
+      Crawler__MaxProductsPerRun: "200"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  var_pg_data:

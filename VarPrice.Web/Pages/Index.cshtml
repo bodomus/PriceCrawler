@@ -1,0 +1,42 @@
+@page
+@model VarPrice.Web.Pages.IndexModel
+
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VAR-1 — Сбор цен (MVP)</title>
+    <style>
+        body { font-family: system-ui, Arial, sans-serif; max-width: 980px; margin: 40px auto; padding: 0 16px; }
+        button { padding: 10px 14px; font-size: 16px; cursor: pointer; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 14px; margin-top: 14px; }
+        .muted { color: #666; }
+    </style>
+</head>
+<body>
+    <h2>VAR-1 — Сбор цен (MVP)</h2>
+    <p class="muted">Кнопка запускает сбор <b>снимка</b> (append-only) по выбранной группе товаров (овощи).</p>
+
+    <form method="post">
+        <button type="submit" asp-page-handler="IngestVegetables">Собрать снимок цен (овощи)</button>
+    </form>
+
+    @if (Model.Result is not null)
+    {
+        <div class="card">
+            <div><b>RunId:</b> @Model.Result.RunId</div>
+            <div><b>Status:</b> @Model.Result.Status</div>
+            <div><b>Products:</b> @Model.Result.ProductsProcessed</div>
+            <div><b>Errors:</b> @Model.Result.Errors</div>
+            @if (!string.IsNullOrWhiteSpace(Model.Result.Note))
+            {
+                <div><b>Note:</b> @Model.Result.Note</div>
+            }
+        </div>
+    }
+
+    <hr />
+    <p class="muted">Проверка: <a href="/health">/health</a></p>
+</body>
+</html>

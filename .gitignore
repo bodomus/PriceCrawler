@@ -1,0 +1,45 @@
+﻿# Build output
+**/bin/
+**/obj/
+**/publish/
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.rsuser
+*.DotSettings.user
+
+# IDEs
+.vs/
+.idea/
+*.sln.iml
+
+# Rider
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/contentModel.xml
+.idea/**/modules.xml
+.idea/**/projectSettingsUpdater.xml
+.idea/**/encodings.xml
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# Test/coverage artifacts
+**/TestResults/
+**/coverage*/
+*.coverage
+*.coveragexml
+
+# Logs
+*.log
+
+# Local backups
+.backup/
+
+# OS files
+.DS_Store
+Thumbs.db
