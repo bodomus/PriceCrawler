@@ -1,7 +1,15 @@
+using Serilog;
 using VarPrice.Web.Crawler;
 using VarPrice.Web.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfiguration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithEnvironmentName());
 
 builder.Services.AddRazorPages();
 
@@ -23,6 +31,8 @@ builder.Services.AddScoped<CrawlerRunner>();
 
 var app = builder.Build();
 
+app.UseSerilogRequestLogging();
+
 app.MapRazorPages();
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
@@ -31,5 +41,7 @@ using (var scope = app.Services.CreateScope())
     var bootstrap = scope.ServiceProvider.GetRequiredService<SchemaBootstrapper>();
     await bootstrap.EnsureSchemaAsync();
 }
+
+app.Logger.LogInformation("Application starting in {EnvironmentName}", app.Environment.EnvironmentName);
 
 app.Run();
