@@ -45,5 +45,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Logger.LogInformation("Application starting in {EnvironmentName}", app.Environment.EnvironmentName);
+app.Logger.LogInformation("Application starting in MCP-3");
 
 app.Run();
