@@ -13,6 +13,7 @@ public sealed class CrawlerRunner(
 {
     public async Task<CrawlerRunResult> RunVegetablesAsync(CancellationToken ct)
     {
+
         var o = opt.Value;
 
         var runId = repo.StartRun("sitemap");
@@ -59,6 +60,7 @@ public sealed class CrawlerRunner(
         }
         catch (Exception ex)
         {
+            log.LogError($"App cause error: {ex.Message}");
             await repo.FinishRunAsync(runId, "failed", ex.Message, ct);
             return new CrawlerRunResult(runId, "failed", processed, errors + 1, ex.Message);
         }

@@ -1,5 +1,6 @@
 using Serilog;
 using VarPrice.Web.Crawler;
+using VarPrice.Web.Logging;
 using VarPrice.Web.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,7 @@ builder.Services.AddHttpClient("varus", c =>
     c.DefaultRequestHeaders.UserAgent.ParseAdd("VarPriceBot/0.1 (+contact: you)");
 });
 
+builder.Services.AddSingleton<ILoggingBootstrapper, LoggingBootstrapper>();
 builder.Services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
 builder.Services.AddScoped<SchemaBootstrapper>();
 builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
