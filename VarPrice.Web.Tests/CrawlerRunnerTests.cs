@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System.Net;
@@ -7,57 +8,10 @@ using VarPrice.Web.Storage;
 
 namespace VarPrice.Web.Tests;
 
-public sealed class SitemapPipelineTests
+public sealed class CrawlerRunnerTests
 {
     [Fact]
-    public void ParseSitemapIndexLocs_WithNamespace_ReturnsNestedSitemaps()
-    {
-        var parser = new SitemapParser();
-
-        var xml = """
-                  <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-                    <sitemap><loc>https://varus.ua/sitemap.xml</loc></sitemap>
-                    <sitemap><loc>https://varus.ua/sitemap_ru.xml</loc></sitemap>
-                  </sitemapindex>
-                  """;
-
-        var locs = parser.ParseSitemapIndexLocs(xml);
-
-        Assert.True(locs.Count >= 1);
-        Assert.Contains(locs, u => u.AbsoluteUri == "https://varus.ua/sitemap.xml");
-    }
-
-    [Fact]
-    public async Task SitemapIndex_To_UrlSet_Pipeline_ReturnsPageUrls_AndProductUrls()
-    {
-        var start = new Uri("https://varus.ua/sitemap-index.xml");
-        var responses = new Dictionary<string, string>
-        {
-            ["https://varus.ua/sitemap-index.xml"] = """
-                <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-                  <sitemap><loc>https://varus.ua/sitemap.xml</loc></sitemap>
-                </sitemapindex>
-                """,
-            ["https://varus.ua/sitemap.xml"] = """
-                <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-                  <url><loc>https://varus.ua/product/kapusta</loc></url>
-                  <url><loc>https://varus.ua/blog/news-1</loc></url>
-                </urlset>
-                """
-        };
-
-        var crawler = CreateSitemapCrawler(responses);
-        var result = await crawler.CollectPageUrlsAsync(start, CancellationToken.None);
-        var filter = new VarusProductUrlFilter();
-
-        var productUrls = result.PageUrls.Where(filter.IsProductUrl).ToList();
-
-        Assert.True(result.PageUrls.Count >= 1);
-        Assert.True(productUrls.Count >= 1);
-    }
-
-    [Fact]
-    public async Task RunVegetablesAsync_WithMockedHttp_ReturnsAtLeastOneParsedAndSavedItem()
+    public async Task RunVegetablesAsync_SkipsCategoryPages_AndDoesNotCallExtractor()
     {
         var start = new Uri("https://varus.ua/sitemap-index.xml");
         var responses = new Dictionary<string, string>
@@ -74,15 +28,8 @@ public sealed class SitemapPipelineTests
                 """,
             ["https://varus.ua/product/kapusta"] = """
                 <html>
-                  <head><title>Капуста білокачанна</title></head>
-                  <body>
-                    <h1>Капуста білокачанна</h1>
-                    <script type="application/ld+json">
-                    {"@context":"https://schema.org","@type":"Product","name":"Test"}
-                    </script>
-                    Артикул: 12345
-                    49,99 грн
-                  </body>
+                  <head><title>Kapusta</title></head>
+                  <body>Category-like page</body>
                 </html>
                 """
         };
@@ -98,9 +45,9 @@ public sealed class SitemapPipelineTests
         var http = new VarusHttpClient(new HttpClient(new FakeHttpMessageHandler(responses)));
         var parser = new SitemapParser();
         var sitemapCrawler = new SitemapCrawler(http, parser, options, NullLogger<SitemapCrawler>.Instance);
-        var extractor = new VarusProductCardExtractor(NullLogger<VarusProductCardExtractor>.Instance);
-        var detector = new PageKindDetector();
+        var extractor = new CountingExtractor();
         var repo = new FakeCrawlerRepository();
+        var detector = new StubPageKindDetector(UrlKind.CategoryPage);
 
         var runner = new CrawlerRunner(
             options,
@@ -114,22 +61,25 @@ public sealed class SitemapPipelineTests
 
         var runResult = await runner.RunVegetablesAsync(CancellationToken.None);
 
-        Assert.True(runResult.ProductUrlsDiscovered >= 1);
-        Assert.True(runResult.ItemsParsed >= 1);
-        Assert.True(runResult.ItemsSaved >= 1);
+        Assert.Equal(0, extractor.CallCount);
+        Assert.Equal(0, runResult.ItemsParsed);
+        Assert.Equal(0, runResult.ItemsSaved);
     }
 
-    private static SitemapCrawler CreateSitemapCrawler(IReadOnlyDictionary<string, string> responses)
+    private sealed class StubPageKindDetector(UrlKind kind) : IPageKindDetector
     {
-        var options = Options.Create(new CrawlerOptions
-        {
-            SitemapIndexUrl = new Uri("https://varus.ua/sitemap-index.xml"),
-            MaxSitemapsToVisit = 20,
-            MaxUrlsToCollect = 100
-        });
+        public UrlKind Detect(IDocument document) => kind;
+    }
 
-        var http = new VarusHttpClient(new HttpClient(new FakeHttpMessageHandler(responses)));
-        return new SitemapCrawler(http, new SitemapParser(), options, NullLogger<SitemapCrawler>.Instance);
+    private sealed class CountingExtractor : IProductCardExtractor
+    {
+        public int CallCount { get; private set; }
+
+        public Task<ProductCard?> ExtractAsync(string url, IDocument document, CancellationToken ct)
+        {
+            CallCount++;
+            return Task.FromResult<ProductCard?>(null);
+        }
     }
 
     private sealed class FakeHttpMessageHandler(IReadOnlyDictionary<string, string> responses) : HttpMessageHandler

@@ -1,3 +1,4 @@
+using AngleSharp;
 using Microsoft.Extensions.Options;
 using VarPrice.Web.Storage;
 
@@ -7,6 +8,8 @@ public sealed class CrawlerRunner(
     IOptions<CrawlerOptions> opt,
     ISitemapCrawler sitemapCrawler,
     IProductUrlFilter productUrlFilter,
+    IVarusHttpClient http,
+    IPageKindDetector pageKindDetector,
     IProductCardExtractor extractor,
     ICrawlerRepository repo,
     ILogger<CrawlerRunner> log
@@ -42,8 +45,25 @@ public sealed class CrawlerRunner(
 
                 try
                 {
-                    var card = await extractor.ExtractAsync(productUrl.AbsoluteUri, ct);
+                    var html = await http.GetStringAsync(productUrl, ct);
+                    var ctx = BrowsingContext.New(Configuration.Default);
+                    var doc = await ctx.OpenAsync(req => req.Content(html), ct);
                     result.PagesFetched++;
+
+                    var kind = pageKindDetector.Detect(doc);
+                    if (kind == UrlKind.CategoryPage)
+                    {
+                        log.LogInformation("Skipping category page: {Url}", productUrl.AbsoluteUri);
+                        continue;
+                    }
+
+                    if (kind == UrlKind.Unknown)
+                    {
+                        log.LogWarning("Unknown page type, skipping price parsing: {Url}", productUrl.AbsoluteUri);
+                        continue;
+                    }
+
+                    var card = await extractor.ExtractAsync(productUrl.AbsoluteUri, doc, ct);
 
                     if (card is null)
                     {

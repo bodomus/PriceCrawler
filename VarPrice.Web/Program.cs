@@ -54,6 +54,7 @@ builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
 builder.Services.AddSingleton<ISitemapParser, SitemapParser>();
 builder.Services.AddScoped<ISitemapCrawler, SitemapCrawler>();
 builder.Services.AddSingleton<IProductUrlFilter, VarusProductUrlFilter>();
+builder.Services.AddSingleton<IPageKindDetector, PageKindDetector>();
 builder.Services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
 builder.Services.AddScoped<CrawlerRunner>();
 

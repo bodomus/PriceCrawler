@@ -1,4 +1,4 @@
-using AngleSharp;
+using AngleSharp.Dom;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 
@@ -6,59 +6,64 @@ namespace VarPrice.Web.Crawler;
 
 public interface IProductCardExtractor
 {
-    Task<ProductCard?> ExtractAsync(string url, CancellationToken ct);
+    Task<ProductCard?> ExtractAsync(string url, IDocument document, CancellationToken ct);
 }
 
 public sealed class VarusProductCardExtractor(
-    IVarusHttpClient http,
     ILogger<VarusProductCardExtractor> log
 ) : IProductCardExtractor
 {
-    public async Task<ProductCard?> ExtractAsync(string url, CancellationToken ct)
+    public Task<ProductCard?> ExtractAsync(string url, IDocument document, CancellationToken ct)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out _))
         {
             log.LogWarning("Cannot parse URL {Url}", url);
-            return null;
+            return Task.FromResult<ProductCard?>(null);
         }
 
-        var html = await http.GetStringAsync(uri, ct);
-
-        var ctx = BrowsingContext.New(Configuration.Default);
-        var doc = await ctx.OpenAsync(req => req.Content(html), ct);
-
-        var name = doc.QuerySelector("h1")?.TextContent?.Trim();
+        var name = document.QuerySelector("h1")?.TextContent?.Trim();
         if (string.IsNullOrWhiteSpace(name))
-            name = doc.Title?.Trim();
+            name = document.Title?.Trim();
 
-        var text = doc.Body?.TextContent ?? "";
+        var text = document.Body?.TextContent ?? "";
         var productId = TryMatchProductId(text);
         if (productId is null)
         {
             log.LogDebug("No product_id found for {Url}", url);
-            return null;
+            return Task.FromResult<ProductCard?>(null);
         }
 
         (decimal? packValue, string? packUnit) = PackParser.TryParse(text);
 
-        var (price, oldPrice) = PriceParser.Parse(text);
+        var (price, oldPrice) = PriceParser.TryParse(text);
+        if (!price.HasValue)
+        {
+            log.LogWarning("Price not found for {Url}", url);
+            return Task.FromResult<ProductCard?>(null);
+        }
 
-        var promoFlag = oldPrice.HasValue && oldPrice.Value > price;
+        if (price.Value <= 0m)
+        {
+            log.LogWarning("Invalid price {Price} for {Url}", price, url);
+            return Task.FromResult<ProductCard?>(null);
+        }
+
+        var promoFlag = oldPrice.HasValue && oldPrice.Value > price.Value;
 
         var city = CityParser.TryParseFromUrl(url);
 
-        return new ProductCard(
+        return Task.FromResult<ProductCard?>(new ProductCard(
             ProductId: productId,
             Name: name ?? productId,
             Url: url,
-            Price: price,
+            Price: price.Value,
             OldPrice: oldPrice,
             PromoFlag: promoFlag,
             InStock: null,
             PackValue: packValue,
             PackUnit: packUnit,
             City: city
-        );
+        ));
     }
 
     private static string? TryMatchProductId(string text)
@@ -112,11 +117,17 @@ internal static class PackParser
 
 internal static class PriceParser
 {
-    public static (decimal price, decimal? oldPrice) Parse(string text)
+    public static (decimal? price, decimal? oldPrice) TryParse(string text)
     {
-        var p = FindFirstMoney(text) ?? 0m;
+        var p = FindFirstMoney(text);
         var old = FindOldMoney(text);
         return (p, old);
+    }
+
+    public static (decimal price, decimal? oldPrice) Parse(string text)
+    {
+        var (price, old) = TryParse(text);
+        return (price ?? 0m, old);
     }
 
     private static decimal? FindFirstMoney(string text)
