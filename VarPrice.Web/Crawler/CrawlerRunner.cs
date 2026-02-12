@@ -5,7 +5,8 @@ namespace VarPrice.Web.Crawler;
 
 public sealed class CrawlerRunner(
     IOptions<CrawlerOptions> opt,
-    ISitemapReader sitemap,
+    ISitemapCrawler sitemapCrawler,
+    IProductUrlFilter productUrlFilter,
     IProductCardExtractor extractor,
     ICrawlerRepository repo,
     ILogger<CrawlerRunner> log
@@ -13,56 +14,74 @@ public sealed class CrawlerRunner(
 {
     public async Task<CrawlerRunResult> RunVegetablesAsync(CancellationToken ct)
     {
-
+        var result = new CrawlerRunResult();
         var o = opt.Value;
 
-        var runId = repo.StartRun("sitemap");
-        var processed = 0;
-        var errors = 0;
+        var runId = repo.StartRun("sitemap-index");
+        result.RunId = runId;
 
         try
         {
-            var urls = await sitemap.GetProductUrlsAsync(o.SitemapIndexUrl, ct);
+            var crawlResult = await sitemapCrawler.CollectPageUrlsAsync(o.SitemapIndexUrl, ct);
+            result.SitemapsDiscovered = crawlResult.SitemapsDiscovered;
+            result.UrlsDiscovered = crawlResult.PageUrls.Count;
 
-            if (!string.IsNullOrWhiteSpace(o.VegetablesUrlContains))
-                urls = urls.Where(u => u.Contains(o.VegetablesUrlContains, StringComparison.OrdinalIgnoreCase)).ToList();
+            var productUrls = crawlResult.PageUrls
+                .Where(productUrlFilter.IsProductUrl)
+                .Where(u => string.IsNullOrWhiteSpace(o.VegetablesUrlContains) ||
+                            u.AbsoluteUri.Contains(o.VegetablesUrlContains, StringComparison.OrdinalIgnoreCase))
+                .DistinctBy(u => u.AbsoluteUri)
+                .Take(Math.Max(1, o.MaxProductsPerRun))
+                .ToList();
 
-            urls = urls.Take(Math.Max(1, o.MaxProductsPerRun)).ToList();
+            result.ProductUrlsDiscovered = productUrls.Count;
 
-            foreach (var url in urls)
+            foreach (var productUrl in productUrls)
             {
                 ct.ThrowIfCancellationRequested();
 
                 try
                 {
-                    var card = await extractor.ExtractAsync(url, ct);
+                    var card = await extractor.ExtractAsync(productUrl.AbsoluteUri, ct);
+                    result.PagesFetched++;
+
                     if (card is null)
                     {
-                        errors++;
                         continue;
                     }
 
+                    result.ItemsParsed++;
                     var pk = await repo.UpsertProductAsync(card.ProductId, card.Name, card.Url, card.PackValue, card.PackUnit, ct);
                     await repo.InsertSnapshotAsync(runId, pk, card.City, card.Price, card.OldPrice, card.PromoFlag, card.InStock, ct);
 
-                    processed++;
+                    result.ItemsSaved++;
                 }
                 catch (Exception ex)
                 {
-                    errors++;
-                    log.LogWarning(ex, "Failed to ingest {Url}", url);
+                    result.Errors++;
+                    log.LogWarning(ex, "Failed to ingest {Url}", productUrl);
                 }
             }
 
-            var note = $"processed={processed}, errors={errors}";
-            await repo.FinishRunAsync(runId, "ok", note, ct);
-            return new CrawlerRunResult(runId, "ok", processed, errors, note);
+            result.ProductsProcessed = result.ItemsSaved;
+            result.Status = "ok";
+            result.Note =
+                $"sitemaps={result.SitemapsDiscovered}, urls={result.UrlsDiscovered}, productUrls={result.ProductUrlsDiscovered}, pages={result.PagesFetched}, parsed={result.ItemsParsed}, saved={result.ItemsSaved}, errors={result.Errors}";
+
+            await repo.FinishRunAsync(runId, result.Status, result.Note, ct);
+            log.LogInformation("Crawler finished. {Note}", result.Note);
+            return result;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            log.LogError($"App cause error: {ex.Message}");
-            await repo.FinishRunAsync(runId, "failed", ex.Message, ct);
-            return new CrawlerRunResult(runId, "failed", processed, errors + 1, ex.Message);
+            result.Status = "failed";
+            result.Errors++;
+            result.LastError = ex.Message;
+            result.Note = ex.Message;
+
+            log.LogError(ex, "Crawler failed");
+            await repo.FinishRunAsync(runId, result.Status, result.Note, ct);
+            return result;
         }
     }
 }

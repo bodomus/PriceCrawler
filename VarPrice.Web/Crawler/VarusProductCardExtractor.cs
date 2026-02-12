@@ -10,14 +10,19 @@ public interface IProductCardExtractor
 }
 
 public sealed class VarusProductCardExtractor(
-    IHttpClientFactory httpClientFactory,
+    IVarusHttpClient http,
     ILogger<VarusProductCardExtractor> log
 ) : IProductCardExtractor
 {
     public async Task<ProductCard?> ExtractAsync(string url, CancellationToken ct)
     {
-        var http = httpClientFactory.CreateClient("varus");
-        var html = await http.GetStringAsync(url, ct);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            log.LogWarning("Cannot parse URL {Url}", url);
+            return null;
+        }
+
+        var html = await http.GetStringAsync(uri, ct);
 
         var ctx = BrowsingContext.New(Configuration.Default);
         var doc = await ctx.OpenAsync(req => req.Content(html), ct);

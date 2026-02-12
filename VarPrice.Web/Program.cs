@@ -1,3 +1,5 @@
+using Polly;
+using Polly.Extensions.Http;
 using Serilog;
 using VarPrice.Web.Crawler;
 using VarPrice.Web.Logging;
@@ -16,18 +18,42 @@ builder.Services.AddRazorPages();
 
 builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
 
-builder.Services.AddHttpClient("varus", c =>
-{
-    c.Timeout = TimeSpan.FromSeconds(30);
-    c.DefaultRequestHeaders.UserAgent.ParseAdd("VarPriceBot/0.1 (+contact: you)");
-});
+builder.Services
+    .AddHttpClient<IVarusHttpClient, VarusHttpClient>((sp, http) =>
+    {
+        var opt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CrawlerOptions>>().Value;
+        http.Timeout = opt.HttpTimeout;
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("VarPriceBot/0.2 (+contact: you)");
+    })
+    .AddPolicyHandler((sp, _) =>
+    {
+        var opt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CrawlerOptions>>().Value;
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .Or<TaskCanceledException>()
+            .WaitAndRetryAsync(
+                Math.Max(1, opt.HttpRetryCount),
+                attempt => TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt)),
+                (outcome, delay, attempt, context) =>
+                {
+                    var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("VarusHttpRetryPolicy");
+                    logger.LogWarning(
+                        outcome.Exception,
+                        "Retry {Attempt} after {DelayMs}ms due to {Reason}",
+                        attempt,
+                        delay.TotalMilliseconds,
+                        outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString());
+                });
+    });
 
 builder.Services.AddSingleton<ILoggingBootstrapper, LoggingBootstrapper>();
 builder.Services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
 builder.Services.AddScoped<SchemaBootstrapper>();
 builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
 
-builder.Services.AddScoped<ISitemapReader, SitemapReader>();
+builder.Services.AddSingleton<ISitemapParser, SitemapParser>();
+builder.Services.AddScoped<ISitemapCrawler, SitemapCrawler>();
+builder.Services.AddSingleton<IProductUrlFilter, VarusProductUrlFilter>();
 builder.Services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
 builder.Services.AddScoped<CrawlerRunner>();
 

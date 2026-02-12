@@ -13,4 +13,19 @@ public sealed record ProductCard(
     string? City
 );
 
-public sealed record CrawlerRunResult(long RunId, string Status, int ProductsProcessed, int Errors, string? Note = null);
+public sealed class CrawlerRunResult
+{
+    public long RunId { get; set; }
+    public string Status { get; set; } = "unknown";
+    public int ProductsProcessed { get; set; }
+    public int Errors { get; set; }
+    public string? Note { get; set; }
+
+    public int SitemapsDiscovered { get; set; }
+    public int UrlsDiscovered { get; set; }
+    public int ProductUrlsDiscovered { get; set; }
+    public int PagesFetched { get; set; }
+    public int ItemsParsed { get; set; }
+    public int ItemsSaved { get; set; }
+    public string? LastError { get; set; }
+}
