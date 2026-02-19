@@ -50,6 +50,7 @@ builder.Services.AddSingleton<ILoggingBootstrapper, LoggingBootstrapper>();
 builder.Services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
 builder.Services.AddScoped<SchemaBootstrapper>();
 builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
+builder.Services.AddScoped<IIngestionRunRepository, PgIngestionRunRepository>();
 
 builder.Services.AddSingleton<ISitemapParser, SitemapParser>();
 builder.Services.AddScoped<ISitemapCrawler, SitemapCrawler>();

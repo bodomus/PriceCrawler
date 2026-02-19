@@ -40,7 +40,7 @@ public sealed class SitemapPipelineTests
                 """,
             ["https://varus.ua/sitemap.xml"] = """
                 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-                  <url><loc>https://varus.ua/product/kapusta</loc></url>
+                  <url><loc>https://varus.ua/kapusta-bilokachanna-mita-2-5-kg</loc></url>
                   <url><loc>https://varus.ua/blog/news-1</loc></url>
                 </urlset>
                 """
@@ -69,10 +69,10 @@ public sealed class SitemapPipelineTests
                 """,
             ["https://varus.ua/sitemap.xml"] = """
                 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-                  <url><loc>https://varus.ua/product/kapusta</loc></url>
+                  <url><loc>https://varus.ua/kapusta-bilokachanna-mita-2-5-kg</loc></url>
                 </urlset>
                 """,
-            ["https://varus.ua/product/kapusta"] = """
+            ["https://varus.ua/kapusta-bilokachanna-mita-2-5-kg"] = """
                 <html>
                   <head><title>Капуста білокачанна</title></head>
                   <body>
@@ -101,6 +101,7 @@ public sealed class SitemapPipelineTests
         var extractor = new VarusProductCardExtractor(NullLogger<VarusProductCardExtractor>.Instance);
         var detector = new PageKindDetector();
         var repo = new FakeCrawlerRepository();
+        var ingestionRepo = new FakeIngestionRunRepository();
 
         var runner = new CrawlerRunner(
             options,
@@ -110,6 +111,7 @@ public sealed class SitemapPipelineTests
             detector,
             extractor,
             repo,
+            ingestionRepo,
             NullLogger<CrawlerRunner>.Instance);
 
         var runResult = await runner.RunVegetablesAsync(CancellationToken.None);
@@ -167,5 +169,16 @@ public sealed class SitemapPipelineTests
 
         public Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct)
             => Task.CompletedTask;
+    }
+
+    private sealed class FakeIngestionRunRepository : IIngestionRunRepository
+    {
+        private long _ingestionRunId = 1000;
+
+        public long StartIngestion(long crawlerRunId, string source) => Interlocked.Increment(ref _ingestionRunId);
+
+        public Task FinishIngestionAsync(long ingestionRunId, string status, string? note, CancellationToken ct) => Task.CompletedTask;
+
+        public Task FailIngestionAsync(long ingestionRunId, Exception ex, string errorSource, CancellationToken ct) => Task.CompletedTask;
     }
 }

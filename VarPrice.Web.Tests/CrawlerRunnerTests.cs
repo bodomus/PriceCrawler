@@ -23,10 +23,10 @@ public sealed class CrawlerRunnerTests
                 """,
             ["https://varus.ua/sitemap.xml"] = """
                 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-                  <url><loc>https://varus.ua/product/kapusta</loc></url>
+                  <url><loc>https://varus.ua/kapusta-bilokachanna-mita-2-5-kg</loc></url>
                 </urlset>
                 """,
-            ["https://varus.ua/product/kapusta"] = """
+            ["https://varus.ua/kapusta-bilokachanna-mita-2-5-kg"] = """
                 <html>
                   <head><title>Kapusta</title></head>
                   <body>Category-like page</body>
@@ -47,6 +47,7 @@ public sealed class CrawlerRunnerTests
         var sitemapCrawler = new SitemapCrawler(http, parser, options, NullLogger<SitemapCrawler>.Instance);
         var extractor = new CountingExtractor();
         var repo = new FakeCrawlerRepository();
+        var ingestionRepo = new FakeIngestionRunRepository();
         var detector = new StubPageKindDetector(UrlKind.CategoryPage);
 
         var runner = new CrawlerRunner(
@@ -57,6 +58,7 @@ public sealed class CrawlerRunnerTests
             detector,
             extractor,
             repo,
+            ingestionRepo,
             NullLogger<CrawlerRunner>.Instance);
 
         var runResult = await runner.RunVegetablesAsync(CancellationToken.None);
@@ -117,5 +119,16 @@ public sealed class CrawlerRunnerTests
 
         public Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct)
             => Task.CompletedTask;
+    }
+
+    private sealed class FakeIngestionRunRepository : IIngestionRunRepository
+    {
+        private long _ingestionRunId = 1000;
+
+        public long StartIngestion(long crawlerRunId, string source) => Interlocked.Increment(ref _ingestionRunId);
+
+        public Task FinishIngestionAsync(long ingestionRunId, string status, string? note, CancellationToken ct) => Task.CompletedTask;
+
+        public Task FailIngestionAsync(long ingestionRunId, Exception ex, string errorSource, CancellationToken ct) => Task.CompletedTask;
     }
 }

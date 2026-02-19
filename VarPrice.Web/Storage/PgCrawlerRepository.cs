@@ -11,7 +11,7 @@ public interface ICrawlerRepository
 
     Task<long> UpsertProductAsync(string productId, string name, string url, decimal? packValue, string? packUnit, CancellationToken ct);
 
-    Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct);
+    Task InsertSnapshotAsync(long ingestionRunId, long productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct);
 }
 
 public sealed class PgCrawlerRepository(IPgConnectionFactory factory) : ICrawlerRepository
@@ -71,7 +71,7 @@ returning product_key;";
         return Convert.ToInt64(obj);
     }
 
-    public async Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct)
+    public async Task InsertSnapshotAsync(long ingestionRunId, long productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct)
     {
         await using var cn = (DbConnection)factory.Create();
         await cn.OpenAsync(ct);
@@ -80,7 +80,7 @@ returning product_key;";
         cmd.CommandText = @"
 insert into price_snapshot(run_id, product_key, city, price, old_price, promo_flag, in_stock)
 values(@runId, @pk, @city, @price, @old, @promo, @stock);";
-        AddParam(cmd, "@runId", runId);
+        AddParam(cmd, "@runId", ingestionRunId);
         AddParam(cmd, "@pk", productKey);
         AddParam(cmd, "@city", city);
         AddParam(cmd, "@price", price);
