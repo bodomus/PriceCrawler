@@ -1,12 +1,8 @@
 using Npgsql;
 using System.Data;
+using Microsoft.Extensions.Configuration;
 
-namespace VarPrice.Web.Storage;
-
-public interface IPgConnectionFactory
-{
-    IDbConnection Create();
-}
+namespace VarPrice.Infrastructure.Persistence;
 
 public sealed class PgConnectionFactory(IConfiguration cfg) : IPgConnectionFactory
 {

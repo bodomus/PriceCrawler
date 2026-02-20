@@ -1,55 +1,57 @@
-﻿# Magazine Price Crawler (Varus)
+# VARUS Price Crawler
 
-Веб-сервис для сбора цен на товары сети Varus. Берет ссылки из sitemap, извлекает карточки товаров, сохраняет снимки цен в Postgres и дает простую UI-кнопку запуска.
+Проект разделён на независимые сборки: домен, application workflow, инфраструктура, web и worker.
 
-## Требования
-- .NET SDK 9.0.311 (фиксируется `global.json`, подходит для сборки `net8.0`)
-- Docker (если запускаете через `docker compose`)
+## Проекты
 
-## Запуск
+- `VarPrice.Domain` — сущности, enum/value objects и репозиторные контракты.
+- `VarPrice.Application` — use-case `RunCrawlerUseCase`, orchestration crawler→ingestion→snapshots→statuses.
+- `VarPrice.Infrastructure` — Postgres реализации репозиториев, bootstrap схемы и HTTP crawler adapters.
+- `VarPrice.Web` — Razor Pages/UI и API-эндпоинты поверх use-case.
+- `VarPrice.Worker` — консольный запуск crawler без web.
 
-### Вариант 1: Docker
-```bash
-docker compose up --build
-```
-Откройте:
-- http://localhost:8080/ — кнопка запуска сбора
-- http://localhost:8080/health — healthcheck
+## Зависимости слоёв
 
-### Вариант 2: Локально
+`Web/Worker -> Application -> Domain`
+
+`Web/Worker -> Infrastructure -> (Domain + Application ports)`
+
+Domain не зависит от ASP.NET, Npgsql, Serilog или EF.
+
+## Запуск Web
+
 ```bash
 dotnet run --project VarPrice.Web
 ```
-Убедитесь, что Postgres доступен и строка подключения задана в `VarPrice.Web/appsettings.json` или через переменные окружения `ConnectionStrings__Postgres`.
 
-## Архитектура
-- UI: Razor Pages (`VarPrice.Web/Pages`) — тонкий слой, запускающий `CrawlerRunner`.
-- Логика сбора: `VarPrice.Web/Crawler` — интерфейсы (`ISitemapReader`, `IProductCardExtractor`) и реализации для чтения sitemap/парсинга карточек.
-- Хранилище: `VarPrice.Web/Storage` — репозиторий `ICrawlerRepository`, фабрика соединений и bootstrap схемы БД.
-- Конфигурация: `Crawler`-секция в `VarPrice.Web/appsettings.json` и через переменные окружения.
+Healthcheck: `http://localhost:8080/health` (в docker) или локальный порт Kestrel.
 
-## Горячие клавиши
-- Visual Studio: `F5` (Debug), `Ctrl+F5` (Run без отладки)
-- Rider: `Shift+F10` (Run), `Shift+F9` (Debug)
-- Браузер: `Ctrl+R` (обновить страницу)
+## Запуск Worker
 
-## Как добавить паттерны
-- Фильтр ссылок из sitemap: `VarPrice.Web/Crawler/CrawlerOptions.cs` (`VegetablesUrlContains`).
-- Маркеры и парсинг: `VarPrice.Web/Crawler/VarusProductCardExtractor.cs`:
-  - `TryMatchProductId` — маркеры/шаблоны product_id.
-  - `PriceParser` — логика поиска цены/старой цены.
-  - `PackParser` — вес/объем и единицы.
-  - `CityParser` — разбор города из URL.
-После изменений запустите сбор и проверьте результат в БД.
-
-## Сборка Release
 ```bash
-dotnet publish --project VarPrice.Web -c Release
+dotnet run --project VarPrice.Worker -- --once --job vegetables
 ```
 
-## Структура папок
-- `VarPrice.Web/` — веб-приложение (UI + логика сбора + доступ к БД)
-- `VarPrice.Web/Crawler/` — правила обхода и парсинга
-- `VarPrice.Web/Storage/` — доступ к Postgres
-- `schema.sql` — исходная схема (для справки)
-- `docker-compose.yml`, `Dockerfile` — контейнеризация
+Поддерживаемые аргументы:
+
+- `--once` — выполнить один проход и завершиться с exit code.
+- `--job vegetables` — запускает овощной workflow.
+
+## Конфигурация
+
+Общие настройки:
+
+- `ConnectionStrings:Postgres`
+- `Crawler:SitemapIndexUrl`
+- `Crawler:VegetablesUrlContains`
+- `Crawler:MaxProductsPerRun`
+
+Настройки находятся в `appsettings.json` соответствующего запускаемого проекта (Web/Worker) и могут переопределяться переменными окружения.
+
+## Тесты
+
+```bash
+dotnet test VarPrice.sln
+```
+
+Содержат unit-тесты use-case и интеграционный сценарий с PostgreSQL через Testcontainers.
