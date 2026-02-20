@@ -1,7 +1,8 @@
-using Serilog;
-using VarPrice.Web.Crawler;
 using VarPrice.Web.Logging;
-using VarPrice.Web.Storage;
+using Serilog;
+using VarPrice.Application.DependencyInjection;
+using VarPrice.Infrastructure.DependencyInjection;
+using VarPrice.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,23 +14,10 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
     .Enrich.WithEnvironmentName());
 
 builder.Services.AddRazorPages();
-
-builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
-
-builder.Services.AddHttpClient("varus", c =>
-{
-    c.Timeout = TimeSpan.FromSeconds(30);
-    c.DefaultRequestHeaders.UserAgent.ParseAdd("VarPriceBot/0.1 (+contact: you)");
-});
+builder.Services.AddVarPriceApplication(builder.Configuration);
+builder.Services.AddVarPriceInfrastructure(builder.Configuration);
 
 builder.Services.AddSingleton<ILoggingBootstrapper, LoggingBootstrapper>();
-builder.Services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
-builder.Services.AddScoped<SchemaBootstrapper>();
-builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
-
-builder.Services.AddScoped<ISitemapReader, SitemapReader>();
-builder.Services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
-builder.Services.AddScoped<CrawlerRunner>();
 
 var app = builder.Build();
 

@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using VarPrice.Web.Crawler;
+using VarPrice.Application.Models;
+using VarPrice.Application.UseCases;
 
 namespace VarPrice.Web.Pages;
 
-public class IndexModel(CrawlerRunner runner) : PageModel
+public class IndexModel(RunCrawlerUseCase runner) : PageModel
 {
     public CrawlerRunResult? Result { get; private set; }
 
