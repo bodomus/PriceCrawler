@@ -1,57 +1,111 @@
-# VARUS Price Crawler
+﻿# VARUS Price Crawler
 
-Проект разделён на независимые сборки: домен, application workflow, инфраструктура, web и worker.
+Сервис для сбора и обработки данных о товарах VARUS.
 
-## Проекты
+## Состав решения
 
-- `VarPrice.Domain` — сущности, enum/value objects и репозиторные контракты.
-- `VarPrice.Application` — use-case `RunCrawlerUseCase`, orchestration crawler→ingestion→snapshots→statuses.
-- `VarPrice.Infrastructure` — Postgres реализации репозиториев, bootstrap схемы и HTTP crawler adapters.
-- `VarPrice.Web` — Razor Pages/UI и API-эндпоинты поверх use-case.
-- `VarPrice.Worker` — консольный запуск crawler без web.
+- `VarPrice.Domain` - доменные сущности и контракты.
+- `VarPrice.Application` - use-case и orchestration.
+- `VarPrice.Infrastructure` - Postgres-репозитории, bootstrap схемы, HTTP crawler adapters.
+- `VarPrice.Web` - web/API хост.
+- `VarPrice.Worker` - консольный запуск crawler.
 
-## Зависимости слоёв
+## Требования
 
-`Web/Worker -> Application -> Domain`
+- .NET SDK 8+
+- PostgreSQL 16+ (или `docker compose`)
 
-`Web/Worker -> Infrastructure -> (Domain + Application ports)`
+## Быстрый запуск
 
-Domain не зависит от ASP.NET, Npgsql, Serilog или EF.
+### 1) Поднять инфраструктуру (опционально)
 
-## Запуск Web
+```bash
+docker compose up -d postgres
+```
+
+### 2) Запустить Web
 
 ```bash
 dotnet run --project VarPrice.Web
 ```
 
-Healthcheck: `http://localhost:8080/health` (в docker) или локальный порт Kestrel.
+Health endpoint: `http://localhost:8080/health` (в Docker) или локальный порт Kestrel.
 
-## Запуск Worker
+### 3) Запустить Worker
 
 ```bash
 dotnet run --project VarPrice.Worker -- --once --job vegetables
 ```
 
-Поддерживаемые аргументы:
+## Параметры командной строки (Worker)
 
-- `--once` — выполнить один проход и завершиться с exit code.
-- `--job vegetables` — запускает овощной workflow.
+Поддерживаются параметры:
+
+- `--once`
+- `--job <name>`
+
+### `--once`
+
+Флаг наличия параметра:
+
+```csharp
+var once = args.Contains("--once");
+```
+
+Если флаг указан, приложение завершится с кодом:
+
+- `0`, если `result.Status == "ok"` (без учета регистра)
+- `1`, если статус не `ok`
+
+Примечание: в текущей реализации Worker возвращает те же коды завершения даже без `--once`.
+
+### `--job <name>`
+
+Индекс параметра в аргументах:
+
+```csharp
+var jobIndex = Array.IndexOf(args, "--job");
+```
+
+Поведение:
+
+- если `--job` передан и после него есть значение, берется это значение
+- если не передан, используется значение по умолчанию: `vegetables`
+- если значение не `vegetables`, Worker пишет `Unsupported job: <name>` и завершается с кодом `2`
+
+Примеры:
+
+```bash
+dotnet run --project VarPrice.Worker
+dotnet run --project VarPrice.Worker -- --once
+dotnet run --project VarPrice.Worker -- --job vegetables
+dotnet run --project VarPrice.Worker -- --once --job vegetables
+```
+
+## Коды завершения Worker
+
+- `0` - успешный run (`status=ok`)
+- `1` - run завершился с ошибочным статусом
+- `2` - передан неподдерживаемый `--job`
 
 ## Конфигурация
 
-Общие настройки:
+Основные ключи (`appsettings.json`):
 
 - `ConnectionStrings:Postgres`
 - `Crawler:SitemapIndexUrl`
 - `Crawler:VegetablesUrlContains`
 - `Crawler:MaxProductsPerRun`
 
-Настройки находятся в `appsettings.json` соответствующего запускаемого проекта (Web/Worker) и могут переопределяться переменными окружения.
+Переопределение через переменные окружения:
+
+- `ConnectionStrings__Postgres`
+- `Crawler__SitemapIndexUrl`
+- `Crawler__VegetablesUrlContains`
+- `Crawler__MaxProductsPerRun`
 
 ## Тесты
 
 ```bash
 dotnet test VarPrice.sln
 ```
-
-Содержат unit-тесты use-case и интеграционный сценарий с PostgreSQL через Testcontainers.
