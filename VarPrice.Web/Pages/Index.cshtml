@@ -6,20 +6,32 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>VAR-1 вЂ” РЎР±РѕСЂ С†РµРЅ (MVP)</title>
+    <title>VAR-1 - Сбор цен (MVP)</title>
     <style>
-        body { font-family: system-ui, Arial, sans-serif; max-width: 980px; margin: 40px auto; padding: 0 16px; }
+        body { font-family: system-ui, Arial, sans-serif; max-width: 980px; margin: 40px auto; padding: 0 16px 72px; }
         button { padding: 10px 14px; font-size: 16px; cursor: pointer; }
         .card { border: 1px solid #ddd; border-radius: 8px; padding: 14px; margin-top: 14px; }
         .muted { color: #666; }
+        .status-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 12px 16px;
+            font-size: 14px;
+            border-top: 1px solid transparent;
+            z-index: 1000;
+        }
+        .status-error { background: #fff1f1; color: #7f1d1d; border-top-color: #fecaca; }
+        .status-info { background: #eff6ff; color: #1e3a8a; border-top-color: #bfdbfe; }
     </style>
 </head>
 <body>
-    <h2>VAR-1 вЂ” РЎР±РѕСЂ С†РµРЅ (MVP)</h2>
-    <p class="muted">РљРЅРѕРїРєР° Р·Р°РїСѓСЃРєР°РµС‚ СЃР±РѕСЂ <b>СЃРЅРёРјРєР°</b> (append-only) РїРѕ РІС‹Р±СЂР°РЅРЅРѕР№ РіСЂСѓРїРїРµ С‚РѕРІР°СЂРѕРІ (РѕРІРѕС‰Рё).</p>
+    <h2>VAR-1 - Сбор цен (MVP)</h2>
+    <p class="muted">Кнопка запускает сбор <b>снимка</b> (append-only) по выбранной группе товаров (овощи).</p>
 
     <form method="post">
-        <button type="submit" asp-page-handler="IngestVegetables">РЎРѕР±СЂР°С‚СЊ СЃРЅРёРјРѕРє С†РµРЅ (РѕРІРѕС‰Рё)</button>
+        <button type="submit" asp-page-handler="IngestVegetables">Собрать снимок цен (овощи)</button>
     </form>
 
     @if (Model.Result is not null)
@@ -37,6 +49,8 @@
     }
 
     <hr />
-    <p class="muted">РџСЂРѕРІРµСЂРєР°: <a href="/health">/health</a></p>
+    <p class="muted">Проверка: <a href="/health">/health</a></p>
+
+    <partial name="_StatusBar" model='new VarPrice.Web.Pages.StatusBarViewModel(Model.StatusLevel, Model.StatusMessage)' />
 </body>
 </html>

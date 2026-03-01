@@ -1,7 +1,9 @@
 using Serilog;
+using Serilog.Context;
 using VarPrice.Web.Crawler;
 using VarPrice.Web.Logging;
 using VarPrice.Web.Storage;
+using VarPrice.Web.Storage.Db;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,7 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
     .Enrich.WithEnvironmentName());
 
 builder.Services.AddRazorPages();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
 
@@ -24,16 +27,25 @@ builder.Services.AddHttpClient("varus", c =>
 
 builder.Services.AddSingleton<ILoggingBootstrapper, LoggingBootstrapper>();
 builder.Services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
+builder.Services.AddSingleton<DbErrorMapper>();
+builder.Services.AddScoped<DbExecutor>();
 builder.Services.AddScoped<SchemaBootstrapper>();
 builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
 
 builder.Services.AddScoped<ISitemapReader, SitemapReader>();
 builder.Services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
-builder.Services.AddScoped<CrawlerRunner>();
+builder.Services.AddScoped<ICrawlerRunner, CrawlerRunner>();
 
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
+app.Use(async (context, next) =>
+{
+    using (LogContext.PushProperty("CorrelationId", context.TraceIdentifier))
+    {
+        await next();
+    }
+});
 
 app.MapRazorPages();
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
