@@ -1,13 +1,9 @@
 using System.Xml.Linq;
+using VarPrice.Application.Abstractions;
 
-namespace VarPrice.Web.Crawler;
+namespace VarPrice.Infrastructure.Crawler;
 
-public interface ISitemapReader
-{
-    Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct);
-}
-
-public sealed class SitemapReader(IHttpClientFactory httpClientFactory) : ISitemapReader
+public sealed class SitemapReader(IHttpClientFactory httpClientFactory) : IProductUrlSource
 {
     public async Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct)
     {
@@ -23,19 +19,13 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory) : ISitem
         if (root == "sitemapindex")
         {
             var sitemapLocs = doc.Descendants().Where(x => x.Name.LocalName == "loc").Select(x => x.Value).ToList();
-
             var urls = new List<string>(capacity: 50_000);
-            foreach (var loc in sitemapLocs.Take(10)) // MVP ограничение
+
+            foreach (var loc in sitemapLocs.Take(10))
             {
                 var partXml = await http.GetStringAsync(loc, ct);
                 var partDoc = XDocument.Parse(partXml);
-
-                urls.AddRange(
-                    partDoc.Descendants()
-                           .Where(x => x.Name.LocalName == "loc")
-                           .Select(x => x.Value)
-                );
-
+                urls.AddRange(partDoc.Descendants().Where(x => x.Name.LocalName == "loc").Select(x => x.Value));
                 if (urls.Count > 200_000) break;
             }
 
