@@ -1,10 +1,10 @@
-﻿name: ci
+name: ci
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ master ]
+    branches: [ main, master ]
 
 jobs:
   build-test:
@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -24,6 +26,12 @@ jobs:
 
       - name: Build
         run: dotnet build --configuration Release --no-restore
+
+      - name: Version Check
+        run: |
+          dotnet --info
+          dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:Version -getProperty:AssemblyVersion -getProperty:FileVersion -getProperty:AssemblyInformationalVersion
+          dotnet pack VarPrice.Application/VarPrice.Application.csproj --configuration Release --no-build --output ./artifacts
 
       - name: Test
         run: dotnet test --configuration Release --no-build

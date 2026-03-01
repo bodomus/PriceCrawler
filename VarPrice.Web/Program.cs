@@ -1,8 +1,14 @@
-using VarPrice.Web.Logging;
 using Serilog;
-using VarPrice.Application.DependencyInjection;
-using VarPrice.Infrastructure.DependencyInjection;
+using Serilog.Context;
+
+using VarPrice.Application.Abstractions;
+using VarPrice.Application.Models;
+using VarPrice.Infrastructure.Crawler;
 using VarPrice.Infrastructure.Persistence;
+using VarPrice.Web.Crawler;
+using VarPrice.Web.Logging;
+using VarPrice.Web.Storage;
+using VarPrice.Web.Storage.Db;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,14 +20,37 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
     .Enrich.WithEnvironmentName());
 
 builder.Services.AddRazorPages();
-builder.Services.AddVarPriceApplication(builder.Configuration);
-builder.Services.AddVarPriceInfrastructure(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
+
+builder.Services.AddHttpClient("varus", c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(30);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("VarPriceBot/0.1 (+contact: you)");
+});
 
 builder.Services.AddSingleton<ILoggingBootstrapper, LoggingBootstrapper>();
+builder.Services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
+builder.Services.AddSingleton<DbErrorMapper>();
+builder.Services.AddScoped<DbExecutor>();
+builder.Services.AddScoped<SchemaBootstrapper>();
+builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
+
+builder.Services.AddScoped<IProductUrlSource, SitemapReader>();
+builder.Services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
+builder.Services.AddScoped<ICrawlerRunner, CrawlerRunner>();
 
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
+app.Use(async (context, next) =>
+{
+    using (LogContext.PushProperty("CorrelationId", context.TraceIdentifier))
+    {
+        await next();
+    }
+});
 
 app.MapRazorPages();
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
