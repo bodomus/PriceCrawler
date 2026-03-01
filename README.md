@@ -1,55 +1,111 @@
-﻿# Magazine Price Crawler (Varus)
+﻿# VARUS Price Crawler
 
-Веб-сервис для сбора цен на товары сети Varus. Берет ссылки из sitemap, извлекает карточки товаров, сохраняет снимки цен в Postgres и дает простую UI-кнопку запуска.
+Сервис для сбора и обработки данных о товарах VARUS.
+
+## Состав решения
+
+- `VarPrice.Domain` - доменные сущности и контракты.
+- `VarPrice.Application` - use-case и orchestration.
+- `VarPrice.Infrastructure` - Postgres-репозитории, bootstrap схемы, HTTP crawler adapters.
+- `VarPrice.Web` - web/API хост.
+- `VarPrice.Worker` - консольный запуск crawler.
 
 ## Требования
-- .NET SDK 9.0.311 (фиксируется `global.json`, подходит для сборки `net8.0`)
-- Docker (если запускаете через `docker compose`)
 
-## Запуск
+- .NET SDK 8+
+- PostgreSQL 16+ (или `docker compose`)
 
-### Вариант 1: Docker
+## Быстрый запуск
+
+### 1) Поднять инфраструктуру (опционально)
+
 ```bash
-docker compose up --build
+docker compose up -d postgres
 ```
-Откройте:
-- http://localhost:8080/ — кнопка запуска сбора
-- http://localhost:8080/health — healthcheck
 
-### Вариант 2: Локально
+### 2) Запустить Web
+
 ```bash
 dotnet run --project VarPrice.Web
 ```
-Убедитесь, что Postgres доступен и строка подключения задана в `VarPrice.Web/appsettings.json` или через переменные окружения `ConnectionStrings__Postgres`.
 
-## Архитектура
-- UI: Razor Pages (`VarPrice.Web/Pages`) — тонкий слой, запускающий `CrawlerRunner`.
-- Логика сбора: `VarPrice.Web/Crawler` — интерфейсы (`ISitemapReader`, `IProductCardExtractor`) и реализации для чтения sitemap/парсинга карточек.
-- Хранилище: `VarPrice.Web/Storage` — репозиторий `ICrawlerRepository`, фабрика соединений и bootstrap схемы БД.
-- Конфигурация: `Crawler`-секция в `VarPrice.Web/appsettings.json` и через переменные окружения.
+Health endpoint: `http://localhost:8080/health` (в Docker) или локальный порт Kestrel.
 
-## Горячие клавиши
-- Visual Studio: `F5` (Debug), `Ctrl+F5` (Run без отладки)
-- Rider: `Shift+F10` (Run), `Shift+F9` (Debug)
-- Браузер: `Ctrl+R` (обновить страницу)
+### 3) Запустить Worker
 
-## Как добавить паттерны
-- Фильтр ссылок из sitemap: `VarPrice.Web/Crawler/CrawlerOptions.cs` (`VegetablesUrlContains`).
-- Маркеры и парсинг: `VarPrice.Web/Crawler/VarusProductCardExtractor.cs`:
-  - `TryMatchProductId` — маркеры/шаблоны product_id.
-  - `PriceParser` — логика поиска цены/старой цены.
-  - `PackParser` — вес/объем и единицы.
-  - `CityParser` — разбор города из URL.
-После изменений запустите сбор и проверьте результат в БД.
-
-## Сборка Release
 ```bash
-dotnet publish --project VarPrice.Web -c Release
+dotnet run --project VarPrice.Worker -- --once --job vegetables
 ```
 
-## Структура папок
-- `VarPrice.Web/` — веб-приложение (UI + логика сбора + доступ к БД)
-- `VarPrice.Web/Crawler/` — правила обхода и парсинга
-- `VarPrice.Web/Storage/` — доступ к Postgres
-- `schema.sql` — исходная схема (для справки)
-- `docker-compose.yml`, `Dockerfile` — контейнеризация
+## Параметры командной строки (Worker)
+
+Поддерживаются параметры:
+
+- `--once`
+- `--job <name>`
+
+### `--once`
+
+Флаг наличия параметра:
+
+```csharp
+var once = args.Contains("--once");
+```
+
+Если флаг указан, приложение завершится с кодом:
+
+- `0`, если `result.Status == "ok"` (без учета регистра)
+- `1`, если статус не `ok`
+
+Примечание: в текущей реализации Worker возвращает те же коды завершения даже без `--once`.
+
+### `--job <name>`
+
+Индекс параметра в аргументах:
+
+```csharp
+var jobIndex = Array.IndexOf(args, "--job");
+```
+
+Поведение:
+
+- если `--job` передан и после него есть значение, берется это значение
+- если не передан, используется значение по умолчанию: `vegetables`
+- если значение не `vegetables`, Worker пишет `Unsupported job: <name>` и завершается с кодом `2`
+
+Примеры:
+
+```bash
+dotnet run --project VarPrice.Worker
+dotnet run --project VarPrice.Worker -- --once
+dotnet run --project VarPrice.Worker -- --job vegetables
+dotnet run --project VarPrice.Worker -- --once --job vegetables
+```
+
+## Коды завершения Worker
+
+- `0` - успешный run (`status=ok`)
+- `1` - run завершился с ошибочным статусом
+- `2` - передан неподдерживаемый `--job`
+
+## Конфигурация
+
+Основные ключи (`appsettings.json`):
+
+- `ConnectionStrings:Postgres`
+- `Crawler:SitemapIndexUrl`
+- `Crawler:VegetablesUrlContains`
+- `Crawler:MaxProductsPerRun`
+
+Переопределение через переменные окружения:
+
+- `ConnectionStrings__Postgres`
+- `Crawler__SitemapIndexUrl`
+- `Crawler__VegetablesUrlContains`
+- `Crawler__MaxProductsPerRun`
+
+## Тесты
+
+```bash
+dotnet test VarPrice.sln
+```

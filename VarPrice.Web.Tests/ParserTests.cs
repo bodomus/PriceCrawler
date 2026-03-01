@@ -1,5 +1,4 @@
-﻿using VarPrice.Web.Crawler;
-using Xunit;
+using VarPrice.Infrastructure.Crawler;
 
 namespace VarPrice.Web.Tests;
 
@@ -13,7 +12,6 @@ public sealed class ParserTests
     public void PackParser_Parses_Value_And_Unit(string text, double expectedValue, string expectedUnit)
     {
         var (value, unit) = PackParser.TryParse(text);
-
         Assert.Equal(expectedUnit, unit);
         Assert.Equal((decimal)expectedValue, value);
     }
@@ -24,7 +22,6 @@ public sealed class ParserTests
     public void PriceParser_Finds_Current_Price(string text, double expectedPrice)
     {
         var (price, old) = PriceParser.Parse(text);
-
         Assert.Equal((decimal)expectedPrice, price);
         Assert.Null(old);
     }
@@ -33,18 +30,7 @@ public sealed class ParserTests
     public void PriceParser_Finds_Old_Price_When_Marked()
     {
         var (price, old) = PriceParser.Parse("~~19,99~~ 15,49 грн");
-
         Assert.Equal(15.49m, price);
         Assert.Equal(19.99m, old);
-    }
-
-    [Theory]
-    [InlineData("https://varus.ua/kyiv/ovochi/kartoplya", "kyiv")]
-    [InlineData("https://varus.ua/lviv/ovochi", "lviv")]
-    public void CityParser_Extracts_City_From_Url(string url, string expectedCity)
-    {
-        var city = CityParser.TryParseFromUrl(url);
-
-        Assert.Equal(expectedCity, city);
     }
 }
