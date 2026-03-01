@@ -1,4 +1,7 @@
 using Microsoft.Extensions.Options;
+
+using VarPrice.Application.Abstractions;
+using VarPrice.Application.Models;
 using VarPrice.Web.Storage;
 using VarPrice.Web.Storage.Db;
 
@@ -11,7 +14,7 @@ public interface ICrawlerRunner
 
 public sealed class CrawlerRunner(
     IOptions<CrawlerOptions> opt,
-    ISitemapReader sitemap,
+    IProductUrlSource sitemap,
     IProductCardExtractor extractor,
     ICrawlerRepository repo,
     ILogger<CrawlerRunner> log

@@ -1,4 +1,4 @@
-@page
+п»ї@page
 @model VarPrice.Web.Pages.IndexModel
 
 <!doctype html>
@@ -6,7 +6,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>VAR-1 - Сбор цен (MVP)</title>
+    <title>VAR-1 - РЎР±РѕСЂ С†РµРЅ (MVP)</title>
     <style>
         body { font-family: system-ui, Arial, sans-serif; max-width: 980px; margin: 40px auto; padding: 0 16px 72px; }
         button { padding: 10px 14px; font-size: 16px; cursor: pointer; }
@@ -24,14 +24,29 @@
         }
         .status-error { background: #fff1f1; color: #7f1d1d; border-top-color: #fecaca; }
         .status-info { background: #eff6ff; color: #1e3a8a; border-top-color: #bfdbfe; }
+        .app-version {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #f9fafb;
+            color: #374151;
+            font-size: 12px;
+            line-height: 1;
+            z-index: 1100;
+        }
     </style>
 </head>
 <body>
-    <h2>VAR-1 - Сбор цен (MVP)</h2>
-    <p class="muted">Кнопка запускает сбор <b>снимка</b> (append-only) по выбранной группе товаров (овощи).</p>
+    <div class="app-version">Version: @Model.AppVersion</div>
+
+    <h2>VAR-1 - РЎР±РѕСЂ С†РµРЅ (MVP)</h2>
+    <p class="muted">РљРЅРѕРїРєР° Р·Р°РїСѓСЃРєР°РµС‚ СЃР±РѕСЂ <b>СЃРЅРёРјРєР°</b> (append-only) РїРѕ РІС‹Р±СЂР°РЅРЅРѕР№ РіСЂСѓРїРїРµ С‚РѕРІР°СЂРѕРІ (РѕРІРѕС‰Рё).</p>
 
     <form method="post">
-        <button type="submit" asp-page-handler="IngestVegetables">Собрать снимок цен (овощи)</button>
+        <button type="submit" asp-page-handler="IngestVegetables">РЎРѕР±СЂР°С‚СЊ СЃРЅРёРјРѕРє С†РµРЅ (РѕРІРѕС‰Рё)</button>
     </form>
 
     @if (Model.Result is not null)
@@ -49,7 +64,7 @@
     }
 
     <hr />
-    <p class="muted">Проверка: <a href="/health">/health</a></p>
+    <p class="muted">РџСЂРѕРІРµСЂРєР°: <a href="/health">/health</a></p>
 
     <partial name="_StatusBar" model='new VarPrice.Web.Pages.StatusBarViewModel(Model.StatusLevel, Model.StatusMessage)' />
 </body>

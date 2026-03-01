@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+
+using VarPrice.Application.Models;
 using VarPrice.Web.Crawler;
 using VarPrice.Web.Pages;
 using VarPrice.Web.Storage.Db;

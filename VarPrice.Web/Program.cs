@@ -1,5 +1,10 @@
 using Serilog;
 using Serilog.Context;
+
+using VarPrice.Application.Abstractions;
+using VarPrice.Application.Models;
+using VarPrice.Infrastructure.Crawler;
+using VarPrice.Infrastructure.Persistence;
 using VarPrice.Web.Crawler;
 using VarPrice.Web.Logging;
 using VarPrice.Web.Storage;
@@ -32,7 +37,7 @@ builder.Services.AddScoped<DbExecutor>();
 builder.Services.AddScoped<SchemaBootstrapper>();
 builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
 
-builder.Services.AddScoped<ISitemapReader, SitemapReader>();
+builder.Services.AddScoped<IProductUrlSource, SitemapReader>();
 builder.Services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
 builder.Services.AddScoped<ICrawlerRunner, CrawlerRunner>();
 

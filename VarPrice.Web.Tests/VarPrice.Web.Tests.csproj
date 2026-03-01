@@ -19,5 +19,6 @@
     <ProjectReference Include="..\VarPrice.Application\VarPrice.Application.csproj" />
     <ProjectReference Include="..\VarPrice.Domain\VarPrice.Domain.csproj" />
     <ProjectReference Include="..\VarPrice.Infrastructure\VarPrice.Infrastructure.csproj" />
+    <ProjectReference Include="..\VarPrice.Web\VarPrice.Web.csproj" />
   </ItemGroup>
 </Project>

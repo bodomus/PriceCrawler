@@ -2,6 +2,8 @@ using System.Data;
 using System.Data.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+
+using VarPrice.Infrastructure.Persistence;
 using VarPrice.Web.Storage;
 using VarPrice.Web.Storage.Db;
 

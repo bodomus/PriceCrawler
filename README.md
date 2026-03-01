@@ -104,6 +104,31 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Crawler__VegetablesUrlContains`
 - `Crawler__MaxProductsPerRun`
 
+## Версионирование (Git tags + Nerdbank.GitVersioning)
+
+В solution используется `Nerdbank.GitVersioning` через корневые `Directory.Build.props` и `version.json`.
+
+- Релизный тег: `vMAJOR.MINOR.PATCH` (пример: `v1.2.3`).
+- На самом теге сборка получает `Version=1.2.3`.
+- На следующих коммитах после тега в `main/master` версия автоинкрементируется и получает prerelease-суффикс `-alpha.<height>`.
+- `AssemblyInformationalVersion` включает короткий sha в формате `+g<sha>`.
+
+Как выпустить релиз:
+
+```bash
+git tag v1.2.3
+git push --tags
+```
+
+Как проверить вычисленную версию локально:
+
+```bash
+dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:Version
+dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:AssemblyVersion
+dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:FileVersion
+dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:AssemblyInformationalVersion
+```
+
 ## Тесты
 
 ```bash
