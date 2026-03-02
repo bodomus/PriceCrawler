@@ -4,6 +4,8 @@
     <ProjectReference Include="..\VarPrice.Domain\VarPrice.Domain.csproj" />
     <ProjectReference Include="..\VarPrice.Application\VarPrice.Application.csproj" />
     <PackageReference Include="Npgsql" Version="8.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.8" />
     <PackageReference Include="AngleSharp" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />

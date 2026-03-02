@@ -1,6 +1,7 @@
 using Serilog;
 using Serilog.Context;
 
+using Microsoft.EntityFrameworkCore;
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
 using VarPrice.Infrastructure.Crawler;
@@ -21,6 +22,12 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
 
 builder.Services.AddRazorPages();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddDbContext<VarPriceDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("Postgres")
+        ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
+    options.UseNpgsql(connectionString);
+});
 
 builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
 
