@@ -1,12 +1,18 @@
-using VarPrice.Web.Logging;
+using Microsoft.EntityFrameworkCore;
+
 using Serilog;
+using Serilog.Context;
+
+using VarPrice.Application.Abstractions;
 using VarPrice.Application.DependencyInjection;
-using VarPrice.Infrastructure.DependencyInjection;
+using VarPrice.Application.Models;
+using VarPrice.Infrastructure.Crawler;
 using VarPrice.Infrastructure.Persistence;
 using VarPrice.Web.Crawler;
 using VarPrice.Web.Logging;
 using VarPrice.Web.Storage;
 using VarPrice.Web.Storage.Db;
+using VarPrice.Web.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +33,7 @@ builder.Services.AddDbContext<VarPriceDbContext>(options =>
 });
 
 builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
+builder.Services.AddUrlFilterOptionsFromFile(builder.Configuration, builder.Environment.ContentRootPath);
 
 builder.Services.AddHttpClient("varus", c =>
 {

@@ -14,6 +14,7 @@ public interface ICrawlerRunner
 
 public sealed class CrawlerRunner(
     IOptions<CrawlerOptions> opt,
+    IOptions<UrlFilterOptions> urlFilterOptions,
     IProductUrlSource sitemap,
     IProductCardExtractor extractor,
     ICrawlerRepository repo,
@@ -42,6 +43,14 @@ public sealed class CrawlerRunner(
             {
                 urls = urls
                     .Where(u => u.Contains(o.VegetablesUrlContains, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
+            if (excluded.Length > 0)
+            {
+                urls = urls
+                    .Where(u => !excluded.Any(ex => u.Contains(ex, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
             }
 

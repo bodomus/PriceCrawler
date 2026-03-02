@@ -1,0 +1,7 @@
+{
+  "ExcludedUrlSubstrings": [
+    "Test",
+    "Sandbox",
+    "tmp-"
+  ]
+}

@@ -55,7 +55,8 @@ public sealed class RunCrawlerUseCaseTests
         IProductCardExtractor extractor)
     {
         var options = Options.Create(new CrawlerOptions { SitemapIndexUrl = "https://example/sitemap.xml", VegetablesUrlContains = "ovochi", MaxProductsPerRun = 2 });
-        return new RunCrawlerUseCase(options, source, extractor, crawler, ingestion, snapshot, NullLogger<RunCrawlerUseCase>.Instance);
+        var filterOptions = Options.Create(new UrlFilterOptions());
+        return new RunCrawlerUseCase(options, filterOptions, source, extractor, crawler, ingestion, snapshot, NullLogger<RunCrawlerUseCase>.Instance);
     }
 
     private sealed class FakeSource(IReadOnlyList<string> urls) : IProductUrlSource

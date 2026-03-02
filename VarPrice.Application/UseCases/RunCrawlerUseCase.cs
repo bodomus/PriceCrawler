@@ -10,6 +10,7 @@ namespace VarPrice.Application.UseCases;
 
 public sealed class RunCrawlerUseCase(
     IOptions<CrawlerOptions> options,
+    IOptions<UrlFilterOptions> urlFilterOptions,
     IProductUrlSource sitemapReader,
     IProductCardExtractor extractor,
     ICrawlerRunRepository crawlerRunRepository,
@@ -32,6 +33,14 @@ public sealed class RunCrawlerUseCase(
             if (!string.IsNullOrWhiteSpace(opt.VegetablesUrlContains))
             {
                 urls = urls.Where(x => x.Contains(opt.VegetablesUrlContains, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
+            if (excluded.Length > 0)
+            {
+                urls = urls
+                    .Where(u => !excluded.Any(ex => u.Contains(ex, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
             }
 
             urls = urls.Take(Math.Max(1, opt.MaxProductsPerRun)).ToList();

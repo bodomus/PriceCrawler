@@ -1,0 +1,42 @@
+[2026-03-01 22:08:35.254 +02:00 WRN] [GFX] [Production] VarPrice.Web.Crawler.CrawlerRunner Failed to extract product card from https://varus.ua/test1/post/ovochi-na-varusua-zapaly-smakom-svij-den
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at VarPrice.Infrastructure.Crawler.VarusProductCardExtractor.ExtractAsync(String url, CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Infrastructure\Crawler\VarusProductCardExtractor.cs:line 14
+   at VarPrice.Web.Crawler.CrawlerRunner.RunVegetablesAsync(CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Web\Crawler\CrawlerRunner.cs:line 57
+[2026-03-01 22:09:16.984 +02:00 WRN] [GFX] [Production] VarPrice.Web.Crawler.CrawlerRunner Failed to extract product card from https://varus.ua/test1/post/ovochi-na-varusua-zapaly-smakom-svij-den
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at VarPrice.Infrastructure.Crawler.VarusProductCardExtractor.ExtractAsync(String url, CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Infrastructure\Crawler\VarusProductCardExtractor.cs:line 14
+   at VarPrice.Web.Crawler.CrawlerRunner.RunVegetablesAsync(CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Web\Crawler\CrawlerRunner.cs:line 57
+[2026-03-01 22:10:23.475 +02:00 WRN] [GFX] [Production] VarPrice.Web.Crawler.CrawlerRunner Failed to extract product card from https://varus.ua/test1/post/ovochi-na-varusua-zapaly-smakom-svij-den
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at VarPrice.Infrastructure.Crawler.VarusProductCardExtractor.ExtractAsync(String url, CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Infrastructure\Crawler\VarusProductCardExtractor.cs:line 14
+   at VarPrice.Web.Crawler.CrawlerRunner.RunVegetablesAsync(CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Web\Crawler\CrawlerRunner.cs:line 57
+[2026-03-01 22:10:57.608 +02:00 WRN] [GFX] [Production] VarPrice.Web.Crawler.CrawlerRunner Failed to extract product card from https://varus.ua/test1/post/ovochi-na-varusua-zapaly-smakom-svij-den
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at VarPrice.Infrastructure.Crawler.VarusProductCardExtractor.ExtractAsync(String url, CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Infrastructure\Crawler\VarusProductCardExtractor.cs:line 14
+   at VarPrice.Web.Crawler.CrawlerRunner.RunVegetablesAsync(CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Web\Crawler\CrawlerRunner.cs:line 57
+[2026-03-01 22:11:15.326 +02:00 WRN] [GFX] [Production] VarPrice.Web.Crawler.CrawlerRunner Failed to extract product card from https://varus.ua/test1/post/ovochi-na-varusua-zapaly-smakom-svij-den
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at VarPrice.Infrastructure.Crawler.VarusProductCardExtractor.ExtractAsync(String url, CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Infrastructure\Crawler\VarusProductCardExtractor.cs:line 14
+   at VarPrice.Web.Crawler.CrawlerRunner.RunVegetablesAsync(CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Web\Crawler\CrawlerRunner.cs:line 57
+[2026-03-01 22:12:51.704 +02:00 WRN] [GFX] [Production] VarPrice.Web.Crawler.CrawlerRunner Failed to extract product card from https://varus.ua/test1/post/ovochi-na-varusua-zapaly-smakom-svij-den
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at VarPrice.Infrastructure.Crawler.VarusProductCardExtractor.ExtractAsync(String url, CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Infrastructure\Crawler\VarusProductCardExtractor.cs:line 14
+   at VarPrice.Web.Crawler.CrawlerRunner.RunVegetablesAsync(CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Web\Crawler\CrawlerRunner.cs:line 57
+[2026-03-01 22:13:07.667 +02:00 WRN] [GFX] [Production] VarPrice.Web.Crawler.CrawlerRunner Failed to extract product card from https://varus.ua/test1/post/ovochi-na-varusua-zapaly-smakom-svij-den
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 404 (Not Found).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at VarPrice.Infrastructure.Crawler.VarusProductCardExtractor.ExtractAsync(String url, CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Infrastructure\Crawler\VarusProductCardExtractor.cs:line 14
+   at VarPrice.Web.Crawler.CrawlerRunner.RunVegetablesAsync(CancellationToken ct) in J:\Projects\c#\(!!!VARUS)\VarPrice.Web\Crawler\CrawlerRunner.cs:line 57

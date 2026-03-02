@@ -40,6 +40,7 @@ public sealed class WorkerIntegrationTests : IAsyncLifetime
 
         var useCase = new RunCrawlerUseCase(
             Options.Create(new CrawlerOptions { SitemapIndexUrl = "unused", VegetablesUrlContains = "ovochi", MaxProductsPerRun = 1 }),
+            Options.Create(new UrlFilterOptions()),
             new StaticSource(["https://varus.ua/kyiv/ovochi/item"]),
             new StaticExtractor(new ProductCard("sku1", "Name", "https://varus.ua/kyiv/ovochi/item", 12m, null, false, true, 1m, "кг", "kyiv")),
             new PgCrawlerRunRepository(factory),
