@@ -1,10 +1,7 @@
+using VarPrice.Web.Logging;
 using Serilog;
-using Serilog.Context;
-
-using Microsoft.EntityFrameworkCore;
-using VarPrice.Application.Abstractions;
-using VarPrice.Application.Models;
-using VarPrice.Infrastructure.Crawler;
+using VarPrice.Application.DependencyInjection;
+using VarPrice.Infrastructure.DependencyInjection;
 using VarPrice.Infrastructure.Persistence;
 using VarPrice.Web.Crawler;
 using VarPrice.Web.Logging;
@@ -28,6 +25,15 @@ builder.Services.AddDbContext<VarPriceDbContext>(options =>
         ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
     options.UseNpgsql(connectionString);
 });
+
+builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
+
+builder.Services.AddHttpClient("varus", c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(30);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("VarPriceBot/0.1 (+contact: you)");
+});
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
 
