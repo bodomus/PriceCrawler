@@ -25,6 +25,10 @@ public sealed class VarusProductCardExtractor(IHttpClientFactory httpClientFacto
             log.LogDebug("No product_id found for {Url}", url);
             return null;
         }
+        else
+        {
+            log.LogDebug("product_id found for {Url}", url);
+        }
 
         var (packValue, packUnit) = PackParser.TryParse(text);
         var (price, oldPrice) = PriceParser.Parse(text);

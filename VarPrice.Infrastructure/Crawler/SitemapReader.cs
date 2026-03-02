@@ -13,7 +13,7 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
     IOptions<UrlFilterOptions> urlFilterOptions,
     ILogger<SitemapReader> log) : IProductUrlSource
 {
-    private const int DefaultMaxUrls = 20;
+    private const int DefaultMaxUrls = 20000;
     // private const int DefaultMaxUrls = 200_000;
     private const int DefaultMaxSitemapsToVisit = 10;
 
@@ -164,7 +164,7 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
                     if (results.Count >= maxUrls)
                     {
                         log.LogWarning("Reached maxUrls={MaxUrls}, stopping URL collection.", maxUrls);
-                        return results.ToList();
+                        return results.Take(maxUrls).ToList();
                     }
 
                     results.Add(loc);

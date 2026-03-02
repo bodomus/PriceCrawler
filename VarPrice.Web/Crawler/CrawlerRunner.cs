@@ -46,13 +46,13 @@ public sealed class CrawlerRunner(
                     .ToList();
             }
 
-            var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
-            if (excluded.Length > 0)
-            {
-                urls = urls
-                    .Where(u => !excluded.Any(ex => u.Contains(ex, StringComparison.OrdinalIgnoreCase)))
-                    .ToList();
-            }
+            // var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
+            // if (excluded.Length > 0)
+            // {
+            //     urls = urls
+            //         .Where(u => !excluded.Any(ex => u.Contains(ex, StringComparison.OrdinalIgnoreCase)))
+            //         .ToList();
+            // }
 
             urls = urls.Take(Math.Max(1, o.MaxProductsPerRun)).ToList();
 

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using VarPrice.Application.DependencyInjection;
 using VarPrice.Application.UseCases;
@@ -7,6 +8,10 @@ using VarPrice.Infrastructure.DependencyInjection;
 using VarPrice.Infrastructure.Persistence;
 
 var builder = Host.CreateApplicationBuilder(args);
+var projectRootPath = ResolveProjectRootPath(builder.Environment.ContentRootPath);
+var logsDirectoryPath = Path.Combine(projectRootPath, "Logs");
+Directory.CreateDirectory(logsDirectoryPath);
+var logFilePath = Path.Combine(logsDirectoryPath, "varprice-worker-.log");
 
 builder.Services.AddVarPriceApplication(builder.Configuration);
 builder.Services.AddVarPriceInfrastructure(builder.Configuration);
@@ -16,9 +21,10 @@ builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfigurati
     .ReadFrom.Configuration(builder.Configuration)
     .ReadFrom.Services(services)
     .Enrich.FromLogContext()
-    .WriteTo.Console());
+    .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14, shared: true));
 
 using var host = builder.Build();
+var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("VarPrice.Worker");
 
 using (var scope = host.Services.CreateScope())
 {
@@ -32,7 +38,7 @@ var job = jobIndex >= 0 && jobIndex + 1 < args.Length ? args[jobIndex + 1] : "ve
 
 if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase))
 {
-    Console.Error.WriteLine($"Unsupported job: {job}");
+    logger.LogError("Unsupported job: {Job}", job);
     return 2;
 }
 
@@ -40,7 +46,12 @@ using var runScope = host.Services.CreateScope();
 var useCase = runScope.ServiceProvider.GetRequiredService<RunCrawlerUseCase>();
 var result = await useCase.RunVegetablesAsync(CancellationToken.None);
 
-Console.WriteLine($"run_id={result.RunId}; status={result.Status}; processed={result.ProductsProcessed}; errors={result.Errors}");
+logger.LogInformation(
+    "run_id={RunId}; status={Status}; processed={Processed}; errors={Errors}",
+    result.RunId,
+    result.Status,
+    result.ProductsProcessed,
+    result.Errors);
 
 if (once)
 {
@@ -48,3 +59,15 @@ if (once)
 }
 
 return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+
+static string ResolveProjectRootPath(string contentRootPath)
+{
+    var currentDirectory = new DirectoryInfo(contentRootPath);
+
+    if (string.Equals(currentDirectory.Name, "VarPrice.Worker", StringComparison.OrdinalIgnoreCase))
+    {
+        return currentDirectory.Parent?.FullName ?? contentRootPath;
+    }
+
+    return contentRootPath;
+}
