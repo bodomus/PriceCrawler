@@ -1,20 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+
 using VarPrice.Infrastructure.Persistence;
 
 namespace VarPrice.Web.Pages;
 
-public sealed class RunsModel(VarPriceDbContext dbContext) : PageModel
+public sealed class RunsModel(VarPriceDbContext dbContext, ILogger<RunsModel> log) : PageModel
 {
     private const int DefaultPageLength = 25;
     private const int MaxPageLength = 200;
+    //private ILogger<RunsModel> _logger;
 
     public void OnGet()
     {
     }
 
-    public async Task<IActionResult> OnPostData()
+    public async Task<IActionResult> OnPostData(ILogger<RunsModel> log)
     {
         var form = Request.Form;
         var ct = HttpContext.RequestAborted;
@@ -35,15 +37,24 @@ public sealed class RunsModel(VarPriceDbContext dbContext) : PageModel
         var orderDir = form["order[0][dir]"].ToString();
         var descending = string.Equals(orderDir, "desc", StringComparison.OrdinalIgnoreCase);
 
+        var snapshotCounts = dbContext.PriceSnapshots.AsNoTracking()
+            .GroupBy(snapshot => snapshot.RunId)
+            .Select(group => new
+            {
+                RunId = group.Key,
+                ItemsCount = group.Count()
+            });
+
         var query = from run in dbContext.CrawlerRuns.AsNoTracking()
-                    join snapshot in dbContext.PriceSnapshots.AsNoTracking()
-                        on run.Id equals snapshot.RunId into snapshotGroup
+                    join countRow in snapshotCounts
+                        on run.Id equals countRow.RunId into countGroup
+                    from countRow in countGroup.DefaultIfEmpty()
                     select new CrawlerRunRow(
                         run.Id,
                         run.StartedAtUtc,
                         run.FinishedAtUtc,
                         run.Status,
-                        snapshotGroup.Count());
+                        countRow == null ? 0 : countRow.ItemsCount);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -73,13 +84,20 @@ public sealed class RunsModel(VarPriceDbContext dbContext) : PageModel
             })
             .ToListAsync(ct);
 
-        return new JsonResult(new
+        try
         {
-            draw,
-            recordsTotal,
-            recordsFiltered,
-            data = page
-        });
+            return new JsonResult(new
+            {
+                draw,
+                recordsTotal,
+                recordsFiltered,
+                data = page.ToList()
+            });
+        }catch (Exception ex)
+        {
+            log.LogError(ex, "DataTables load failed");
+            return StatusCode(500, new { error = ex.Message }); // временно для диагностики
+        }
     }
 
     private static IQueryable<CrawlerRunRow> ApplyOrdering(IQueryable<CrawlerRunRow> query, int orderColumn, bool descending)
