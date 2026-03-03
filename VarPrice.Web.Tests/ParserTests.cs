@@ -16,6 +16,15 @@ public sealed class ParserTests
         Assert.Equal((decimal)expectedValue, value);
     }
 
+    [Fact]
+    public void PackParser_Parses_QuantityText_Into_Unit()
+    {
+        var text = "\"quantityText\":\"за 1 шт (400 г)\"";
+        var (value, unit) = PackParser.TryParse(text);
+        Assert.Equal(400m, value);
+        Assert.Equal("за 1 шт (400 г)", unit);
+    }
+
     [Theory]
     [InlineData("Цена 12,34 грн", 12.34)]
     [InlineData("Вартість 9.99 грн", 9.99)]
@@ -34,3 +43,4 @@ public sealed class ParserTests
         Assert.Equal(19.99m, old);
     }
 }
+
