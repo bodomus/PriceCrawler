@@ -138,11 +138,12 @@ public sealed class SitemapReaderTests
 
     private static SitemapReader CreateSut(HttpClient client, params string[] excludedUrlSubstrings)
     {
+         var crawlerOptions = Options.Create(new CrawlerOptions());
         var options = Options.Create(new UrlFilterOptions
         {
             ExcludedUrlSubstrings = excludedUrlSubstrings
         });
-        return new SitemapReader(new FakeHttpClientFactory(client), options, NullLogger<SitemapReader>.Instance);
+        return new SitemapReader(new FakeHttpClientFactory(client), crawlerOptions, options, NullLogger<SitemapReader>.Instance);
     }
 
     private static HttpResponseMessage CreateXmlResponse(string xml, string? contentEncoding = null)

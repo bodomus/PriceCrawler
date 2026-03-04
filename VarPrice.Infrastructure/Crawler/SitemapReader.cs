@@ -10,18 +10,17 @@ using VarPrice.Application.Models;
 namespace VarPrice.Infrastructure.Crawler;
 
 public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
+    IOptions<CrawlerOptions> crawlerOptions,
     IOptions<UrlFilterOptions> urlFilterOptions,
     ILogger<SitemapReader> log) : IProductUrlSource
 {
-    private const int DefaultMaxUrls = 20000;
-    // private const int DefaultMaxUrls = 200_000;
     private const int DefaultMaxSitemapsToVisit = 10;
 
     public async Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct)
     {
         var http = httpClientFactory.CreateClient("varus");
         var doc = await LoadXmlAsync(http, sitemapIndexUrl, ct);
-        var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
+        var maxUrls = crawlerOptions.Value.MaxUrls;
         if (IsUrlSet(doc))
         {
             var locs = GetLocs(doc);
@@ -29,9 +28,9 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
             var urls = new HashSet<string>(StringComparer.Ordinal);
             foreach (var url in locs)
             {
-                if (urls.Count >= DefaultMaxUrls)
+                if (urls.Count >= maxUrls)
                 {
-                    log.LogWarning("Reached maxUrls={MaxUrls} while processing {Url}", DefaultMaxUrls, sitemapIndexUrl);
+                    log.LogWarning("Reached maxUrls={MaxUrls} while processing {Url}", maxUrls, sitemapIndexUrl);
                     break;
                 }
 
@@ -45,7 +44,7 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
         {
             var sitemapLocs = GetLocs(doc);
             log.LogInformation("Sitemap processed: Url={Url}, RootType=sitemapindex, LocCount={LocCount}", sitemapIndexUrl, sitemapLocs.Count);
-            return await CollectUrlsAsync(http, sitemapLocs, ct, DefaultMaxUrls, DefaultMaxSitemapsToVisit);
+            return await CollectUrlsAsync(http, sitemapLocs, ct, maxUrls, DefaultMaxSitemapsToVisit);
         }
 
         var root = doc.Root?.Name.LocalName ?? "<null>";
@@ -129,9 +128,10 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
         HttpClient http,
         IEnumerable<string> sitemapLocs,
         CancellationToken ct,
-        int maxUrls = DefaultMaxUrls,
+        int? maxUrls = null,
         int? maxSitemapsToVisit = null)
     {
+        var maxUrlsLimit = maxUrls ?? crawlerOptions.Value.MaxUrls;
         var results = new HashSet<string>(StringComparer.Ordinal);
         var topLevelSitemaps = maxSitemapsToVisit.HasValue
             ? sitemapLocs.Take(maxSitemapsToVisit.Value)
@@ -144,6 +144,20 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
             var currentSitemapUrl = toVisit.Pop();
             var doc = await LoadXmlAsync(http, currentSitemapUrl, ct);
             var locs = GetLocs(doc);
+
+            //There is
+            try
+            {
+                var logsPath = Path.Combine(AppContext.BaseDirectory, "Logs");
+                Directory.CreateDirectory(logsPath);
+                var locsLogPath = Path.Combine(logsPath, "locs.log");
+                await File.AppendAllLinesAsync(locsLogPath, locs, ct);
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "Failed to write locs to locs.log");
+            }
+
 
             if (IsSitemapIndex(doc))
             {
@@ -161,10 +175,10 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
                 log.LogInformation("Sitemap processed: Url={Url}, RootType=urlset, LocCount={LocCount}", currentSitemapUrl, locs.Count);
                 foreach (var loc in locs)
                 {
-                    if (results.Count >= maxUrls)
+                    if (results.Count >= maxUrlsLimit)
                     {
-                        log.LogWarning("Reached maxUrls={MaxUrls}, stopping URL collection.", maxUrls);
-                        return results.Take(maxUrls).ToList();
+                        log.LogWarning("Reached maxUrls={MaxUrls}, stopping URL collection.", maxUrlsLimit);
+                        return results.Take(maxUrlsLimit).ToList();
                     }
 
                     results.Add(loc);

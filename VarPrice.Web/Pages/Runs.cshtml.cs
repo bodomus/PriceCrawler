@@ -10,13 +10,12 @@ public sealed class RunsModel(VarPriceDbContext dbContext, ILogger<RunsModel> lo
 {
     private const int DefaultPageLength = 25;
     private const int MaxPageLength = 200;
-    //private ILogger<RunsModel> _logger;
 
     public void OnGet()
     {
     }
 
-    public async Task<IActionResult> OnPostData(ILogger<RunsModel> log)
+    public async Task<IActionResult> OnPostData()
     {
         var form = Request.Form;
         var ct = HttpContext.RequestAborted;
@@ -45,16 +44,19 @@ public sealed class RunsModel(VarPriceDbContext dbContext, ILogger<RunsModel> lo
                 ItemsCount = group.Count()
             });
 
-        var query = from run in dbContext.CrawlerRuns.AsNoTracking()
-                    join countRow in snapshotCounts
-                        on run.Id equals countRow.RunId into countGroup
-                    from countRow in countGroup.DefaultIfEmpty()
-                    select new CrawlerRunRow(
-                        run.Id,
-                        run.StartedAtUtc,
-                        run.FinishedAtUtc,
-                        run.Status,
-                        countRow == null ? 0 : countRow.ItemsCount);
+        var query =
+            from run in dbContext.CrawlerRuns.AsNoTracking()
+            join c in snapshotCounts on run.Id equals c.RunId into cg
+            from c in cg.DefaultIfEmpty()
+            select new
+            {
+                run.Id,
+                run.StartedAtUtc,
+                run.FinishedAtUtc,
+                run.Status,
+                ItemsCount = c == null ? 0 : c.ItemsCount
+            };
+
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -66,12 +68,24 @@ public sealed class RunsModel(VarPriceDbContext dbContext, ILogger<RunsModel> lo
                 EF.Functions.ILike(row.Status, statusPattern));
         }
 
-        query = ApplyOrdering(query, orderColumn, descending);
+        // query = ApplyOrdering(query, orderColumn, descending);
+
+        query = orderColumn switch
+        {
+            0 => descending ? query.OrderByDescending(x => x.Id) : query.OrderBy(x => x.Id),
+            1 => descending ? query.OrderByDescending(x => x.StartedAtUtc) : query.OrderBy(x => x.StartedAtUtc),
+            2 => descending ? query.OrderByDescending(x => x.Status) : query.OrderBy(x => x.Status),
+            3 => descending ? query.OrderByDescending(x => x.FinishedAtUtc) : query.OrderBy(x => x.FinishedAtUtc),
+            4 => descending ? query.OrderByDescending(x => x.ItemsCount) : query.OrderBy(x => x.ItemsCount),
+            _ => query.OrderByDescending(x => x.StartedAtUtc)
+        };
+
+        //query = query.OrderByDescending(x => x.StartedAtUtc);
 
         var recordsTotal = await dbContext.CrawlerRuns.AsNoTracking().CountAsync(ct);
         var recordsFiltered = await query.CountAsync(ct);
 
-        var page = await query
+        var pageQuery = query
             .Skip(start)
             .Take(length)
             .Select(row => new
@@ -81,9 +95,11 @@ public sealed class RunsModel(VarPriceDbContext dbContext, ILogger<RunsModel> lo
                 finishedAtUtc = row.FinishedAtUtc,
                 status = row.Status,
                 itemsCount = row.ItemsCount
-            })
-            .ToListAsync(ct);
+            });
 
+        log.LogInformation("Runs SQL query:\n{Sql}", pageQuery.ToQueryString());
+
+        var page = await pageQuery.ToListAsync(ct);
         try
         {
             return new JsonResult(new
@@ -91,7 +107,7 @@ public sealed class RunsModel(VarPriceDbContext dbContext, ILogger<RunsModel> lo
                 draw,
                 recordsTotal,
                 recordsFiltered,
-                data = page.ToList()
+                data = page
             });
         }catch (Exception ex)
         {
@@ -102,6 +118,8 @@ public sealed class RunsModel(VarPriceDbContext dbContext, ILogger<RunsModel> lo
 
     private static IQueryable<CrawlerRunRow> ApplyOrdering(IQueryable<CrawlerRunRow> query, int orderColumn, bool descending)
     {
+
+
         return orderColumn switch
         {
             0 => descending ? query.OrderByDescending(x => x.Id) : query.OrderBy(x => x.Id),

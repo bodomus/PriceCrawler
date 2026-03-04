@@ -29,6 +29,8 @@ public sealed class RunCrawlerUseCase(
 
         try
         {
+            //There is place where filtering urls
+            //TODO remove in prodaction
             var urls = await sitemapReader.GetProductUrlsAsync(opt.SitemapIndexUrl, ct);
             if (!string.IsNullOrWhiteSpace(opt.VegetablesUrlContains))
             {
@@ -53,6 +55,7 @@ public sealed class RunCrawlerUseCase(
                     var card = await extractor.ExtractAsync(url, ct);
                     if (card is null)
                     {
+                        //TODO add error code and log url
                         errors++;
                         continue;
                     }
@@ -60,6 +63,7 @@ public sealed class RunCrawlerUseCase(
                     var productKey = await priceSnapshotRepository.UpsertProductAsync(card.ProductId, card.Name, card.Url, card.PackValue, card.PackUnit, ct);
                     await priceSnapshotRepository.InsertSnapshotAsync(runId, productKey, card.City, card.Price, card.OldPrice, card.PromoFlag, card.InStock, ct);
                     processed++;
+                    logger.LogInformation($"Add url: {url} Name: {card.Name} ProductId:{card.ProductId} PackValue: {card.PackValue} PackUnit");
                 }
                 catch (Exception ex)
                 {
