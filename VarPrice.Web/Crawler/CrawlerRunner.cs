@@ -14,7 +14,6 @@ public interface ICrawlerRunner
 
 public sealed class CrawlerRunner(
     IOptions<CrawlerOptions> opt,
-    IOptions<UrlFilterOptions> urlFilterOptions,
     IProductUrlSource sitemap,
     IProductCardExtractor extractor,
     ICrawlerRepository repo,

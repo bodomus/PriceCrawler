@@ -22,7 +22,7 @@ create table if not exists price_snapshot (
     run_id        bigint not null references Crawler_run(run_id),
     captured_at   timestamptz not null default now(),
     product_key   bigint not null references product(product_key),
-    city          varchar(64) null,
+    city          varchar(128) null,
     price         numeric(18,2) not null,
     old_price     numeric(18,2) null,
     promo_flag    boolean not null default false,
