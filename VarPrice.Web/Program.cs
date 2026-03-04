@@ -12,7 +12,6 @@ using VarPrice.Web.Crawler;
 using VarPrice.Web.Logging;
 using VarPrice.Web.Storage;
 using VarPrice.Web.Storage.Db;
-using VarPrice.Web.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
