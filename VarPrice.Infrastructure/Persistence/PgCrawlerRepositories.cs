@@ -88,6 +88,7 @@ where ingestion_run_id=@ingestion_run_id;";
     }
 }
 
+
 public sealed class PgPriceSnapshotRepository(IPgConnectionFactory factory) : IPriceSnapshotRepository
 {
     public async Task<long> UpsertProductAsync(string productId, string name, string url, decimal? packValue, string? packUnit, CancellationToken ct)
@@ -120,6 +121,25 @@ returning product_key;";
 values(@run_id, @product_key, @city, @price, @old_price, @promo_flag, @in_stock);";
         AddParam(cmd, "@run_id", runId);
         AddParam(cmd, "@product_key", productKey);
+        AddParam(cmd, "@city", city);
+        AddParam(cmd, "@price", price);
+        AddParam(cmd, "@old_price", oldPrice);
+        AddParam(cmd, "@promo_flag", promoFlag);
+        AddParam(cmd, "@in_stock", inStock);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    public async Task InsertProductErrorAsync(long runId, long? productKey, string? city, decimal price, decimal? oldPrice,
+        bool promoFlag, bool? inStock, CancellationToken ct)
+    {
+        await using var cn = (DbConnection)factory.Create();
+        await cn.OpenAsync(ct);
+
+        await using var cmd = cn.CreateCommand();
+        cmd.CommandText = @"insert into price_snapshot(run_id, product_key, city, price, old_price, promo_flag, in_stock)
+values(@run_id, @product_key, @city, @price, @old_price, @promo_flag, @in_stock);";
+        AddParam(cmd, "@run_id", runId);
+        AddParam(cmd, "@product_key", productKey.Value);
         AddParam(cmd, "@city", city);
         AddParam(cmd, "@price", price);
         AddParam(cmd, "@old_price", oldPrice);
