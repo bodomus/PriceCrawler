@@ -98,5 +98,6 @@ public sealed class RunCrawlerUseCaseTests
     {
         public Task<long> UpsertProductAsync(string productId, string name, string url, decimal? packValue, string? packUnit, CancellationToken ct) => Task.FromResult(5L);
         public Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct) => Task.CompletedTask;
+        public Task InsertProductErrorAsync(long runId, long? productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct) => Task.CompletedTask;
     }
 }

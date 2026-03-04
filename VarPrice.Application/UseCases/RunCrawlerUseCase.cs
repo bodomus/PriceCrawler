@@ -30,7 +30,7 @@ public sealed class RunCrawlerUseCase(
         try
         {
             //There is place where filtering urls
-            //TODO remove in prodaction
+
             var urls = await sitemapReader.GetProductUrlsAsync(opt.SitemapIndexUrl, ct);
             if (!string.IsNullOrWhiteSpace(opt.VegetablesUrlContains))
             {
@@ -44,19 +44,21 @@ public sealed class RunCrawlerUseCase(
                     .Where(u => !excluded.Any(ex => u.Contains(ex, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
             }
-
+            //TODO remove in prodaction
             urls = urls.Take(Math.Max(1, opt.MaxProductsPerRun)).ToList();
-
+            int urls_count = urls.Count;
             foreach (var url in urls)
             {
                 ct.ThrowIfCancellationRequested();
                 try
                 {
+                    logger.LogInformation($"Current: {errors+processed} from {urls_count} url: {url}");
                     var card = await extractor.ExtractAsync(url, ct);
                     if (card is null)
                     {
                         //TODO add error code and log url
                         errors++;
+                        await priceSnapshotRepository.InsertProductErrorAsync(runId, null, "Unknown", 0, 0, false, false, ct);
                         continue;
                     }
 

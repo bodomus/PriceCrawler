@@ -72,6 +72,19 @@ public sealed class SchemaBootstrapper(IPgConnectionFactory factory, ILogger<Sch
             created_at timestamptz not null default now()
         );",
 
+        @"create table if not exists product_errors (
+            product_key bigserial primary key,
+            product_id varchar(64) null,
+            name varchar(512) not null,
+            url varchar(1024) not null,
+            pack_value numeric(18,6) null,
+            pack_unit varchar(16) null,
+            created_at timestamptz not null default now()
+        );",
+
+        @"create index if not exists ix_product_errors_product_id on product_errors(product_id);",
+        @"create index if not exists ix_product_errors_created_at on product_errors(created_at);",
+
         @"create table if not exists price_snapshot (
             snapshot_id bigserial primary key,
             run_id bigint not null references crawler_run(run_id),
