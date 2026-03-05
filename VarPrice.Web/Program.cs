@@ -5,6 +5,7 @@ using Serilog.Context;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.DependencyInjection;
+using VarPrice.Application.Grids;
 using VarPrice.Application.Models;
 using VarPrice.Infrastructure.Crawler;
 using VarPrice.Infrastructure.Persistence;
@@ -30,6 +31,8 @@ builder.Services.AddDbContext<VarPriceDbContext>(options =>
         ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
     options.UseNpgsql(connectionString);
 });
+builder.Services.AddScoped<IDataTableRequestParser, DataTableRequestParser>();
+builder.Services.AddScoped<IDataTableQueryService, DataTableQueryService>();
 
 builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
 builder.Services.AddUrlFilterOptionsFromFile(builder.Configuration, builder.Environment.ContentRootPath);

@@ -2,6 +2,9 @@
 **/bin/
 **/obj/
 **/publish/
+artifacts
+logs
+
 
 # User-specific files
 *.user
