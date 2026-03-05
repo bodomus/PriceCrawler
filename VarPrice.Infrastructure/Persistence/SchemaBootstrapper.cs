@@ -79,7 +79,8 @@ public sealed class SchemaBootstrapper(IPgConnectionFactory factory, ILogger<Sch
             url varchar(1024) not null,
             pack_value numeric(18,6) null,
             pack_unit varchar(16) null,
-            created_at timestamptz not null default now()
+            created_at timestamptz not null default now(),
+            error_string varchar(256) null
         );",
 
         @"create index if not exists ix_product_errors_product_id on product_errors(product_id);",

@@ -139,7 +139,7 @@ values(@run_id, @product_key, @city, @price, @old_price, @promo_flag, @in_stock)
         cmd.CommandText = @"insert into price_snapshot(run_id, product_key, city, price, old_price, promo_flag, in_stock)
 values(@run_id, @product_key, @city, @price, @old_price, @promo_flag, @in_stock);";
         AddParam(cmd, "@run_id", runId);
-        AddParam(cmd, "@product_key", productKey?? productKey.Value);
+        AddParam(cmd, "@product_key", (object?)productKey ?? DBNull.Value);
         AddParam(cmd, "@city", city);
         AddParam(cmd, "@price", price);
         AddParam(cmd, "@old_price", oldPrice);

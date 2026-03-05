@@ -46,13 +46,18 @@ public sealed class RunCrawlerUseCase(
             }
             //TODO remove in prodaction
             urls = urls.Take(Math.Max(1, opt.MaxProductsPerRun)).ToList();
-            int urls_count = urls.Count;
+            int urlsCount = urls.Count;
             foreach (var url in urls)
             {
+
+                // if(url.IndexOf("https://varus.ua/yabluko-slava-peremozhcyu-1-gatunok-vag") != 0)
+                // {
+                //     continue;
+                // }
                 ct.ThrowIfCancellationRequested();
                 try
                 {
-                    logger.LogInformation($"Current: {errors+processed} from {urls_count} url: {url}");
+                    logger.LogInformation($"Current: {errors+processed} from {urlsCount} url: {url}");
                     var card = await extractor.ExtractAsync(url, ct);
                     if (card is null)
                     {
@@ -63,9 +68,9 @@ public sealed class RunCrawlerUseCase(
                     }
 
                     var productKey = await priceSnapshotRepository.UpsertProductAsync(card.ProductId, card.Name, card.Url, card.PackValue, card.PackUnit, ct);
-                    await priceSnapshotRepository.InsertSnapshotAsync(runId, productKey, card.City, card.Price, card.OldPrice, card.PromoFlag, card.InStock, ct);
+                    await priceSnapshotRepository.InsertSnapshotAsync(runId, productKey, card.Name, card.Price, card.OldPrice, card.PromoFlag, card.InStock, ct);
                     processed++;
-                    logger.LogInformation($"Add url: {url} Name: {card.Name} ProductId:{card.ProductId} PackValue: {card.PackValue} PackUnit");
+                    logger.LogInformation($"{errors+processed}\\{urlsCount}|Add url: {url} Name: {card.Name} ProductId:{card.ProductId} PackValue: {card.PackValue} PackUnit");
                 }
                 catch (Exception ex)
                 {

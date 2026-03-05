@@ -66,6 +66,7 @@ builder.Services.AddScoped<ICrawlerRunner, CrawlerRunner>();
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
+app.UseStaticFiles();
 app.Use(async (context, next) =>
 {
     using (LogContext.PushProperty("CorrelationId", context.TraceIdentifier))

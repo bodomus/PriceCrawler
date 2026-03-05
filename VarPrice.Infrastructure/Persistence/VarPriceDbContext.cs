@@ -135,3 +135,22 @@ public sealed class ProductEntity
 
     public DateTime CreatedAtUtc { get; set; }
 }
+
+public sealed class ProductErrorsEntity
+{
+    public long ProductKey { get; set; }
+
+    public string ProductId { get; set; } = string.Empty;
+
+    public string Name { get; set; } = string.Empty;
+
+    public string Url { get; set; } = string.Empty;
+
+    public decimal? PackValue { get; set; }
+
+    public string? PackUnit { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; }
+
+    public string? Error { get; set; }
+}
