@@ -1,0 +1,24 @@
+body {
+    padding: 1.5rem 0 2rem;
+}
+
+.grid-card .card-header {
+    min-height: 3.5rem;
+}
+
+.context-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+table.dataTable tbody tr {
+    cursor: pointer;
+}
+
+#snapshotsTable tbody tr.snapshot-promo > * {
+    background-color: #e8f9e8 !important;
+}
+
+#snapshotsTable tbody tr.snapshot-promo-strong > * {
+    font-weight: 700;
+}

@@ -26,7 +26,7 @@ public sealed class VarusProductCardExtractor(IHttpClientFactory httpClientFacto
                    ?? doc.Title?.Trim();
 
         var text = doc.Body?.TextContent ?? "";
-        var productId = (ld?.Sku?.Trim()).NullIfEmpty() ?? TryMatchProductId(text);
+        string? productId = (ld?.Sku?.Trim()).NullIfEmpty() ?? TryMatchProductId(text);
 
         if (productId is null)
         {
@@ -333,7 +333,7 @@ file static class JsonLdProductParser
         => obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 }
 
-file sealed record SqppInfo(decimal? RegularPrice, decimal? SpecialPrice, DateOnly? SpecialFromDate, int? DiscountPercent, bool? Available);
+file sealed record SqppInfo(decimal? RegularPrice, decimal? SpecialPrice, DateOnly? SpecialFromDate, bool? Available);
 
 file static class SkuInlineJsonFallback
 {
@@ -366,7 +366,7 @@ file static class SkuInlineJsonFallback
         if (special is null && regular is null && discount is null && available is null && fromDate is null)
             return null;
 
-        return new SqppInfo(regular, special, fromDate, discount, available);
+        return new SqppInfo(regular, special, fromDate, available);
     }
 
     private static int FindSkuIndex(string html, string sku)

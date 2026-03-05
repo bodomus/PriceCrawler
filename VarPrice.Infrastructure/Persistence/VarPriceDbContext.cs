@@ -69,6 +69,39 @@ public sealed class VarPriceDbContext(DbContextOptions<VarPriceDbContext> option
 
             entity.HasIndex(x => x.ProductId).IsUnique();
         });
+
+        modelBuilder.Entity<ProductEntity>(entity =>
+        {
+            entity.ToTable("product");
+            entity.HasKey(x => x.ProductKey);
+
+            entity.Property(x => x.ProductKey).HasColumnName("product_key");
+            entity.Property(x => x.ProductId).HasColumnName("product_id").HasMaxLength(64);
+            entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(512);
+            entity.Property(x => x.Url).HasColumnName("url").HasMaxLength(1024);
+            entity.Property(x => x.PackValue).HasColumnName("pack_value").HasPrecision(18, 6);
+            entity.Property(x => x.PackUnit).HasColumnName("pack_unit").HasMaxLength(16);
+            entity.Property(x => x.CreatedAtUtc).HasColumnName("created_at");
+
+            entity.HasIndex(x => x.ProductId).IsUnique();
+        });
+
+        modelBuilder.Entity<ProductErrorsEntity>(entity =>
+        {
+            entity.ToTable("product");
+            entity.HasKey(x => x.ProductKey);
+
+            entity.Property(x => x.ProductKey).HasColumnName("product_key");
+            entity.Property(x => x.ProductId).HasColumnName("product_id").HasMaxLength(64);
+            entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(512);
+            entity.Property(x => x.Url).HasColumnName("url").HasMaxLength(1024);
+            entity.Property(x => x.PackValue).HasColumnName("pack_value").HasPrecision(18, 6);
+            entity.Property(x => x.PackUnit).HasColumnName("pack_unit").HasMaxLength(16);
+            entity.Property(x => x.CreatedAtUtc).HasColumnName("created_at");
+            entity.Property(x => x.Url).HasColumnName("error_string").HasMaxLength(256);
+
+            entity.HasIndex(x => x.ProductId).IsUnique();
+        });
     }
 }
 
@@ -134,4 +167,23 @@ public sealed class ProductEntity
     public string? PackUnit { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
+}
+
+public sealed class ProductErrorsEntity
+{
+    public long ProductKey { get; set; }
+
+    public string ProductId { get; set; } = string.Empty;
+
+    public string Name { get; set; } = string.Empty;
+
+    public string Url { get; set; } = string.Empty;
+
+    public decimal? PackValue { get; set; }
+
+    public string? PackUnit { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; }
+
+    public string Error { get; set; }
 }
