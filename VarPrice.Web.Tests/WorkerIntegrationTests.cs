@@ -1,9 +1,12 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
 using Npgsql;
+
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
 using VarPrice.Application.UseCases;
@@ -31,7 +34,8 @@ public sealed class WorkerIntegrationTests : IAsyncLifetime
         var connectionString = "Host=localhost;Port=55432;Database=varprice;Username=varprice;Password=varprice";
 
         var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Postgres"] = connectionString })
+            .AddInMemoryCollection(
+                new Dictionary<string, string?> { ["ConnectionStrings:Postgres"] = connectionString })
             .Build();
 
         var factory = new PgConnectionFactory(config);
@@ -39,10 +43,16 @@ public sealed class WorkerIntegrationTests : IAsyncLifetime
         await schema.EnsureSchemaAsync();
 
         var useCase = new RunCrawlerUseCase(
-            Options.Create(new CrawlerOptions { SitemapIndexUrl = "unused", VegetablesUrlContains = "ovochi", MaxProductsPerRun = 1 }),
+            Options.Create(new CrawlerOptions
+                { SitemapIndexUrl = "unused", VegetablesUrlContains = "ovochi", MaxProductsPerRun = 1 }),
             Options.Create(new UrlFilterOptions()),
             new StaticSource(["https://varus.ua/kyiv/ovochi/item"]),
-            new StaticExtractor(new ProductCard("sku1", "Name", "https://varus.ua/kyiv/ovochi/item", 12m, null, false, true, 1m, "кг", "kyiv")),
+            new StaticExtractor(ProductExtractResult.Success(
+                new ProductCard("sku1", "Name", "https://varus.ua/kyiv/ovochi/item", 12m, null, false, true, 1m, "kg",
+                    "kyiv"),
+                200,
+                10,
+                1.0d)),
             new PgCrawlerRunRepository(factory),
             new PgIngestionRunRepository(factory),
             new PgPriceSnapshotRepository(factory),
@@ -57,7 +67,8 @@ public sealed class WorkerIntegrationTests : IAsyncLifetime
         Assert.True(await ScalarAsync(conn, "select count(*) from crawler_run") >= 1);
         Assert.True(await ScalarAsync(conn, "select count(*) from ingestion_run") >= 1);
         Assert.True(await ScalarAsync(conn, "select count(*) from price_snapshot") >= 1);
-        Assert.True(await ScalarAsync(conn, "select count(*) from ingestion_run where crawler_run_id is not null") >= 1);
+        Assert.True(await ScalarAsync(conn, "select count(*) from ingestion_run where crawler_run_id is not null") >=
+                    1);
     }
 
     private static async Task<long> ScalarAsync(NpgsqlConnection conn, string sql)
@@ -69,11 +80,12 @@ public sealed class WorkerIntegrationTests : IAsyncLifetime
 
     private sealed class StaticSource(IReadOnlyList<string> urls) : IProductUrlSource
     {
-        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) => Task.FromResult(urls);
+        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) =>
+            Task.FromResult(urls);
     }
 
-    private sealed class StaticExtractor(ProductCard card) : IProductCardExtractor
+    private sealed class StaticExtractor(ProductExtractResult result) : IProductCardExtractor
     {
-        public Task<ProductCard?> ExtractAsync(string url, CancellationToken ct) => Task.FromResult<ProductCard?>(card);
+        public Task<ProductExtractResult> ExtractAsync(string url, CancellationToken ct) => Task.FromResult(result);
     }
 }

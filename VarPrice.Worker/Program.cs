@@ -1,17 +1,19 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
 using Serilog;
+
 using VarPrice.Application.DependencyInjection;
 using VarPrice.Application.UseCases;
 using VarPrice.Infrastructure.DependencyInjection;
 using VarPrice.Infrastructure.Persistence;
 
 var builder = Host.CreateApplicationBuilder(args);
-var projectRootPath = ResolveProjectRootPath(builder.Environment.ContentRootPath);
-var logsDirectoryPath = Path.Combine(projectRootPath, "Logs");
+var executableDirectoryPath = AppContext.BaseDirectory;
+var logsDirectoryPath = Path.Combine(executableDirectoryPath, "logs");
 Directory.CreateDirectory(logsDirectoryPath);
-var logFilePath = Path.Combine(logsDirectoryPath, "varprice-worker-.log");
+var logFilePath = Path.Combine(logsDirectoryPath, "varprice-worker.log");
 
 builder.Services.AddVarPriceApplication(builder.Configuration);
 builder.Services.AddVarPriceInfrastructure(builder.Configuration);
@@ -23,10 +25,10 @@ builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfigurati
     .Enrich.FromLogContext()
     .WriteTo.File(
         logFilePath,
-        rollingInterval: RollingInterval.Day,
-        fileSizeLimitBytes: 10 * 1024 * 1024,
+        rollingInterval: RollingInterval.Infinite,
+        fileSizeLimitBytes: 1 * 1024 * 1024,
         rollOnFileSizeLimit: true,
-        retainedFileCountLimit: 1,
+        retainedFileCountLimit: 10,
         shared: true));
 
 using var host = builder.Build();
@@ -65,15 +67,3 @@ if (once)
 }
 
 return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
-
-static string ResolveProjectRootPath(string contentRootPath)
-{
-    var currentDirectory = new DirectoryInfo(contentRootPath);
-
-    if (string.Equals(currentDirectory.Name, "VarPrice.Worker", StringComparison.OrdinalIgnoreCase))
-    {
-        return currentDirectory.Parent?.FullName ?? contentRootPath;
-    }
-
-    return contentRootPath;
-}

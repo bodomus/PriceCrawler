@@ -7,6 +7,16 @@ create table if not exists Crawler_run (
     note          varchar(255) null
 );
 
+create table if not exists ingestion_run (
+    ingestion_run_id bigserial primary key,
+    crawler_run_id   bigint not null references crawler_run(run_id),
+    started_at       timestamptz not null default now(),
+    finished_at      timestamptz null,
+    status           varchar(32) not null,
+    error_code       varchar(128) null,
+    error_message    varchar(512) null
+);
+
 create table if not exists product (
     product_key   bigserial primary key,
     product_id    varchar(64) not null unique,
@@ -15,6 +25,21 @@ create table if not exists product (
     pack_value    numeric(18,6) null,
     pack_unit     varchar(16) null,
     created_at    timestamptz not null default now()
+);
+
+create table if not exists product_errors (
+    product_key   bigserial primary key,
+    run_id        bigint null references crawler_run(run_id),
+    product_id    varchar(64) null,
+    name          varchar(512) not null,
+    url           varchar(1024) not null,
+    pack_value    numeric(18,6) null,
+    pack_unit     varchar(16) null,
+    created_at    timestamptz not null default now(),
+    error_string  varchar(256) null,
+    error_code    varchar(64) null,
+    http_status   integer null,
+    error_message varchar(512) null
 );
 
 create table if not exists price_snapshot (
@@ -31,3 +56,7 @@ create table if not exists price_snapshot (
 
 create index if not exists ix_price_snapshot_run on price_snapshot(run_id);
 create index if not exists ix_price_snapshot_product_time on price_snapshot(product_key, captured_at);
+create index if not exists ix_product_errors_product_id on product_errors(product_id);
+create index if not exists ix_product_errors_run_id on product_errors(run_id);
+create index if not exists ix_product_errors_error_code on product_errors(error_code);
+create index if not exists ix_product_errors_created_at on product_errors(created_at);

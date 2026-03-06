@@ -10,6 +10,7 @@ services:
       - "55432:5432"   # <-- важно: другой host-порт
     volumes:
       - var_pg_data:/var/lib/postgresql/data
+      - "D:/Backups/Varus/Postgres:/backups"
 
   web:
     build:

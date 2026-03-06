@@ -1,4 +1,6 @@
 using System.Data.Common;
+
+using VarPrice.Application.Models;
 using VarPrice.Domain.Enums;
 using VarPrice.Domain.Interfaces;
 using VarPrice.Domain.ValueObjects;
@@ -57,7 +59,8 @@ public sealed class PgIngestionRunRepository(IPgConnectionFactory factory) : IIn
         await cn.OpenAsync(ct);
 
         await using var cmd = cn.CreateCommand();
-        cmd.CommandText = "insert into ingestion_run(crawler_run_id, status) values (@crawler_run_id, @status) returning ingestion_run_id;";
+        cmd.CommandText =
+            "insert into ingestion_run(crawler_run_id, status) values (@crawler_run_id, @status) returning ingestion_run_id;";
         AddParam(cmd, "@crawler_run_id", crawlerRunId);
         AddParam(cmd, "@status", "running");
         var scalar = await cmd.ExecuteScalarAsync(ct);
@@ -70,7 +73,8 @@ public sealed class PgIngestionRunRepository(IPgConnectionFactory factory) : IIn
         await cn.OpenAsync(ct);
 
         await using var cmd = cn.CreateCommand();
-        cmd.CommandText = @"update ingestion_run set status=@status, error_code=@error_code, error_message=@error_message, finished_at=now()
+        cmd.CommandText =
+            @"update ingestion_run set status=@status, error_code=@error_code, error_message=@error_message, finished_at=now()
 where ingestion_run_id=@ingestion_run_id;";
         AddParam(cmd, "@status", status == RunStatus.Ok ? "ok" : "failed");
         AddParam(cmd, "@error_code", errorInfo?.Code);
@@ -88,10 +92,10 @@ where ingestion_run_id=@ingestion_run_id;";
     }
 }
 
-
 public sealed class PgPriceSnapshotRepository(IPgConnectionFactory factory) : IPriceSnapshotRepository
 {
-    public async Task<long> UpsertProductAsync(string productId, string name, string url, decimal? packValue, string? packUnit, CancellationToken ct)
+    public async Task<long> UpsertProductAsync(string productId, string name, string url, decimal? packValue,
+        string? packUnit, CancellationToken ct)
     {
         await using var cn = (DbConnection)factory.Create();
         await cn.OpenAsync(ct);
@@ -111,13 +115,15 @@ returning product_key;";
         return Convert.ToInt64(scalar);
     }
 
-    public async Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct)
+    public async Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice,
+        bool promoFlag, bool? inStock, CancellationToken ct)
     {
         await using var cn = (DbConnection)factory.Create();
         await cn.OpenAsync(ct);
 
         await using var cmd = cn.CreateCommand();
-        cmd.CommandText = @"insert into price_snapshot(run_id, product_key, city, price, old_price, promo_flag, in_stock)
+        cmd.CommandText =
+            @"insert into price_snapshot(run_id, product_key, city, price, old_price, promo_flag, in_stock)
 values(@run_id, @product_key, @city, @price, @old_price, @promo_flag, @in_stock);";
         AddParam(cmd, "@run_id", runId);
         AddParam(cmd, "@product_key", productKey);
@@ -129,23 +135,56 @@ values(@run_id, @product_key, @city, @price, @old_price, @promo_flag, @in_stock)
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
-    public async Task InsertProductErrorAsync(long runId, long? productKey, string? city, decimal price, decimal? oldPrice,
+    public async Task InsertProductErrorAsync(long runId, long? productKey, string? city, decimal price,
+        decimal? oldPrice,
         bool promoFlag, bool? inStock, CancellationToken ct)
+        => await InsertProductErrorAsync(
+            runId,
+            city ?? string.Empty,
+            CrawlerErrorCodes.Unknown,
+            null,
+            "Legacy product error overload invoked",
+            ct);
+
+    public async Task InsertProductErrorAsync(long runId, string url, string errorCode, int? httpStatus,
+        string? message, CancellationToken ct)
     {
         await using var cn = (DbConnection)factory.Create();
         await cn.OpenAsync(ct);
 
         await using var cmd = cn.CreateCommand();
-        cmd.CommandText = @"insert into price_snapshot(run_id, product_key, city, price, old_price, promo_flag, in_stock)
-values(@run_id, @product_key, @city, @price, @old_price, @promo_flag, @in_stock);";
+        cmd.CommandText =
+            @"insert into product_errors(run_id, product_id, name, url, pack_value, pack_unit, error_string, error_code, http_status, error_message)
+values(@run_id, @product_id, @name, @url, @pack_value, @pack_unit, @error_string, @error_code, @http_status, @error_message);";
+        var normalizedCode = string.IsNullOrWhiteSpace(errorCode)
+            ? CrawlerErrorCodes.Unknown
+            : errorCode.Trim().ToLowerInvariant();
+        var normalizedUrl = Truncate(url, 1024);
+        var normalizedMessage = Truncate(message, 512);
+        var shortError = Truncate($"{normalizedCode}: {normalizedMessage}", 256);
+
         AddParam(cmd, "@run_id", runId);
-        AddParam(cmd, "@product_key", (object?)productKey ?? DBNull.Value);
-        AddParam(cmd, "@city", city);
-        AddParam(cmd, "@price", price);
-        AddParam(cmd, "@old_price", oldPrice);
-        AddParam(cmd, "@promo_flag", promoFlag);
-        AddParam(cmd, "@in_stock", inStock);
+        AddParam(cmd, "@product_id", DBNull.Value);
+        AddParam(cmd, "@name", Truncate("crawler_error", 512));
+        AddParam(cmd, "@url", normalizedUrl);
+        AddParam(cmd, "@pack_value", DBNull.Value);
+        AddParam(cmd, "@pack_unit", DBNull.Value);
+        AddParam(cmd, "@error_string", shortError);
+        AddParam(cmd, "@error_code", Truncate(normalizedCode, 64));
+        AddParam(cmd, "@http_status", httpStatus);
+        AddParam(cmd, "@error_message", normalizedMessage);
         await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    private static string Truncate(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 
     private static void AddParam(DbCommand cmd, string name, object? value)

@@ -62,10 +62,17 @@ public sealed class CrawlerRunner(
                 ProductCard? card;
                 try
                 {
-                    card = await extractor.ExtractAsync(url, ct);
-                    if (card is null)
+                    var extractResult = await extractor.ExtractAsync(url, ct);
+                    card = extractResult.Card;
+                    if (!extractResult.IsSuccess || card is null)
                     {
                         errors++;
+                        log.LogWarning(
+                            "Failed to extract product card from {Url}. error_code={ErrorCode} http_status={HttpStatus} latency_ms={LatencyMs}",
+                            url,
+                            extractResult.ErrorCode ?? CrawlerErrorCodes.Unknown,
+                            extractResult.HttpStatus,
+                            extractResult.LatencyMs);
                         continue;
                     }
                 }
@@ -120,7 +127,8 @@ public sealed class CrawlerRunner(
         {
             log.LogError(ex, "Unhandled crawler error for run {RunId}", runId);
             await TryFinishFailedRunAsync(runId, ex.Message, ct);
-            return DbResult<CrawlerRunResult>.Success(new CrawlerRunResult(runId, "failed", processed, errors + 1, ex.Message));
+            return DbResult<CrawlerRunResult>.Success(new CrawlerRunResult(runId, "failed", processed, errors + 1,
+                ex.Message));
         }
     }
 
