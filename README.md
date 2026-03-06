@@ -138,7 +138,8 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 - Релизный тег: `vMAJOR.MINOR.PATCH` (пример: `v1.2.3`).
 - На самом теге сборка получает `Version=1.2.3`.
-- На следующих коммитах после тега в `main/master` версия автоинкрементируется и получает prerelease-суффикс `-alpha.<height>`.
+- На следующих коммитах после тега в `main/master` версия автоинкрементируется и получает prerelease-суффикс
+  `-alpha.<height>`.
 - `AssemblyInformationalVersion` включает короткий sha в формате `+g<sha>`.
 
 Как выпустить релиз:
@@ -162,3 +163,17 @@ dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersi
 ```bash
 dotnet test VarPrice.sln
 ```
+
+
+## Как делать backup
+docker exec var_postgres pg_dump -U var -d varprice -F c -f /backups/varprice.backup
+
+## Если нужен SQL-дамп
+docker exec var_postgres pg_dump -U var -d varprice -f /backups/varprice.sql
+
+## Как восстановить
+Из backup-формата:
+docker exec -i var_postgres pg_restore -U var -d varprice --clean --if-exists /backups/varprice.backup
+
+Из .sql:
+docker exec -i var_postgres psql -U var -d varprice -f /backups/varprice.sql
