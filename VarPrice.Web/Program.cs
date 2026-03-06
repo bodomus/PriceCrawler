@@ -28,7 +28,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<VarPriceDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Postgres")
-        ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
+                           ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
     options.UseNpgsql(connectionString);
 });
 builder.Services.AddScoped<IDataTableRequestParser, DataTableRequestParser>();
@@ -36,15 +36,6 @@ builder.Services.AddScoped<IDataTableQueryService, DataTableQueryService>();
 
 builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
 builder.Services.AddUrlFilterOptionsFromFile(builder.Configuration, builder.Environment.ContentRootPath);
-
-builder.Services.AddHttpClient("varus", c =>
-{
-    c.Timeout = TimeSpan.FromSeconds(30);
-    c.DefaultRequestHeaders.UserAgent.ParseAdd("VarPriceBot/0.1 (+contact: you)");
-});
-builder.Services.AddHttpContextAccessor();
-
-builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
 
 builder.Services.AddHttpClient("varus", c =>
 {
@@ -60,6 +51,7 @@ builder.Services.AddScoped<SchemaBootstrapper>();
 builder.Services.AddScoped<ICrawlerRepository, PgCrawlerRepository>();
 
 builder.Services.AddScoped<IProductUrlSource, SitemapReader>();
+builder.Services.AddSingleton<VarusRequestCoordinator>();
 builder.Services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
 builder.Services.AddScoped<ICrawlerRunner, CrawlerRunner>();
 

@@ -1,4 +1,5 @@
 using System.Data;
+
 using Microsoft.Extensions.Logging;
 
 namespace VarPrice.Infrastructure.Persistence;
@@ -74,16 +75,26 @@ public sealed class SchemaBootstrapper(IPgConnectionFactory factory, ILogger<Sch
 
         @"create table if not exists product_errors (
             product_key bigserial primary key,
+            run_id bigint null references crawler_run(run_id),
             product_id varchar(64) null,
             name varchar(512) not null,
             url varchar(1024) not null,
             pack_value numeric(18,6) null,
             pack_unit varchar(16) null,
             created_at timestamptz not null default now(),
-            error_string varchar(256) null
+            error_string varchar(256) null,
+            error_code varchar(64) null,
+            http_status integer null,
+            error_message varchar(512) null
         );",
+        @"alter table if exists product_errors add column if not exists run_id bigint null references crawler_run(run_id);",
+        @"alter table if exists product_errors add column if not exists error_code varchar(64) null;",
+        @"alter table if exists product_errors add column if not exists http_status integer null;",
+        @"alter table if exists product_errors add column if not exists error_message varchar(512) null;",
 
         @"create index if not exists ix_product_errors_product_id on product_errors(product_id);",
+        @"create index if not exists ix_product_errors_run_id on product_errors(run_id);",
+        @"create index if not exists ix_product_errors_error_code on product_errors(error_code);",
         @"create index if not exists ix_product_errors_created_at on product_errors(created_at);",
 
         @"create table if not exists price_snapshot (

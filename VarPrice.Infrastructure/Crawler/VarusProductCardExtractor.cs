@@ -1,20 +1,296 @@
-using AngleSharp;
-using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+
+using AngleSharp;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
 
 namespace VarPrice.Infrastructure.Crawler;
 
-public sealed class VarusProductCardExtractor(IHttpClientFactory httpClientFactory, ILogger<VarusProductCardExtractor> log) : IProductCardExtractor
+public sealed class VarusProductCardExtractor(
+    IHttpClientFactory httpClientFactory,
+    VarusRequestCoordinator requestCoordinator,
+    IOptions<CrawlerOptions> options,
+    ILogger<VarusProductCardExtractor> log) : IProductCardExtractor
 {
-    public async Task<ProductCard?> ExtractAsync(string url, CancellationToken ct)
-    {
-        var http = httpClientFactory.CreateClient("varus");
-        var html = await http.GetStringAsync(url, ct);
+    private readonly CrawlerOptions _options = options.Value;
 
+    public async Task<ProductExtractResult> ExtractAsync(string url, CancellationToken ct)
+    {
+        var maxAttempts = Math.Max(1, _options.RetryCount + 1);
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var result = await TryExtractOnceAsync(url, ct);
+            var errorCode = result.ErrorCode ?? CrawlerErrorCodes.Unknown;
+
+            if (result.IsTransient)
+            {
+                requestCoordinator.MarkTemporaryFailure();
+            }
+            else
+            {
+                requestCoordinator.ResetTemporaryFailureStreak();
+            }
+
+            if (result.IsSuccess)
+            {
+                return result;
+            }
+
+            var canRetry = result.IsTransient && attempt < maxAttempts;
+            if (!canRetry)
+            {
+                return result with { ErrorCode = errorCode };
+            }
+
+            var delay = BuildRetryDelay(attempt, errorCode);
+            log.LogWarning(
+                "Transient extractor error for {Url}. attempt={Attempt}/{MaxAttempts} error_code={ErrorCode} http_status={HttpStatus} retry_delay_ms={RetryDelayMs}",
+                url,
+                attempt,
+                maxAttempts,
+                errorCode,
+                result.HttpStatus,
+                (int)delay.TotalMilliseconds);
+            await Task.Delay(delay, ct);
+        }
+
+        return ProductExtractResult.Fail(
+            CrawlerErrorCodes.Unknown,
+            null,
+            "Retry loop exited unexpectedly",
+            0,
+            requestCoordinator.GetApproximateRps(),
+            false);
+    }
+
+    private async Task<ProductExtractResult> TryExtractOnceAsync(string url, CancellationToken ct)
+    {
+        await requestCoordinator.AcquireRequestSlotAsync(ct);
+
+        var http = httpClientFactory.CreateClient("varus");
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, _options.RequestTimeoutSeconds)));
+
+        var sw = Stopwatch.StartNew();
+        int? httpStatus = null;
+
+        try
+        {
+            using var response =
+                await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
+            httpStatus = (int)response.StatusCode;
+            var rps = requestCoordinator.GetApproximateRps();
+
+            if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
+            {
+                sw.Stop();
+                log.LogInformation(
+                    "Extractor result {Url} error_code={ErrorCode} http_status={HttpStatus} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                    url,
+                    CrawlerErrorCodes.NotFound,
+                    httpStatus,
+                    sw.ElapsedMilliseconds,
+                    rps);
+                return ProductExtractResult.Fail(
+                    CrawlerErrorCodes.NotFound,
+                    httpStatus,
+                    $"HTTP {httpStatus}",
+                    sw.ElapsedMilliseconds,
+                    rps,
+                    false);
+            }
+
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                sw.Stop();
+                log.LogWarning(
+                    "Extractor result {Url} error_code={ErrorCode} http_status={HttpStatus} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                    url,
+                    CrawlerErrorCodes.TooManyRequests,
+                    httpStatus,
+                    sw.ElapsedMilliseconds,
+                    rps);
+                return ProductExtractResult.Fail(
+                    CrawlerErrorCodes.TooManyRequests,
+                    httpStatus,
+                    $"HTTP {httpStatus}",
+                    sw.ElapsedMilliseconds,
+                    rps,
+                    true);
+            }
+
+            if ((int)response.StatusCode >= 500)
+            {
+                sw.Stop();
+                log.LogWarning(
+                    "Extractor result {Url} error_code={ErrorCode} http_status={HttpStatus} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                    url,
+                    CrawlerErrorCodes.Http5xx,
+                    httpStatus,
+                    sw.ElapsedMilliseconds,
+                    rps);
+                return ProductExtractResult.Fail(
+                    CrawlerErrorCodes.Http5xx,
+                    httpStatus,
+                    $"HTTP {httpStatus}",
+                    sw.ElapsedMilliseconds,
+                    rps,
+                    true);
+            }
+
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                sw.Stop();
+                log.LogWarning(
+                    "Extractor result {Url} error_code={ErrorCode} http_status={HttpStatus} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                    url,
+                    CrawlerErrorCodes.Unknown,
+                    httpStatus,
+                    sw.ElapsedMilliseconds,
+                    rps);
+                return ProductExtractResult.Fail(
+                    CrawlerErrorCodes.Unknown,
+                    httpStatus,
+                    $"HTTP {httpStatus}",
+                    sw.ElapsedMilliseconds,
+                    rps,
+                    false);
+            }
+
+            var html = await response.Content.ReadAsStringAsync(timeoutCts.Token);
+            var parsed = await TryParseCardAsync(url, html, timeoutCts.Token);
+            sw.Stop();
+
+            if (parsed is null)
+            {
+                log.LogWarning(
+                    "Extractor result {Url} error_code={ErrorCode} http_status={HttpStatus} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                    url,
+                    CrawlerErrorCodes.ParseFailed,
+                    httpStatus,
+                    sw.ElapsedMilliseconds,
+                    rps);
+                return ProductExtractResult.Fail(
+                    CrawlerErrorCodes.ParseFailed,
+                    httpStatus,
+                    "Could not parse product_id or price from HTML",
+                    sw.ElapsedMilliseconds,
+                    rps,
+                    false);
+            }
+
+            log.LogInformation(
+                "Extractor result {Url} status=ok http_status={HttpStatus} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                url,
+                httpStatus,
+                sw.ElapsedMilliseconds,
+                rps);
+            return ProductExtractResult.Success(parsed, httpStatus, sw.ElapsedMilliseconds, rps);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
+        {
+            sw.Stop();
+            var rps = requestCoordinator.GetApproximateRps();
+            log.LogWarning(
+                "Extractor timeout for {Url} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                url,
+                sw.ElapsedMilliseconds,
+                rps);
+            return ProductExtractResult.Fail(
+                CrawlerErrorCodes.Timeout,
+                httpStatus,
+                $"Request timed out after {_options.RequestTimeoutSeconds}s",
+                sw.ElapsedMilliseconds,
+                rps,
+                true);
+        }
+        catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+        {
+            sw.Stop();
+            var rps = requestCoordinator.GetApproximateRps();
+            log.LogWarning(
+                "Extractor timeout (task canceled) for {Url} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                url,
+                sw.ElapsedMilliseconds,
+                rps);
+            return ProductExtractResult.Fail(
+                CrawlerErrorCodes.Timeout,
+                httpStatus,
+                $"Request timed out after {_options.RequestTimeoutSeconds}s",
+                sw.ElapsedMilliseconds,
+                rps,
+                true);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            sw.Stop();
+            var rps = requestCoordinator.GetApproximateRps();
+            return ProductExtractResult.Fail(
+                CrawlerErrorCodes.TooManyRequests,
+                (int?)HttpStatusCode.TooManyRequests,
+                ex.Message,
+                sw.ElapsedMilliseconds,
+                rps,
+                true);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is not null && (int)ex.StatusCode >= 500)
+        {
+            sw.Stop();
+            var rps = requestCoordinator.GetApproximateRps();
+            return ProductExtractResult.Fail(
+                CrawlerErrorCodes.Http5xx,
+                (int?)ex.StatusCode,
+                ex.Message,
+                sw.ElapsedMilliseconds,
+                rps,
+                true);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            var rps = requestCoordinator.GetApproximateRps();
+
+            if (!ct.IsCancellationRequested && IsTimeoutLike(ex))
+            {
+                log.LogWarning(
+                    ex,
+                    "Extractor timeout-like error for {Url} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                    url,
+                    sw.ElapsedMilliseconds,
+                    rps);
+                return ProductExtractResult.Fail(
+                    CrawlerErrorCodes.Timeout,
+                    httpStatus,
+                    $"Request timed out after {_options.RequestTimeoutSeconds}s",
+                    sw.ElapsedMilliseconds,
+                    rps,
+                    true);
+            }
+
+            log.LogWarning(ex, "Extractor unknown error for {Url}", url);
+            return ProductExtractResult.Fail(
+                CrawlerErrorCodes.Unknown,
+                httpStatus,
+                ex.Message,
+                sw.ElapsedMilliseconds,
+                rps,
+                false);
+        }
+    }
+
+    private async Task<ProductCard?> TryParseCardAsync(string url, string html, CancellationToken ct)
+    {
         var ctx = BrowsingContext.New(Configuration.Default);
         var doc = await ctx.OpenAsync(req => req.Content(html), ct);
 
@@ -25,7 +301,7 @@ public sealed class VarusProductCardExtractor(IHttpClientFactory httpClientFacto
                    ?? doc.QuerySelector("h1")?.TextContent?.Trim()
                    ?? doc.Title?.Trim();
 
-        var text = doc.Body?.TextContent ?? "";
+        var text = doc.Body?.TextContent ?? string.Empty;
         string? productId = (ld?.Sku?.Trim()).NullIfEmpty() ?? TryMatchProductId(text);
 
         if (productId is null)
@@ -70,11 +346,44 @@ public sealed class VarusProductCardExtractor(IHttpClientFactory httpClientFacto
             oldPrice ??= legacy.oldPrice;
         }
 
+        if (price <= 0m)
+        {
+            log.LogDebug("No valid price found for {Url}", url);
+            return null;
+        }
+
         var promoFlag = oldPrice.HasValue && oldPrice.Value > price;
         var city = CityParser.TryParseFromUrl(url);
 
-        return new ProductCard(productId, name ?? productId, url, price, oldPrice, promoFlag, null, packValue, packUnit, city);
+        return new ProductCard(productId, name ?? productId, url, price, oldPrice, promoFlag, null, packValue, packUnit,
+            city);
     }
+
+    private TimeSpan BuildRetryDelay(int attempt, string errorCode)
+    {
+        var exponent = Math.Max(0, attempt - 1);
+        var baseDelayMs = Math.Max(1, _options.RetryBaseDelayMs);
+        var backoffMultiplier = Math.Pow(2, exponent);
+        var delayMs = baseDelayMs * backoffMultiplier;
+
+        if (string.Equals(errorCode, CrawlerErrorCodes.TooManyRequests, StringComparison.OrdinalIgnoreCase))
+        {
+            delayMs *= 2;
+        }
+
+        if (_options.JitterDelayMsMax > 0)
+        {
+            var jitterMin = Math.Max(0, _options.JitterDelayMsMin);
+            var jitterMax = Math.Max(jitterMin, _options.JitterDelayMsMax);
+            delayMs += Random.Shared.Next(jitterMin, jitterMax + 1);
+        }
+
+        return TimeSpan.FromMilliseconds(Math.Min(delayMs, 30_000d));
+    }
+
+    private static bool IsTimeoutLike(Exception ex)
+        => ex is TimeoutException or OperationCanceledException or TaskCanceledException
+           || (ex.InnerException is not null && IsTimeoutLike(ex.InnerException));
 
     private static string? TryMatchProductId(string text)
     {
@@ -215,6 +524,7 @@ file static class JsonLdProductParser
             var product = TryParseProductFromJson(scriptJson);
             if (product is not null) return product;
         }
+
         return null;
     }
 
@@ -246,6 +556,7 @@ file static class JsonLdProductParser
                     var p = TryParseProductObject(el);
                     if (p is not null) return p;
                 }
+
                 return null;
             }
 
@@ -387,7 +698,9 @@ file static class SkuInlineJsonFallback
         var m = rx.Match(text);
         if (!m.Success) return null;
 
-        return decimal.TryParse(m.Groups["v"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : null;
+        return decimal.TryParse(m.Groups["v"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)
+            ? v
+            : null;
     }
 
     private static int? TryMatchInt(string text, string key)
@@ -397,7 +710,9 @@ file static class SkuInlineJsonFallback
         var m = rx.Match(text);
         if (!m.Success) return null;
 
-        return int.TryParse(m.Groups["v"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null;
+        return int.TryParse(m.Groups["v"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)
+            ? v
+            : null;
     }
 
     private static bool? TryMatchBool(string text, string key)
@@ -417,7 +732,9 @@ file static class SkuInlineJsonFallback
         var m = rx.Match(text);
         if (!m.Success) return null;
 
-        return DateOnly.TryParseExact(m.Groups["v"].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
+        return DateOnly.TryParseExact(m.Groups["v"].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+            DateTimeStyles.None, out var d)
+            ? d
+            : null;
     }
 }
-

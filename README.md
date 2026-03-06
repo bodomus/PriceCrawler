@@ -96,6 +96,15 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Crawler:SitemapIndexUrl`
 - `Crawler:VegetablesUrlContains`
 - `Crawler:MaxProductsPerRun`
+- `Crawler:MaxUrls`
+- `Crawler:MaxConcurrency` (default `4`)
+- `Crawler:RequestsPerSecond` (default `2.0`)
+- `Crawler:RequestTimeoutSeconds` (default `15`)
+- `Crawler:JitterDelayMsMin` / `Crawler:JitterDelayMsMax` (default `50` / `250`)
+- `Crawler:RetryCount` (default `2`)
+- `Crawler:RetryBaseDelayMs` (default `500`)
+- `Crawler:BreakerFailureThreshold` (default `20`)
+- `Crawler:BreakerOpenSeconds` (default `60`)
 
 Переопределение через переменные окружения:
 
@@ -103,6 +112,25 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Crawler__SitemapIndexUrl`
 - `Crawler__VegetablesUrlContains`
 - `Crawler__MaxProductsPerRun`
+- `Crawler__MaxUrls`
+- `Crawler__MaxConcurrency`
+- `Crawler__RequestsPerSecond`
+- `Crawler__RequestTimeoutSeconds`
+- `Crawler__JitterDelayMsMin`
+- `Crawler__JitterDelayMsMax`
+- `Crawler__RetryCount`
+- `Crawler__RetryBaseDelayMs`
+- `Crawler__BreakerFailureThreshold`
+- `Crawler__BreakerOpenSeconds`
+
+Коды ошибок crawler, сохраняемые в `product_errors.error_code`:
+
+- `not_found`
+- `too_many_requests`
+- `timeout`
+- `http_5xx`
+- `parse_failed`
+- `unknown`
 
 ## Версионирование (Git tags + Nerdbank.GitVersioning)
 
