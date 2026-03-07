@@ -7,5 +7,6 @@ public interface IDataTableQueryService
         DataTableRequest request,
         Func<TEntity, TDto> selector,
         Func<IQueryable<TEntity>, string?, IQueryable<TEntity>> filter,
-        Func<IQueryable<TEntity>, int, bool, IQueryable<TEntity>> order);
+        Func<IQueryable<TEntity>, int, bool, IQueryable<TEntity>> order,
+        CancellationToken ct = default);
 }

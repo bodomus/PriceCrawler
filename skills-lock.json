@@ -5,6 +5,16 @@
       "source": "jeffallan/claude-skills",
       "sourceType": "github",
       "computedHash": "a3b7c791f91183abc5def5aed3e4d7879016cf401366526a822f0690fd5dfc8b"
+    },
+    "frontend-design": {
+      "source": "am-will/codex-skills",
+      "sourceType": "github",
+      "computedHash": "d3334661de9ed476cdd2d4ebef8da6a1f0f0432915b2de035f5f2e989216dd94"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "d8e7d3afe37dcc8a97b99ffb5afdb4d0919ae0092ea8b68f44eb201f035e33ac"
     }
   }
 }

@@ -6,6 +6,7 @@ using Serilog.Context;
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.DependencyInjection;
 using VarPrice.Application.Grids;
+using VarPrice.Application.Grids.Runs;
 using VarPrice.Application.Models;
 using VarPrice.Infrastructure.Crawler;
 using VarPrice.Infrastructure.Persistence;
@@ -13,6 +14,8 @@ using VarPrice.Web.Crawler;
 using VarPrice.Web.Logging;
 using VarPrice.Web.Storage;
 using VarPrice.Web.Storage.Db;
+
+using InfrastructureRuns = VarPrice.Infrastructure.Queries.Runs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +26,7 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
     .Enrich.WithMachineName()
     .Enrich.WithEnvironmentName());
 
+builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<VarPriceDbContext>(options =>
@@ -33,6 +37,12 @@ builder.Services.AddDbContext<VarPriceDbContext>(options =>
 });
 builder.Services.AddScoped<IDataTableRequestParser, DataTableRequestParser>();
 builder.Services.AddScoped<IDataTableQueryService, DataTableQueryService>();
+builder.Services.AddScoped<IGetRunsGridQueryService, GetRunsGridQueryService>();
+builder.Services.AddScoped<IGetSnapshotsGridQueryService, GetSnapshotsGridQueryService>();
+builder.Services.AddScoped<IGetProductsGridQueryService, GetProductsGridQueryService>();
+builder.Services.AddScoped<IRunsGridQuerySource, InfrastructureRuns.RunsGridQuerySource>();
+builder.Services.AddScoped<ISnapshotsGridQuerySource, InfrastructureRuns.SnapshotsGridQuerySource>();
+builder.Services.AddScoped<IProductsGridQuerySource, InfrastructureRuns.ProductsGridQuerySource>();
 
 builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection("Crawler"));
 builder.Services.AddUrlFilterOptionsFromFile(builder.Configuration, builder.Environment.ContentRootPath);
@@ -67,6 +77,7 @@ app.Use(async (context, next) =>
     }
 });
 
+app.MapDefaultControllerRoute();
 app.MapRazorPages();
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 

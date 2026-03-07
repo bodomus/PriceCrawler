@@ -10,6 +10,46 @@
 - `VarPrice.Web` - web/API хост.
 - `VarPrice.Worker` - консольный запуск crawler.
 
+## Runs Dashboard (MVC)
+
+Экран `Runs` переведен с Razor Pages на ASP.NET Core MVC.
+
+### Слои
+
+- `VarPrice.Web`
+  - `Controllers/RunsController.cs`
+  - `ViewModels/Runs/RunsDashboardVm.cs`
+  - `Views/Runs/Index.cshtml`
+  - `Infrastructure/DataTables/DataTableResults.cs`
+- `VarPrice.Application`
+  - `Grids/Runs/IGetRunsGridQueryService.cs`
+  - `Grids/Runs/IGetSnapshotsGridQueryService.cs`
+  - `Grids/Runs/IGetProductsGridQueryService.cs`
+  - `Grids/Runs/GetRunsGridQueryService.cs`
+  - `Grids/Runs/GetSnapshotsGridQueryService.cs`
+  - `Grids/Runs/GetProductsGridQueryService.cs`
+  - `Grids/Runs/Dto/*` - DTO для JSON-контракта DataTables
+- `VarPrice.Infrastructure`
+  - `Queries/Runs/RunsGridQuerySource.cs` - EF query для runs
+  - `Queries/Runs/SnapshotsGridQuerySource.cs` - EF query для snapshots
+  - `Queries/Runs/ProductsGridQuerySource.cs` - SQL query для products
+  - `Queries/Runs/ProductGridRow.cs` - row model SQL-проекции
+
+### MVC маршруты
+
+- `GET /Runs` - экран дашборда.
+- `POST /Runs/RunsData` - данные таблицы runs (DataTables).
+- `POST /Runs/SnapshotsData` - данные таблицы snapshots (DataTables).
+- `POST /Runs/ProductsData` - данные таблицы products (DataTables).
+
+Для всех `POST` endpoint используется anti-forgery token.
+
+### Где теперь находится data access для grid
+
+- `Web` слой не делает EF/SQL запросы для `Runs`.
+- Весь доступ к данным для гридов находится в `VarPrice.Infrastructure/Queries/Runs`.
+- Логика фильтрации/сортировки/пагинации orchestration находится в `VarPrice.Application/Grids/Runs`.
+
 ## Требования
 
 - .NET SDK 8+
