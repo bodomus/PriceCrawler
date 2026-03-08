@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICrawlerRunRepository, PgCrawlerRunRepository>();
         services.AddScoped<IIngestionRunRepository, PgIngestionRunRepository>();
         services.AddScoped<IPriceSnapshotRepository, PgPriceSnapshotRepository>();
+        services.AddScoped<IPriceCollectQueueRepository, PgPriceCollectQueueRepository>();
 
         services.AddScoped<IProductUrlSource, SitemapReader>();
         services.AddSingleton<VarusRequestCoordinator>();

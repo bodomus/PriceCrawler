@@ -1,7 +1,9 @@
 using System.Text.Json;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+
 using VarPrice.Application.Models;
 using VarPrice.Application.UseCases;
 
@@ -9,9 +11,11 @@ namespace VarPrice.Application.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddVarPriceApplication(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddVarPriceApplication(this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.Configure<CrawlerOptions>(configuration.GetSection("Crawler"));
+        services.Configure<QueueOptions>(configuration.GetSection("Queue"));
         services.AddScoped<RunCrawlerUseCase>();
         return services;
     }
@@ -45,9 +49,9 @@ public static class ServiceCollectionExtensions
         {
             var json = File.ReadAllText(resolvedPath);
             options = JsonSerializer.Deserialize<UrlFilterOptions>(
-                json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                ?? new UrlFilterOptions();
+                          json,
+                          new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                      ?? new UrlFilterOptions();
         }
         catch (JsonException ex)
         {

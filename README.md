@@ -6,7 +6,7 @@
 
 - `VarPrice.Domain` - доменные сущности и контракты.
 - `VarPrice.Application` - use-case и orchestration.
-- `VarPrice.Infrastructure` - Postgres-репозитории, bootstrap схемы, HTTP crawler adapters.
+- `VarPrice.Infrastructure` - Postgres-репозитории, queue pipeline, bootstrap схемы, HTTP crawler adapters.
 - `VarPrice.Web` - web/API хост.
 - `VarPrice.Worker` - консольный запуск crawler.
 
@@ -145,6 +145,13 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Crawler:RetryBaseDelayMs` (default `500`)
 - `Crawler:BreakerFailureThreshold` (default `20`)
 - `Crawler:BreakerOpenSeconds` (default `60`)
+- `Queue:BatchSize` (default `32`)
+- `Queue:PollDelayMs` (default `250`)
+- `Queue:LeaseSeconds` (default `90`)
+- `Queue:MaxAttempts` (default `3`)
+- `Queue:RetryBaseDelayMs` (default `1000`)
+- `Queue:RetryMaxDelayMs` (default `30000`)
+- `Queue:ReaperIntervalSeconds` (default `15`)
 
 Переопределение через переменные окружения:
 
@@ -162,6 +169,13 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Crawler__RetryBaseDelayMs`
 - `Crawler__BreakerFailureThreshold`
 - `Crawler__BreakerOpenSeconds`
+- `Queue__BatchSize`
+- `Queue__PollDelayMs`
+- `Queue__LeaseSeconds`
+- `Queue__MaxAttempts`
+- `Queue__RetryBaseDelayMs`
+- `Queue__RetryMaxDelayMs`
+- `Queue__ReaperIntervalSeconds`
 
 Коды ошибок crawler, сохраняемые в `product_errors.error_code`:
 
