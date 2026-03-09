@@ -5,7 +5,6 @@ using Serilog.Context;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.DependencyInjection;
-using VarPrice.Application.Grids;
 using VarPrice.Application.Grids.Runs;
 using VarPrice.Application.Models;
 using VarPrice.Infrastructure.Crawler;
@@ -27,7 +26,6 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
     .Enrich.WithEnvironmentName());
 
 builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<VarPriceDbContext>(options =>
 {
@@ -35,11 +33,6 @@ builder.Services.AddDbContext<VarPriceDbContext>(options =>
                            ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
     options.UseNpgsql(connectionString);
 });
-builder.Services.AddScoped<IDataTableRequestParser, DataTableRequestParser>();
-builder.Services.AddScoped<IDataTableQueryService, DataTableQueryService>();
-builder.Services.AddScoped<IGetRunsGridQueryService, GetRunsGridQueryService>();
-builder.Services.AddScoped<IGetSnapshotsGridQueryService, GetSnapshotsGridQueryService>();
-builder.Services.AddScoped<IGetProductsGridQueryService, GetProductsGridQueryService>();
 builder.Services.AddScoped<IRunsGridQuerySource, InfrastructureRuns.RunsGridQuerySource>();
 builder.Services.AddScoped<ISnapshotsGridQuerySource, InfrastructureRuns.SnapshotsGridQuerySource>();
 builder.Services.AddScoped<IProductsGridQuerySource, InfrastructureRuns.ProductsGridQuerySource>();
@@ -77,8 +70,9 @@ app.Use(async (context, next) =>
     }
 });
 
-app.MapDefaultControllerRoute();
-app.MapRazorPages();
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Runs}/{action=Index}/{id?}");
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
 using (var scope = app.Services.CreateScope())

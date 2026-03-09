@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/vendor/devextreme/css/dx.fluent.blue.light.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/style.css" asp-append-version="true"/>
+</head>
+<body class="runs-dashboard-page dx-viewport">
+@RenderBody()
+
+<script src="~/vendor/devextreme/js/jquery.min.js" asp-append-version="true"></script>
+<script src="~/vendor/devextreme/js/dx.all.js" asp-append-version="true"></script>
+<script src="~/vendor/devextreme/js/aspnet/dx.aspnet.data.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
