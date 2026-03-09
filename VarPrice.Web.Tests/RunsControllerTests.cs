@@ -1,15 +1,11 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using VarPrice.Application.Abstractions;
 using VarPrice.Application.Grids.Runs;
 using VarPrice.Application.Grids.Runs.QueryRows;
 using VarPrice.Application.Models;
 using VarPrice.Web.Controllers;
-using VarPrice.Web.Crawler;
-using VarPrice.Web.Storage.Db;
 using VarPrice.Web.ViewModels.Runs;
 
 namespace VarPrice.Web.Tests;
@@ -20,7 +16,7 @@ public sealed class RunsControllerTests
     public void Index_ReturnsDashboardViewModel()
     {
         var sut = CreateController(
-            DbResult<CrawlerRunResult>.Success(new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0")));
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"));
 
         var result = sut.Index();
 
@@ -31,54 +27,28 @@ public sealed class RunsControllerTests
     }
 
     [Fact]
-    public async Task IngestVegetables_WhenDbFailsInProduction_ShowsSafeStatusMessage()
+    public async Task IngestVegetables_WhenRunFails_ShowsErrorStatusMessage()
     {
-        var error = new DbError(
-            "connection",
-            "Database is unavailable.",
-            "Host=localhost;Password=secret",
-            "PgCrawlerRepository.StartRunAsync",
-            "ABC123");
-        var sut = CreateController(DbResult<CrawlerRunResult>.Fail(error));
+        var failedRun = new CrawlerRunResult(18, "error", 0, 1, "Database is unavailable.");
+        var sut = CreateController(failedRun);
 
         var result = await sut.IngestVegetables(CancellationToken.None);
 
         var view = Assert.IsType<ViewResult>(result);
         Assert.Equal("Index", view.ViewName);
         var model = Assert.IsType<RunsDashboardVm>(view.Model);
+        Assert.Equal(failedRun, model.LatestRun);
         Assert.NotNull(model.StatusBar);
         Assert.Equal("error", model.StatusBar!.Level);
-        Assert.Contains("Database operation failed: Database is unavailable.", model.StatusBar.Message);
-        Assert.Contains("CorrelationId: ABC123", model.StatusBar.Message);
-        Assert.DoesNotContain("Host=localhost", model.StatusBar.Message);
-    }
-
-    [Fact]
-    public async Task IngestVegetables_WhenDbFailsInDevelopment_IncludesTechnicalDetails()
-    {
-        var error = new DbError(
-            "connection",
-            "Database is unavailable.",
-            "Host=localhost;Password=secret",
-            "PgCrawlerRepository.StartRunAsync",
-            "ABC123");
-        var sut = CreateController(
-            DbResult<CrawlerRunResult>.Fail(error),
-            new FakeWebHostEnvironment { EnvironmentName = Environments.Development });
-
-        var result = await sut.IngestVegetables(CancellationToken.None);
-
-        var view = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<RunsDashboardVm>(view.Model);
-        Assert.NotNull(model.StatusBar);
-        Assert.Contains("Details: Host=localhost;Password=secret", model.StatusBar!.Message);
+        Assert.Contains("Crawler run completed with status 'error'.", model.StatusBar.Message);
+        Assert.Contains("Database is unavailable.", model.StatusBar.Message);
     }
 
     [Fact]
     public async Task IngestVegetables_WhenRunSucceeds_ShowsLatestRunSummary()
     {
         var run = new CrawlerRunResult(17, "ok", 24, 1, "processed=24, errors=1");
-        var sut = CreateController(DbResult<CrawlerRunResult>.Success(run));
+        var sut = CreateController(run);
 
         var result = await sut.IngestVegetables(CancellationToken.None);
 
@@ -92,21 +62,19 @@ public sealed class RunsControllerTests
     }
 
     private static RunsController CreateController(
-        DbResult<CrawlerRunResult> crawlerResponse,
-        IWebHostEnvironment? environment = null)
+        CrawlerRunResult crawlerResponse)
     {
         return new RunsController(
             new EmptyRunsGridQuerySource(),
             new EmptySnapshotsGridQuerySource(),
             new EmptyProductsGridQuerySource(),
-            new FakeCrawlerRunner(crawlerResponse),
-            environment ?? new FakeWebHostEnvironment(),
+            new FakeRunCrawlerUseCase(crawlerResponse),
             NullLogger<RunsController>.Instance);
     }
 
-    private sealed class FakeCrawlerRunner(DbResult<CrawlerRunResult> response) : ICrawlerRunner
+    private sealed class FakeRunCrawlerUseCase(CrawlerRunResult response) : IRunCrawlerUseCase
     {
-        public Task<DbResult<CrawlerRunResult>> RunVegetablesAsync(CancellationToken ct) => Task.FromResult(response);
+        public Task<CrawlerRunResult> RunVegetablesAsync(CancellationToken ct) => Task.FromResult(response);
     }
 
     private sealed class EmptyRunsGridQuerySource : IRunsGridQuerySource
@@ -123,20 +91,5 @@ public sealed class RunsControllerTests
     {
         public IQueryable<ProductGridQueryRow> Build(long snapshotId) =>
             Array.Empty<ProductGridQueryRow>().AsQueryable();
-    }
-
-    private sealed class FakeWebHostEnvironment : IWebHostEnvironment
-    {
-        public string ApplicationName { get; set; } = "VarPrice.Web.Tests";
-
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string ContentRootPath { get; set; } = Directory.GetCurrentDirectory();
-
-        public string EnvironmentName { get; set; } = Environments.Production;
-
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string WebRootPath { get; set; } = Directory.GetCurrentDirectory();
     }
 }

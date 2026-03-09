@@ -6,11 +6,10 @@ using DevExtreme.AspNet.Mvc;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+using VarPrice.Application.Abstractions;
 using VarPrice.Application.Grids.Runs;
 using VarPrice.Application.Grids.Runs.Dto;
 using VarPrice.Application.Models;
-using VarPrice.Web.Crawler;
-using VarPrice.Web.Storage.Db;
 using VarPrice.Web.ViewModels.Runs;
 using VarPrice.Web.ViewModels.Shared;
 
@@ -20,8 +19,7 @@ public sealed class RunsController(
     IRunsGridQuerySource runsGridQuerySource,
     ISnapshotsGridQuerySource snapshotsGridQuerySource,
     IProductsGridQuerySource productsGridQuerySource,
-    ICrawlerRunner crawlerRunner,
-    IWebHostEnvironment environment,
+    IRunCrawlerUseCase runCrawlerUseCase,
     ILogger<RunsController> log) : Controller
 {
     [HttpGet]
@@ -34,15 +32,14 @@ public sealed class RunsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> IngestVegetables(CancellationToken ct)
     {
-        var result = await crawlerRunner.RunVegetablesAsync(ct);
-        if (result.IsFailure)
-        {
-            return View("Index", CreateViewModel(statusBar: CreateStatusError(result.Error!)));
-        }
+        var result = await runCrawlerUseCase.RunVegetablesAsync(ct);
+        var isSuccess = string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase);
 
         return View("Index", CreateViewModel(
-            latestRun: result.Value,
-            statusBar: new StatusBarViewModel("info", "Price snapshot collected successfully.")));
+            latestRun: result,
+            statusBar: isSuccess
+                ? new StatusBarViewModel("info", "Price snapshot collected successfully.")
+                : CreateRunFailureStatus(result)));
     }
 
     [HttpGet]
@@ -178,20 +175,11 @@ public sealed class RunsController(
         };
     }
 
-    private StatusBarViewModel CreateStatusError(DbError error)
+    private static StatusBarViewModel CreateRunFailureStatus(CrawlerRunResult result)
     {
-        var message = $"Database operation failed: {error.UserMessage}";
-
-        if (environment.IsDevelopment() && !string.IsNullOrWhiteSpace(error.TechnicalDetails))
-        {
-            message += $" Details: {error.TechnicalDetails}";
-        }
-
-        if (!string.IsNullOrWhiteSpace(error.CorrelationId))
-        {
-            message += $" CorrelationId: {error.CorrelationId}";
-        }
-
+        var message = string.IsNullOrWhiteSpace(result.Note)
+            ? $"Crawler run completed with status '{result.Status}'."
+            : $"Crawler run completed with status '{result.Status}'. {result.Note}";
         return new StatusBarViewModel("error", message);
     }
 
