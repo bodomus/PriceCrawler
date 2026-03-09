@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
 using VarPrice.Application.UseCases;
 
@@ -17,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.Configure<CrawlerOptions>(configuration.GetSection("Crawler"));
         services.Configure<QueueOptions>(configuration.GetSection("Queue"));
         services.AddScoped<RunCrawlerUseCase>();
+        services.AddScoped<IRunCrawlerUseCase>(provider => provider.GetRequiredService<RunCrawlerUseCase>());
         return services;
     }
 

@@ -23,7 +23,7 @@ public sealed class RunCrawlerUseCase(
     IIngestionRunRepository ingestionRunRepository,
     IPriceCollectQueueRepository queueRepository,
     IPriceSnapshotRepository priceSnapshotRepository,
-    ILogger<RunCrawlerUseCase> logger)
+    ILogger<RunCrawlerUseCase> logger) : IRunCrawlerUseCase
 {
     public async Task<CrawlerRunResult> RunVegetablesAsync(CancellationToken ct)
     {

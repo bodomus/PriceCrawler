@@ -10,49 +10,50 @@
 - `VarPrice.Web` - web/API хост.
 - `VarPrice.Worker` - консольный запуск crawler.
 
-## Runs Dashboard (MVC)
+## Runs Dashboard (MVC + DevExtreme)
 
-Экран `Runs` переведен с Razor Pages на ASP.NET Core MVC.
+Экран `Runs` переведен с Razor Pages/DataTables на ASP.NET Core MVC с DevExtreme.
 
 ### Слои
 
 - `VarPrice.Web`
   - `Controllers/RunsController.cs`
   - `ViewModels/Runs/RunsDashboardVm.cs`
+  - `ViewModels/Shared/StatusBarViewModel.cs`
   - `Views/Runs/Index.cshtml`
-  - `Infrastructure/DataTables/DataTableResults.cs`
+  - `Views/Shared/_Layout.cshtml`
+  - `Views/Shared/_StatusBar.cshtml`
+  - `wwwroot/js/runs-dashboard.js`
+  - `wwwroot/vendor/devextreme/*`
 - `VarPrice.Application`
-  - `Grids/Runs/IGetRunsGridQueryService.cs`
-  - `Grids/Runs/IGetSnapshotsGridQueryService.cs`
-  - `Grids/Runs/IGetProductsGridQueryService.cs`
-  - `Grids/Runs/GetRunsGridQueryService.cs`
-  - `Grids/Runs/GetSnapshotsGridQueryService.cs`
-  - `Grids/Runs/GetProductsGridQueryService.cs`
-  - `Grids/Runs/Dto/*` - DTO для JSON-контракта DataTables
+  - `Grids/Runs/IRunsGridQuerySource.cs`
+  - `Grids/Runs/ISnapshotsGridQuerySource.cs`
+  - `Grids/Runs/IProductsGridQuerySource.cs`
+  - `Grids/Runs/Dto/*` - DTO для JSON-контракта DevExtreme grid
 - `VarPrice.Infrastructure`
   - `Queries/Runs/RunsGridQuerySource.cs` - EF query для runs
   - `Queries/Runs/SnapshotsGridQuerySource.cs` - EF query для snapshots
-  - `Queries/Runs/ProductsGridQuerySource.cs` - SQL query для products
-  - `Queries/Runs/ProductGridRow.cs` - row model SQL-проекции
+  - `Queries/Runs/ProductsGridQuerySource.cs` - query для products
 
 ### MVC маршруты
 
-- `GET /Runs` - экран дашборда.
-- `POST /Runs/RunsData` - данные таблицы runs (DataTables).
-- `POST /Runs/SnapshotsData` - данные таблицы snapshots (DataTables).
-- `POST /Runs/ProductsData` - данные таблицы products (DataTables).
+- `GET /` и `GET /Runs` - экран дашборда.
+- `POST /Runs/IngestVegetables` - запуск crawler из dashboard.
+- `GET /Runs/RunsGrid` - данные таблицы runs (DevExtreme).
+- `GET /Runs/SnapshotsGrid` - данные таблицы snapshots (DevExtreme).
+- `GET /Runs/ProductsGrid` - данные таблицы products (DevExtreme).
 
-Для всех `POST` endpoint используется anti-forgery token.
+Для `POST /Runs/IngestVegetables` используется anti-forgery token.
 
 ### Где теперь находится data access для grid
 
 - `Web` слой не делает EF/SQL запросы для `Runs`.
 - Весь доступ к данным для гридов находится в `VarPrice.Infrastructure/Queries/Runs`.
-- Логика фильтрации/сортировки/пагинации orchestration находится в `VarPrice.Application/Grids/Runs`.
+- Фильтрация/сортировка/пагинация для DevExtreme выполняются через `DataSourceLoadOptions`/`DataSourceLoader`.
 
 ## Требования
 
-- .NET SDK 8+
+- .NET SDK 9.0.311+ (проект таргетится в `net8.0`, но в репо закреплен совместимый установленный SDK)
 - PostgreSQL 16+ (или `docker compose`)
 
 ## Быстрый запуск

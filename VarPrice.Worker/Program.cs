@@ -4,8 +4,8 @@ using Microsoft.Extensions.Logging;
 
 using Serilog;
 
+using VarPrice.Application.Abstractions;
 using VarPrice.Application.DependencyInjection;
-using VarPrice.Application.UseCases;
 using VarPrice.Infrastructure.DependencyInjection;
 using VarPrice.Infrastructure.Persistence;
 
@@ -51,7 +51,7 @@ if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase))
 }
 
 using var runScope = host.Services.CreateScope();
-var useCase = runScope.ServiceProvider.GetRequiredService<RunCrawlerUseCase>();
+var useCase = runScope.ServiceProvider.GetRequiredService<IRunCrawlerUseCase>();
 var result = await useCase.RunVegetablesAsync(CancellationToken.None);
 
 logger.LogInformation(
