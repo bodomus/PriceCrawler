@@ -5,8 +5,8 @@
   <ItemGroup>
     <ProjectReference Include="..\VarPrice.Application\VarPrice.Application.csproj" />
     <ProjectReference Include="..\VarPrice.Infrastructure\VarPrice.Infrastructure.csproj" />
-      <PackageReference Include="DevExpress.AspNetCore.Core" Version="25.2.3"/>
-      <PackageReference Include="DevExtreme.AspNet.Core" Version="25.2.3"/>
+      <PackageReference Include="DevExpress.AspNetCore.Core" Version="25.2.4"/>
+      <PackageReference Include="DevExtreme.AspNet.Core" Version="25.2.4"/>
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.4" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
