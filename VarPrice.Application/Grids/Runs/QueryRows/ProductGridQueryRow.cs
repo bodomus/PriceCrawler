@@ -14,7 +14,7 @@ public sealed class ProductGridQueryRow
 
     public string? PackUnit { get; init; }
 
-    public DateTime CreatedAtUtc { get; init; }
+    public DateTime? LastSeenAtUtc { get; init; }
 
-    public decimal SnapshotPrice { get; init; }
+    public decimal? SnapshotPrice { get; init; }
 }

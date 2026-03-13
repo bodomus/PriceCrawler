@@ -17,11 +17,9 @@ public sealed class SnapshotsGridQuerySource(VarPriceDbContext dbContext) : ISna
                 Id = snapshot.Id,
                 CapturedAtUtc = snapshot.CapturedAtUtc,
                 City = snapshot.City,
-                Price = snapshot.Price,
-                OldPrice = snapshot.OldPrice,
-                DiscountPercent = snapshot.OldPrice.HasValue && snapshot.OldPrice.Value > 0
-                    ? ((snapshot.OldPrice.Value - snapshot.Price) / snapshot.OldPrice.Value) * 100m
-                    : (decimal?)null,
+                FinalPrice = snapshot.FinalPrice,
+                RegularPrice = snapshot.RegularPrice,
+                DiscountPercent = snapshot.DiscountPercent,
                 PromoFlag = snapshot.PromoFlag,
                 InStock = snapshot.InStock
             });

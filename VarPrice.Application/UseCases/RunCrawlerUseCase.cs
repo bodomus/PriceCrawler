@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -68,16 +69,17 @@ public sealed class RunCrawlerUseCase(
             await DrainQueueAsync(runId, opt, queueOpt, ct);
 
             var stats = await queueRepository.GetRunStatsAsync(runId, ct);
+            var runStatus = stats.Dead > 0 ? RunStatus.Error : RunStatus.Ok;
             var note =
                 $"queued={queueItems.Count}, enqueued={enqueued}, succeeded={stats.Succeeded}, dead={stats.Dead}, pending={stats.Pending}, retry={stats.Retry}";
-            logger.LogInformation("Crawler finished run_id={RunId} {Note}", runId, note);
+            logger.LogInformation("Crawler finished run_id={RunId} status={Status} {Note}", runId, runStatus, note);
 
-            await ingestionRunRepository.FinishAsync(ingestionRunId, RunStatus.Ok, null, ct);
-            await crawlerRunRepository.FinishAsync(runId, RunStatus.Ok, note, ct);
+            await ingestionRunRepository.FinishAsync(ingestionRunId, runStatus, null, ct);
+            await crawlerRunRepository.FinishAsync(runId, runStatus, note, ct);
 
             return new CrawlerRunResult(
                 runId,
-                RunStatus.Ok.ToString().ToLowerInvariant(),
+                runStatus.ToString().ToLowerInvariant(),
                 stats.Succeeded,
                 stats.Dead,
                 note);
@@ -152,17 +154,13 @@ public sealed class RunCrawlerUseCase(
         try
         {
             var extractResult = await extractor.ExtractAsync(item.Url, ct);
-            if (!extractResult.IsSuccess || extractResult.Card is null)
+            if (!extractResult.HasCard || extractResult.Card is null)
             {
-                var errorCode = NormalizeErrorCode(extractResult.ErrorCode);
-                var message = TrimMessage(extractResult.Message);
+                var issue = NormalizeIssue(extractResult.Issue, isCritical: true);
                 await FinalizeFailedItemAsync(
                     runId,
                     item,
-                    errorCode,
-                    extractResult.HttpStatus,
-                    message,
-                    extractResult.IsTransient,
+                    issue,
                     queueOpt,
                     ct);
 
@@ -171,31 +169,49 @@ public sealed class RunCrawlerUseCase(
                     runId,
                     item.QueueId,
                     item.Url,
-                    errorCode,
-                    extractResult.HttpStatus,
-                    extractResult.IsTransient);
+                    issue.ErrorCode,
+                    issue.HttpStatus,
+                    issue.IsTransient);
                 return;
             }
 
             var card = extractResult.Card;
-            var productKey = await priceSnapshotRepository.UpsertProductAsync(
+            var observation = new ProductObservation(
                 card.ProductId,
                 card.Name,
                 card.Url,
                 card.PackValue,
                 card.PackUnit,
-                ct);
-
-            await priceSnapshotRepository.InsertSnapshotAsync(
-                runId,
-                productKey,
                 card.City,
-                card.Price,
-                card.OldPrice,
+                card.RegularPrice,
+                card.FinalPrice,
+                card.DiscountPercent,
                 card.PromoFlag,
                 card.InStock,
+                DateTimeOffset.UtcNow);
+
+            var writeResult = await priceSnapshotRepository.StoreObservationAsync(
+                runId,
                 item.QueueId,
+                observation,
                 ct);
+
+            if (extractResult.Issue is not null)
+            {
+                var issue = NormalizeIssue(extractResult.Issue, isCritical: false);
+                await priceSnapshotRepository.InsertProductErrorAsync(
+                    new ProductErrorRecord(
+                        runId,
+                        writeResult.ProductKey,
+                        writeResult.SnapshotId,
+                        item.QueueId,
+                        DateTimeOffset.UtcNow,
+                        issue.Stage,
+                        issue.ErrorCode,
+                        issue.Message ?? string.Empty,
+                        BuildIssueDetailsJson(item, issue, card)),
+                    ct);
+            }
 
             await queueRepository.MarkSucceededAsync(item.QueueId, ct);
 
@@ -205,7 +221,7 @@ public sealed class RunCrawlerUseCase(
                 item.QueueId,
                 card.ProductId,
                 extractResult.LatencyMs,
-                extractResult.HttpStatus);
+                extractResult.Issue?.HttpStatus);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -213,16 +229,20 @@ public sealed class RunCrawlerUseCase(
         }
         catch (Exception ex)
         {
-            var message = TrimMessage(ex.Message);
+            var issue = new ProductExtractIssue(
+                "process",
+                CrawlerErrorCodes.Unknown,
+                null,
+                TrimMessage(ex.Message),
+                null,
+                true,
+                true);
             try
             {
                 await FinalizeFailedItemAsync(
                     runId,
                     item,
-                    CrawlerErrorCodes.Unknown,
-                    null,
-                    message,
-                    true,
+                    issue,
                     queueOpt,
                     ct);
             }
@@ -240,20 +260,15 @@ public sealed class RunCrawlerUseCase(
         }
     }
 
-    private async Task FinalizeFailedItemAsync(long runId, ReservedQueueItem item, string errorCode, int? httpStatus,
-        string? message, bool isTransient, QueueOptions queueOpt, CancellationToken ct)
+    private async Task FinalizeFailedItemAsync(
+        long runId,
+        ReservedQueueItem item,
+        ProductExtractIssue issue,
+        QueueOptions queueOpt,
+        CancellationToken ct)
     {
         var failureAttempt = item.Attempt + 1;
-        var action = QueueRetryPolicy.DecideFailureAction(isTransient, failureAttempt, item.MaxAttempts);
-
-        await priceSnapshotRepository.InsertProductErrorAsync(
-            runId,
-            item.QueueId,
-            item.Url,
-            errorCode,
-            httpStatus,
-            message,
-            ct);
+        var action = QueueRetryPolicy.DecideFailureAction(issue.IsTransient, failureAttempt, item.MaxAttempts);
 
         if (action == QueueFailureAction.Retry)
         {
@@ -264,18 +279,31 @@ public sealed class RunCrawlerUseCase(
                 queueOpt.RetryBaseDelayMs,
                 queueOpt.RetryMaxDelayMs,
                 jitterMs);
-            if (string.Equals(errorCode, CrawlerErrorCodes.TooManyRequests, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(issue.ErrorCode, CrawlerErrorCodes.TooManyRequests, StringComparison.OrdinalIgnoreCase))
             {
                 var doubledMs = Math.Min(delay.TotalMilliseconds * 2d, Math.Max(queueOpt.RetryMaxDelayMs, 1));
                 delay = TimeSpan.FromMilliseconds(doubledMs);
             }
 
-            await queueRepository.MarkRetryAsync(item.QueueId, errorCode, httpStatus, message,
+            await queueRepository.MarkRetryAsync(item.QueueId, issue.ErrorCode, issue.HttpStatus, issue.Message,
                 DateTimeOffset.UtcNow.Add(delay), ct);
             return;
         }
 
-        await queueRepository.MarkDeadAsync(item.QueueId, errorCode, httpStatus, message, ct);
+        await priceSnapshotRepository.InsertProductErrorAsync(
+            new ProductErrorRecord(
+                runId,
+                null,
+                null,
+                item.QueueId,
+                DateTimeOffset.UtcNow,
+                issue.Stage,
+                issue.ErrorCode,
+                issue.Message ?? string.Empty,
+                BuildIssueDetailsJson(item, issue, null)),
+            ct);
+
+        await queueRepository.MarkDeadAsync(item.QueueId, issue.ErrorCode, issue.HttpStatus, issue.Message, ct);
     }
 
     private static string BuildWorkerId()
@@ -311,4 +339,55 @@ public sealed class RunCrawlerUseCase(
         var trimmed = message.Trim();
         return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
+
+    private static ProductExtractIssue NormalizeIssue(ProductExtractIssue? issue, bool isCritical)
+    {
+        if (issue is null)
+        {
+            return new ProductExtractIssue(
+                "extract",
+                CrawlerErrorCodes.Unknown,
+                null,
+                string.Empty,
+                null,
+                false,
+                isCritical);
+        }
+
+        return issue with
+        {
+            Stage = string.IsNullOrWhiteSpace(issue.Stage) ? "extract" : issue.Stage.Trim().ToLowerInvariant(),
+            ErrorCode = NormalizeErrorCode(issue.ErrorCode),
+            Message = TrimMessage(issue.Message),
+            IsCritical = isCritical
+        };
+    }
+
+    private static string BuildIssueDetailsJson(ReservedQueueItem item, ProductExtractIssue issue, ProductCard? card)
+        => JsonSerializer.Serialize(new
+        {
+            queue_id = item.QueueId,
+            item.Url,
+            item.City,
+            item.Attempt,
+            item.MaxAttempts,
+            http_status = issue.HttpStatus,
+            is_transient = issue.IsTransient,
+            is_critical = issue.IsCritical,
+            issue.DetailsJson,
+            product = card is null
+                ? null
+                : new
+                {
+                    card.ProductId,
+                    card.Name,
+                    card.Url,
+                    card.City,
+                    card.RegularPrice,
+                    card.FinalPrice,
+                    card.DiscountPercent,
+                    card.PromoFlag,
+                    card.InStock
+                }
+        });
 }

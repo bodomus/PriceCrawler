@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -21,14 +22,14 @@ public sealed class WorkerIntegrationTests
     public async Task RunCrawlerUseCase_PersistsRunAndSnapshots_AndDrainsQueue()
     {
         var factory = CreateFactory();
-        await PrepareSchemaAsync(factory);
+        await PrepareSchemaAsync();
 
         var useCase = CreateUseCase(
             factory,
             source: new StaticSource(["https://varus.ua/kyiv/ovochi/item"]),
             extractor: new DelegatingExtractor(_ => Task.FromResult(ProductExtractResult.Success(
-                new ProductCard("sku1", "Name", "https://varus.ua/kyiv/ovochi/item", 12m, null, false, true, 1m, "kg",
-                    "kyiv"),
+                new ProductCard("sku1", "Name", "https://varus.ua/kyiv/ovochi/item", 12m, 10m, 17, true, true, 1m,
+                    "kg", "kyiv"),
                 200,
                 10,
                 1.0d))));
@@ -45,16 +46,174 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from ingestion_run"));
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_collect_queue where status='succeeded'"));
+        Assert.Equal(1, await ScalarAsync(conn, "select status from crawler_run limit 1"));
         Assert.Equal(0,
             await ScalarAsync(conn,
                 "select count(*) from price_collect_queue where status in ('pending','retry','reserved')"));
     }
 
     [Fact]
+    public async Task StoreObservation_NewProduct_CreatesSnapshotAndUpdatesLastSeenAt()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+
+        var crawlerRepo = new PgCrawlerRunRepository(factory);
+        var snapshotRepo = new PgPriceSnapshotRepository(factory);
+        var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
+
+        var result = await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true),
+            CancellationToken.None);
+
+        Assert.True(result.SnapshotCreated);
+
+        await using var conn = new NpgsqlConnection(ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product where last_seen_at is not null"));
+    }
+
+    [Fact]
+    public async Task StoreObservation_UnchangedProduct_UpdatesOnlyLastSeenAt()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+
+        var crawlerRepo = new PgCrawlerRunRepository(factory);
+        var snapshotRepo = new PgPriceSnapshotRepository(factory);
+        var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
+
+        await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true,
+                observedAt: new DateTimeOffset(2026, 03, 10, 10, 0, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        var second = await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true,
+                observedAt: new DateTimeOffset(2026, 03, 10, 11, 0, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        Assert.False(second.SnapshotCreated);
+
+        await using var conn = new NpgsqlConnection(ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
+        Assert.Equal(
+            new DateTime(2026, 03, 10, 11, 0, 0, DateTimeKind.Utc),
+            await TimestampAsync(conn, "select last_seen_at from product limit 1"));
+    }
+
+    [Fact]
+    public async Task StoreObservation_WhenOnlyDiscountChanges_CreatesNewSnapshot()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+
+        var crawlerRepo = new PgCrawlerRunRepository(factory);
+        var snapshotRepo = new PgPriceSnapshotRepository(factory);
+        var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
+
+        await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true),
+            CancellationToken.None);
+
+        var second = await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 20, inStock: true,
+                observedAt: new DateTimeOffset(2026, 03, 10, 12, 0, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        Assert.True(second.SnapshotCreated);
+
+        await using var conn = new NpgsqlConnection(ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_snapshot"));
+        Assert.Equal(20,
+            await ScalarAsync(conn, "select discount_percent from price_snapshot order by snapshot_id desc limit 1"));
+    }
+
+    [Fact]
+    public async Task StoreObservation_WhenOnlyFinalPriceChanges_CreatesNewSnapshot()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+
+        var crawlerRepo = new PgCrawlerRunRepository(factory);
+        var snapshotRepo = new PgPriceSnapshotRepository(factory);
+        var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
+
+        await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true),
+            CancellationToken.None);
+
+        var second = await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(regularPrice: 12m, finalPrice: 9m, discountPercent: 25, inStock: true,
+                observedAt: new DateTimeOffset(2026, 03, 10, 12, 30, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        Assert.True(second.SnapshotCreated);
+
+        await using var conn = new NpgsqlConnection(ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_snapshot"));
+        Assert.Equal(9m,
+            await DecimalScalarAsync(conn, "select final_price from price_snapshot order by snapshot_id desc limit 1"));
+    }
+
+    [Fact]
+    public async Task RunCrawlerUseCase_NonCriticalIssue_CreatesSnapshotAndLinkedProductError()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+
+        var useCase = CreateUseCase(
+            factory,
+            source: new StaticSource(["https://varus.ua/kyiv/ovochi/warn"]),
+            extractor: new DelegatingExtractor(_ => Task.FromResult(ProductExtractResult.Partial(
+                new ProductCard("sku-warn", "Warn", "https://varus.ua/kyiv/ovochi/warn", 12m, 10m, 17, true, true, 1m,
+                    "kg", "kyiv"),
+                CrawlerErrorCodes.ParseFailed,
+                200,
+                "promo badge missing",
+                10,
+                1.0d))));
+
+        var result = await useCase.RunVegetablesAsync(CancellationToken.None);
+        Assert.Equal("ok", result.Status);
+
+        await using var conn = new NpgsqlConnection(ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product_errors"));
+        Assert.Equal(1,
+            await ScalarAsync(conn, "select count(*) from product_errors where price_snapshot_id is not null"));
+    }
+
+    [Fact]
     public async Task QueueReservation_TwoWorkers_DoNotReserveSameItems()
     {
         var factory = CreateFactory();
-        await PrepareSchemaAsync(factory);
+        await PrepareSchemaAsync();
 
         var crawlerRepo = new PgCrawlerRunRepository(factory);
         var queueRepo = new PgPriceCollectQueueRepository(factory);
@@ -85,7 +244,7 @@ public sealed class WorkerIntegrationTests
     public async Task QueueReaper_ReleasesExpiredReservations()
     {
         var factory = CreateFactory();
-        await PrepareSchemaAsync(factory);
+        await PrepareSchemaAsync();
 
         var crawlerRepo = new PgCrawlerRunRepository(factory);
         var queueRepo = new PgPriceCollectQueueRepository(factory);
@@ -112,55 +271,10 @@ public sealed class WorkerIntegrationTests
     }
 
     [Fact]
-    public async Task Persistence_IsIdempotent_ForSnapshotAndProductError_ByQueueId()
+    public async Task RunCrawlerUseCase_WhenTransientFailuresExhausted_MarksDeadAndReturnsError()
     {
         var factory = CreateFactory();
-        await PrepareSchemaAsync(factory);
-
-        var crawlerRepo = new PgCrawlerRunRepository(factory);
-        var queueRepo = new PgPriceCollectQueueRepository(factory);
-        var snapshotRepo = new PgPriceSnapshotRepository(factory);
-        var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
-
-        await queueRepo.EnqueueAsync(
-            runId,
-            [new QueueEnqueueItem("https://varus.ua/p/idempotent", null, "idem-1")],
-            maxAttempts: 3,
-            CancellationToken.None);
-        var reserved = await queueRepo.ReserveBatchAsync(runId, 1, "worker", TimeSpan.FromSeconds(30),
-            CancellationToken.None);
-        var item = Assert.Single(reserved);
-
-        var productKey = await snapshotRepo.UpsertProductAsync("idem-sku", "Idem Product",
-            "https://varus.ua/p/idempotent",
-            1m, "kg", CancellationToken.None);
-
-        await snapshotRepo.InsertSnapshotAsync(runId, productKey, "kyiv", 100m, 120m, true, true, item.QueueId,
-            CancellationToken.None);
-        await snapshotRepo.InsertSnapshotAsync(runId, productKey, "kyiv", 95m, 120m, true, true, item.QueueId,
-            CancellationToken.None);
-
-        await snapshotRepo.InsertProductErrorAsync(runId, item.QueueId, "https://varus.ua/p/idempotent",
-            CrawlerErrorCodes.Timeout, 504, "timeout-1", CancellationToken.None);
-        await snapshotRepo.InsertProductErrorAsync(runId, item.QueueId, "https://varus.ua/p/idempotent",
-            CrawlerErrorCodes.Http5xx, 503, "timeout-2", CancellationToken.None);
-
-        await using var conn = new NpgsqlConnection(ConnectionString);
-        await conn.OpenAsync();
-
-        Assert.Equal(1, await ScalarAsync(conn, $"select count(*) from price_snapshot where queue_id={item.QueueId}"));
-        Assert.Equal(95m, await DecimalScalarAsync(conn,
-            $"select price from price_snapshot where queue_id={item.QueueId}"));
-        Assert.Equal(1, await ScalarAsync(conn, $"select count(*) from product_errors where queue_id={item.QueueId}"));
-        Assert.Equal("http_5xx", await StringScalarAsync(conn,
-            $"select error_code from product_errors where queue_id={item.QueueId}"));
-    }
-
-    [Fact]
-    public async Task RunCrawlerUseCase_WhenTransientFailuresExhausted_MarksDead()
-    {
-        var factory = CreateFactory();
-        await PrepareSchemaAsync(factory);
+        await PrepareSchemaAsync();
 
         var useCase = CreateUseCase(
             factory,
@@ -184,7 +298,7 @@ public sealed class WorkerIntegrationTests
             });
 
         var result = await useCase.RunVegetablesAsync(CancellationToken.None);
-        Assert.Equal("ok", result.Status);
+        Assert.Equal("error", result.Status);
         Assert.Equal(0, result.ProductsProcessed);
         Assert.Equal(1, result.Errors);
 
@@ -193,13 +307,15 @@ public sealed class WorkerIntegrationTests
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_collect_queue where status='dead'"));
         Assert.Equal(2, await ScalarAsync(conn, "select attempt from price_collect_queue limit 1"));
+        Assert.Equal(2, await ScalarAsync(conn, "select status from crawler_run limit 1"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product_errors where price_snapshot_id is null"));
     }
 
     [Fact]
-    public async Task RunCrawlerUseCase_WhenFatalSourceError_ReturnsErrorAndMarksRunsFailed()
+    public async Task RunCrawlerUseCase_WhenFatalSourceError_ReturnsErrorAndMarksRunsError()
     {
         var factory = CreateFactory();
-        await PrepareSchemaAsync(factory);
+        await PrepareSchemaAsync();
 
         var useCase = CreateUseCase(
             factory,
@@ -218,8 +334,8 @@ public sealed class WorkerIntegrationTests
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
 
-        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status='failed'"));
-        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from ingestion_run where status='failed'"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status=2"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from ingestion_run where status='error'"));
     }
 
     private static RunCrawlerUseCase CreateUseCase(
@@ -255,6 +371,26 @@ public sealed class WorkerIntegrationTests
             new PgPriceSnapshotRepository(factory),
             NullLogger<RunCrawlerUseCase>.Instance);
 
+    private static ProductObservation CreateObservation(
+        decimal? regularPrice,
+        decimal? finalPrice,
+        int? discountPercent,
+        bool? inStock,
+        DateTimeOffset? observedAt = null)
+        => new(
+            "sku-1",
+            "Name",
+            "https://varus.ua/kyiv/ovochi/item",
+            1m,
+            "kg",
+            "kyiv",
+            regularPrice,
+            finalPrice,
+            discountPercent,
+            discountPercent.GetValueOrDefault() > 0,
+            inStock,
+            observedAt ?? new DateTimeOffset(2026, 03, 10, 9, 0, 0, TimeSpan.Zero));
+
     private static PgConnectionFactory CreateFactory()
     {
         var config = new ConfigurationBuilder()
@@ -264,9 +400,10 @@ public sealed class WorkerIntegrationTests
         return new PgConnectionFactory(config);
     }
 
-    private static async Task PrepareSchemaAsync(IPgConnectionFactory factory)
+    private static async Task PrepareSchemaAsync()
     {
-        var schema = new SchemaBootstrapper(factory, NullLogger<SchemaBootstrapper>.Instance);
+        await using var dbContext = CreateDbContext();
+        var schema = new SchemaBootstrapper(dbContext, NullLogger<SchemaBootstrapper>.Instance);
         await schema.EnsureSchemaAsync();
 
         await using var conn = new NpgsqlConnection(ConnectionString);
@@ -275,6 +412,14 @@ public sealed class WorkerIntegrationTests
             "truncate table price_snapshot, product_errors, price_collect_queue, product, ingestion_run, crawler_run restart identity cascade;",
             conn);
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    private static VarPriceDbContext CreateDbContext()
+    {
+        var options = new DbContextOptionsBuilder<VarPriceDbContext>()
+            .UseNpgsql(ConnectionString)
+            .Options;
+        return new VarPriceDbContext(options);
     }
 
     private static async Task<long> ScalarAsync(NpgsqlConnection conn, string sql)
@@ -291,11 +436,11 @@ public sealed class WorkerIntegrationTests
         return Convert.ToDecimal(value);
     }
 
-    private static async Task<string> StringScalarAsync(NpgsqlConnection conn, string sql)
+    private static async Task<DateTime> TimestampAsync(NpgsqlConnection conn, string sql)
     {
         await using var cmd = new NpgsqlCommand(sql, conn);
         var value = await cmd.ExecuteScalarAsync();
-        return Convert.ToString(value) ?? string.Empty;
+        return Convert.ToDateTime(value);
     }
 
     private sealed class StaticSource(IReadOnlyList<string> urls) : IProductUrlSource

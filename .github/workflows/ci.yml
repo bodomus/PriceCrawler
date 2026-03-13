@@ -9,12 +9,29 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      DevExpress_License: ${{ secrets.DEVEXPRESS_LICENSE }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Validate DevExpress license secret
+        shell: bash
+        run: |
+          if [ -z "${DevExpress_License}" ]; then
+            echo "Missing GitHub Actions secret DEVEXPRESS_LICENSE." >&2
+            echo "Add your DevExpress .NET license key and rerun the workflow." >&2
+            exit 1
+          fi
+
+      - name: Install DevExpress license file
+        shell: bash
+        run: |
+          install -d "$HOME/.config/DevExpress"
+          printf '%s' "$DevExpress_License" > "$HOME/.config/DevExpress/DevExpress_License.txt"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -25,7 +42,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore --disable-build-servers
 
       - name: Version Check
         run: |

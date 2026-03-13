@@ -187,6 +187,25 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `parse_failed`
 - `unknown`
 
+## Модель хранения результатов обхода
+
+- `crawler_run` хранит именно журнал конкретных запусков crawler, а не справочник crawler-ов.
+- `crawler_run.status` хранится как `smallint` со значениями `0=Running`, `1=Ok`, `2=Error`.
+- `price_snapshot` работает как append-only журнал значимых изменений состояния товара.
+- Новый `price_snapshot` создается только если изменилось хотя бы одно из полей:
+  `regular_price`, `final_price`, `discount_percent`, `promo_flag`, `in_stock`.
+- Если товар успешно обработан, но его состояние не изменилось, новый snapshot не создается.
+  В этом случае обновляется только `product.last_seen_at`.
+- Для нового товара создается запись в `product`, затем первый `price_snapshot`, если удалось собрать
+  минимально валидное состояние: известен `product_key` и есть хотя бы одно из
+  `regular_price`, `final_price`, `in_stock`.
+- `product_errors` хранит ошибки с полным контекстом запуска:
+  `run_id`, `product_key`, `price_snapshot_id`, `queue_id`, `occurred_at`, `stage`,
+  `error_code`, `error_message`, `details_json`.
+- При некритической ошибке и валидном состоянии товара может быть создан и snapshot, и связанная запись
+  в `product_errors`.
+- При критической ошибке без валидного состояния snapshot не создается, сохраняется только `product_errors`.
+
 ## Версионирование (Git tags + Nerdbank.GitVersioning)
 
 В solution используется `Nerdbank.GitVersioning` через корневые `Directory.Build.props` и `version.json`.

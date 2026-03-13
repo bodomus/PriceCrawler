@@ -6,4 +6,5 @@ public sealed record Product(
     string Name,
     string Url,
     decimal? PackValue,
-    string? PackUnit);
+    string? PackUnit,
+    DateTimeOffset? LastSeenAt);

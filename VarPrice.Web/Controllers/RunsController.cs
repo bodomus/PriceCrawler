@@ -80,11 +80,12 @@ public sealed class RunsController(
             var query = snapshotsGridQuerySource.Build(runId.Value)
                 .Select(row => new SnapshotGridRowDto
                 {
+                    //TODO check invalid city parser
                     Id = row.Id,
                     CreatedAtUtc = row.CapturedAtUtc,
                     City = row.City,
-                    Price = row.Price,
-                    OldPrice = row.OldPrice,
+                    Price = row.FinalPrice,
+                    OldPrice = row.RegularPrice,
                     DiscountPercent = row.DiscountPercent,
                     PromoFlag = row.PromoFlag,
                     InStock = row.InStock
@@ -121,7 +122,7 @@ public sealed class RunsController(
                     row.SnapshotPrice,
                     row.PackValue,
                     row.PackUnit,
-                    row.CreatedAtUtc
+                    row.LastSeenAtUtc
                 })
                 .ToListAsync(ct);
 
@@ -134,7 +135,7 @@ public sealed class RunsController(
                     Url = row.Url,
                     Price = row.SnapshotPrice,
                     Unit = FormatUnit(row.PackValue, row.PackUnit),
-                    UpdatedAtUtc = row.CreatedAtUtc
+                    UpdatedAtUtc = row.LastSeenAtUtc
                 }),
                 loadOptions);
 
