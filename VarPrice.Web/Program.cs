@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 using Serilog;
 using Serilog.Context;
 
@@ -20,6 +22,12 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddDbContext<VarPriceDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("Postgres")
+                           ?? throw new InvalidOperationException("Connection string 'Postgres' is not configured.");
+    options.UseNpgsql(connectionString);
+});
 builder.Services.AddScoped<IRunsGridQuerySource, InfrastructureRuns.RunsGridQuerySource>();
 builder.Services.AddScoped<ISnapshotsGridQuerySource, InfrastructureRuns.SnapshotsGridQuerySource>();
 builder.Services.AddScoped<IProductsGridQuerySource, InfrastructureRuns.ProductsGridQuerySource>();

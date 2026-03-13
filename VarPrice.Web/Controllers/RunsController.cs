@@ -80,6 +80,7 @@ public sealed class RunsController(
             var query = snapshotsGridQuerySource.Build(runId.Value)
                 .Select(row => new SnapshotGridRowDto
                 {
+                    //TODO check invalid city parser
                     Id = row.Id,
                     CreatedAtUtc = row.CapturedAtUtc,
                     City = row.City,
