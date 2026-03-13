@@ -83,8 +83,8 @@ public sealed class RunsController(
                     Id = row.Id,
                     CreatedAtUtc = row.CapturedAtUtc,
                     City = row.City,
-                    Price = row.FinalPrice,
-                    OldPrice = row.RegularPrice,
+                    Price = row.Price,
+                    OldPrice = row.OldPrice,
                     DiscountPercent = row.DiscountPercent,
                     PromoFlag = row.PromoFlag,
                     InStock = row.InStock
@@ -121,7 +121,7 @@ public sealed class RunsController(
                     row.SnapshotPrice,
                     row.PackValue,
                     row.PackUnit,
-                    row.LastSeenAtUtc
+                    row.CreatedAtUtc
                 })
                 .ToListAsync(ct);
 
@@ -134,7 +134,7 @@ public sealed class RunsController(
                     Url = row.Url,
                     Price = row.SnapshotPrice,
                     Unit = FormatUnit(row.PackValue, row.PackUnit),
-                    UpdatedAtUtc = row.LastSeenAtUtc
+                    UpdatedAtUtc = row.CreatedAtUtc
                 }),
                 loadOptions);
 
