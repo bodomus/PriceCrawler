@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +14,12 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddVarPriceInfrastructure(this IServiceCollection services,
         IConfiguration configuration)
     {
+        var connectionString = configuration.GetConnectionString("Postgres")
+                               ?? throw new InvalidOperationException(
+                                   "Connection string 'Postgres' is not configured.");
+
+        services.AddDbContext<VarPriceDbContext>(options => options.UseNpgsql(connectionString));
+
         services.AddHttpClient("varus", c =>
         {
             c.Timeout = TimeSpan.FromSeconds(30);

@@ -5,8 +5,10 @@ public sealed record PriceSnapshot(
     long RunId,
     long ProductKey,
     string? City,
-    decimal Price,
-    decimal? OldPrice,
+    decimal? RegularPrice,
+    decimal? FinalPrice,
+    int? DiscountPercent,
     bool PromoFlag,
     bool? InStock,
+    long? QueueId,
     DateTimeOffset CapturedAt);

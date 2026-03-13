@@ -18,8 +18,8 @@ public sealed class ProductsGridQuerySource(VarPriceDbContext dbContext) : IProd
                                            p.url as "Url",
                                            p.pack_value as "PackValue",
                                            p.pack_unit as "PackUnit",
-                                           p.created_at as "CreatedAtUtc",
-                                           s.price as "SnapshotPrice"
+                                           p.last_seen_at as "LastSeenAtUtc",
+                                           coalesce(s.final_price, s.regular_price) as "SnapshotPrice"
                                        from price_snapshot s
                                        join product p on p.product_key = s.product_key
                                        where s.snapshot_id = {snapshotId}
@@ -32,7 +32,7 @@ public sealed class ProductsGridQuerySource(VarPriceDbContext dbContext) : IProd
                 Url = row.Url,
                 PackValue = row.PackValue,
                 PackUnit = row.PackUnit,
-                CreatedAtUtc = row.CreatedAtUtc,
+                LastSeenAtUtc = row.LastSeenAtUtc,
                 SnapshotPrice = row.SnapshotPrice
             });
     }

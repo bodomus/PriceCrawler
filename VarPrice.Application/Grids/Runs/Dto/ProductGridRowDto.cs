@@ -12,9 +12,9 @@ public sealed class ProductGridRowDto
 
     [JsonPropertyName("url")] public string Url { get; init; } = string.Empty;
 
-    [JsonPropertyName("price")] public decimal Price { get; init; }
+    [JsonPropertyName("price")] public decimal? Price { get; init; }
 
     [JsonPropertyName("unit")] public string? Unit { get; init; }
 
-    [JsonPropertyName("updatedAtUtc")] public DateTime UpdatedAtUtc { get; init; }
+    [JsonPropertyName("updatedAtUtc")] public DateTime? UpdatedAtUtc { get; init; }
 }

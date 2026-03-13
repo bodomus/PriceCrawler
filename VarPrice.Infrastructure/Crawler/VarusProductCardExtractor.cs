@@ -49,7 +49,10 @@ public sealed class VarusProductCardExtractor(
             var canRetry = result.IsTransient && attempt < maxAttempts;
             if (!canRetry)
             {
-                return result with { ErrorCode = errorCode };
+                return result with
+                {
+                    Issue = result.Issue is null ? null : result.Issue with { ErrorCode = errorCode }
+                };
             }
 
             var delay = BuildRetryDelay(attempt, errorCode);
@@ -318,18 +321,23 @@ public sealed class VarusProductCardExtractor(
         // 1) Current price from JSON-LD offers.price
         // 2) Old/regular/special from inline JSON fragment near SKU (sqpp.price / sqpp.special_price)
         // 3) Fallback to legacy text scraping (last resort)
-        var price = ld?.Price ?? 0m;
-        decimal? oldPrice = null;
+        decimal? finalPrice = ld?.Price;
+        decimal? regularPrice = null;
+        int? discountPercent = null;
+        bool? inStock = null;
 
         var sqpp = SkuInlineJsonFallback.TryExtractSqpp(html, productId);
         if (sqpp is not null)
         {
             // On Varus: sqpp.special_price is promo price, sqpp.price is regular price.
             if (sqpp.SpecialPrice is not null)
-                price = sqpp.SpecialPrice.Value;
+                finalPrice = sqpp.SpecialPrice.Value;
 
             if (sqpp.RegularPrice is not null)
-                oldPrice = sqpp.RegularPrice.Value;
+                regularPrice = sqpp.RegularPrice.Value;
+
+            discountPercent = sqpp.DiscountPercent;
+            inStock = sqpp.Available;
 
             log.LogDebug("SQPP found for {Sku}: regular={Regular} special={Special} available={Available}",
                 productId, sqpp.RegularPrice, sqpp.SpecialPrice, sqpp.Available);
@@ -339,23 +347,44 @@ public sealed class VarusProductCardExtractor(
             log.LogDebug("SQPP not found for {Sku}", productId);
         }
 
-        if (price <= 0m)
+        if (!finalPrice.HasValue || finalPrice.Value <= 0m)
         {
             var legacy = PriceParser.Parse(text);
-            price = legacy.price;
-            oldPrice ??= legacy.oldPrice;
+            if (legacy.price > 0m)
+            {
+                finalPrice = legacy.price;
+            }
+
+            regularPrice ??= legacy.oldPrice;
         }
 
-        if (price <= 0m)
+        if ((!finalPrice.HasValue || finalPrice.Value <= 0m) && regularPrice.HasValue)
+        {
+            finalPrice = regularPrice;
+        }
+
+        if ((!finalPrice.HasValue || finalPrice.Value <= 0m) && !regularPrice.HasValue && !inStock.HasValue)
         {
             log.LogDebug("No valid price found for {Url}", url);
             return null;
         }
 
-        var promoFlag = oldPrice.HasValue && oldPrice.Value > price;
+        discountPercent ??= CalculateDiscountPercent(regularPrice, finalPrice);
+        var promoFlag = (discountPercent.HasValue && discountPercent.Value > 0)
+                        || (regularPrice.HasValue && finalPrice.HasValue && regularPrice.Value > finalPrice.Value);
         var city = CityParser.TryParseFromUrl(url);
 
-        return new ProductCard(productId, name ?? productId, url, price, oldPrice, promoFlag, null, packValue, packUnit,
+        return new ProductCard(
+            productId,
+            name ?? productId,
+            url,
+            regularPrice,
+            finalPrice,
+            discountPercent,
+            promoFlag,
+            inStock,
+            packValue,
+            packUnit,
             city);
     }
 
@@ -398,6 +427,18 @@ public sealed class VarusProductCardExtractor(
         }
 
         return null;
+    }
+
+    private static int? CalculateDiscountPercent(decimal? regularPrice, decimal? finalPrice)
+    {
+        if (!regularPrice.HasValue || !finalPrice.HasValue || regularPrice.Value <= 0m ||
+            finalPrice.Value >= regularPrice.Value)
+        {
+            return null;
+        }
+
+        var value = ((regularPrice.Value - finalPrice.Value) / regularPrice.Value) * 100m;
+        return (int)Math.Round(value, MidpointRounding.AwayFromZero);
     }
 }
 
@@ -644,7 +685,12 @@ file static class JsonLdProductParser
         => obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 }
 
-file sealed record SqppInfo(decimal? RegularPrice, decimal? SpecialPrice, DateOnly? SpecialFromDate, bool? Available);
+file sealed record SqppInfo(
+    decimal? RegularPrice,
+    decimal? SpecialPrice,
+    int? DiscountPercent,
+    DateOnly? SpecialFromDate,
+    bool? Available);
 
 file static class SkuInlineJsonFallback
 {
@@ -677,7 +723,7 @@ file static class SkuInlineJsonFallback
         if (special is null && regular is null && discount is null && available is null && fromDate is null)
             return null;
 
-        return new SqppInfo(regular, special, fromDate, available);
+        return new SqppInfo(regular, special, discount, fromDate, available);
     }
 
     private static int FindSkuIndex(string html, string sku)

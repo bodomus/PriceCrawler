@@ -8,9 +8,9 @@ public sealed class SnapshotGridQueryRow
 
     public string? City { get; init; }
 
-    public decimal Price { get; init; }
+    public decimal? FinalPrice { get; init; }
 
-    public decimal? OldPrice { get; init; }
+    public decimal? RegularPrice { get; init; }
 
     public decimal? DiscountPercent { get; init; }
 

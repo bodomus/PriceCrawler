@@ -23,7 +23,7 @@ public sealed class RunCrawlerUseCaseTests
         var snapshotRepo = new FakePriceSnapshotRepository();
         var source = new FakeSource(["https://example/ovochi/1"]);
         var extractor = new FakeExtractor(ProductExtractResult.Success(
-            new ProductCard("1", "name", "url", 10m, null, false, true, null, null, "kyiv"), 200, 10, 1.0d));
+            new ProductCard("1", "name", "url", 12m, 10m, 17, true, true, null, null, "kyiv"), 200, 10, 1.0d));
 
         var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor);
         var result = await sut.RunVegetablesAsync(CancellationToken.None);
@@ -34,6 +34,8 @@ public sealed class RunCrawlerUseCaseTests
         Assert.Equal(RunStatus.Ok, crawlerRepo.LastStatus);
         Assert.Equal(RunStatus.Ok, ingestionRepo.LastStatus);
         Assert.Null(ingestionRepo.LastError);
+        Assert.Single(snapshotRepo.Observations);
+        Assert.Empty(snapshotRepo.Errors);
     }
 
     [Fact]
@@ -57,7 +59,7 @@ public sealed class RunCrawlerUseCaseTests
     }
 
     [Fact]
-    public async Task RunVegetablesAsync_NotFound_MarksItemDeadAndPersistsErrorCode()
+    public async Task RunVegetablesAsync_CriticalItemFailure_MarksRunAsErrorAndPersistsProductError()
     {
         var crawlerRepo = new FakeCrawlerRunRepository();
         var ingestionRepo = new FakeIngestionRunRepository();
@@ -70,11 +72,62 @@ public sealed class RunCrawlerUseCaseTests
         var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor);
         var result = await sut.RunVegetablesAsync(CancellationToken.None);
 
-        Assert.Equal("ok", result.Status);
+        Assert.Equal("error", result.Status);
         Assert.Equal(0, result.ProductsProcessed);
         Assert.Equal(1, result.Errors);
-        Assert.Equal(CrawlerErrorCodes.NotFound, snapshotRepo.LastErrorCode);
-        Assert.Equal(404, snapshotRepo.LastHttpStatus);
+        Assert.Single(snapshotRepo.Errors);
+        Assert.Equal(CrawlerErrorCodes.NotFound, snapshotRepo.Errors[0].ErrorCode);
+        Assert.Equal("extract", snapshotRepo.Errors[0].Stage);
+        Assert.Empty(snapshotRepo.Observations);
+    }
+
+    [Fact]
+    public async Task RunVegetablesAsync_NonCriticalIssue_PersistsObservationAndLinkedError()
+    {
+        var crawlerRepo = new FakeCrawlerRunRepository();
+        var ingestionRepo = new FakeIngestionRunRepository();
+        var queueRepo = new FakeQueueRepository();
+        var snapshotRepo = new FakePriceSnapshotRepository
+        {
+            NextWriteResult = new ProductObservationWriteResult(5, 77, true)
+        };
+        var source = new FakeSource(["https://example/ovochi/partial"]);
+        var extractor = new FakeExtractor(ProductExtractResult.Partial(
+            new ProductCard("sku-1", "name", "url", 12m, 10m, 17, true, true, 1m, "kg", "kyiv"),
+            CrawlerErrorCodes.ParseFailed,
+            200,
+            "discount label missing",
+            8,
+            1.0d));
+
+        var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor);
+        var result = await sut.RunVegetablesAsync(CancellationToken.None);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Single(snapshotRepo.Observations);
+        Assert.Single(snapshotRepo.Errors);
+        Assert.Equal(5, snapshotRepo.Errors[0].ProductKey);
+        Assert.Equal(77, snapshotRepo.Errors[0].PriceSnapshotId);
+        Assert.Equal(CrawlerErrorCodes.ParseFailed, snapshotRepo.Errors[0].ErrorCode);
+    }
+
+    [Fact]
+    public async Task RunVegetablesAsync_WhenDeadItemsExist_CompletesRunWithErrorStatus()
+    {
+        var crawlerRepo = new FakeCrawlerRunRepository();
+        var ingestionRepo = new FakeIngestionRunRepository();
+        var queueRepo = new FakeQueueRepository();
+        var snapshotRepo = new FakePriceSnapshotRepository();
+        var source = new FakeSource(["https://example/ovochi/missing"]);
+        var extractor =
+            new FakeExtractor(ProductExtractResult.Fail(CrawlerErrorCodes.Timeout, 504, "HTTP 504", 11, 1.0d, true));
+
+        var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor);
+        var result = await sut.RunVegetablesAsync(CancellationToken.None);
+
+        Assert.Equal("error", result.Status);
+        Assert.Equal(RunStatus.Error, crawlerRepo.LastStatus);
+        Assert.Equal(RunStatus.Error, ingestionRepo.LastStatus);
     }
 
     private static RunCrawlerUseCase CreateUseCase(
@@ -160,29 +213,25 @@ public sealed class RunCrawlerUseCaseTests
 
     private sealed class FakePriceSnapshotRepository : IPriceSnapshotRepository
     {
-        public string? LastErrorCode { get; private set; }
-        public int? LastHttpStatus { get; private set; }
+        public ProductObservationWriteResult NextWriteResult { get; set; } = new(5, 15, true);
 
-        public Task<long> UpsertProductAsync(string productId, string name, string url, decimal? packValue,
-            string? packUnit, CancellationToken ct) => Task.FromResult(5L);
+        public List<ProductObservation> Observations { get; } = [];
 
-        public Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice,
-            bool promoFlag, bool? inStock, long? queueId, CancellationToken ct) => Task.CompletedTask;
+        public List<ProductErrorRecord> Errors { get; } = [];
 
-        public Task InsertProductErrorAsync(long runId, long? productKey, string? city, decimal price,
-            decimal? oldPrice, bool promoFlag, bool? inStock, CancellationToken ct) => Task.CompletedTask;
-
-        public Task InsertProductErrorAsync(long runId, string url, string errorCode, int? httpStatus, string? message,
+        public Task<ProductObservationWriteResult> StoreObservationAsync(long runId, long? queueId,
+            ProductObservation observation,
             CancellationToken ct)
         {
-            LastErrorCode = errorCode;
-            LastHttpStatus = httpStatus;
-            return Task.CompletedTask;
+            Observations.Add(observation);
+            return Task.FromResult(NextWriteResult);
         }
 
-        public Task InsertProductErrorAsync(long runId, long? queueId, string url, string errorCode, int? httpStatus,
-            string? message, CancellationToken ct)
-            => InsertProductErrorAsync(runId, url, errorCode, httpStatus, message, ct);
+        public Task<long> InsertProductErrorAsync(ProductErrorRecord error, CancellationToken ct)
+        {
+            Errors.Add(error);
+            return Task.FromResult((long)Errors.Count);
+        }
     }
 
     private sealed class FakeQueueRepository : IPriceCollectQueueRepository

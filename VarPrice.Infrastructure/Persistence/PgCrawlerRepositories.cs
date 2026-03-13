@@ -19,7 +19,7 @@ public sealed class PgCrawlerRunRepository(IPgConnectionFactory factory) : ICraw
         await using var cmd = cn.CreateCommand();
         cmd.CommandText = "insert into crawler_run(status, source) values (@status, @source) returning run_id;";
         AddParam(cmd, "@status", ToStorage(RunStatus.Running));
-        AddParam(cmd, "@source", source);
+        AddParam(cmd, "@source", Truncate(source, 64));
         var scalar = await cmd.ExecuteScalarAsync(ct);
         return Convert.ToInt64(scalar);
     }
@@ -32,17 +32,34 @@ public sealed class PgCrawlerRunRepository(IPgConnectionFactory factory) : ICraw
         await using var cmd = cn.CreateCommand();
         cmd.CommandText = "update crawler_run set status=@status, note=@note, finished_at=now() where run_id=@run_id;";
         AddParam(cmd, "@status", ToStorage(status));
-        AddParam(cmd, "@note", note);
+        AddParam(cmd, "@note", TruncateNullable(note, 255));
         AddParam(cmd, "@run_id", runId);
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
-    private static string ToStorage(RunStatus status) => status switch
+    private static short ToStorage(RunStatus status) => (short)status;
+
+    private static string Truncate(string? value, int maxLength)
     {
-        RunStatus.Running => "running",
-        RunStatus.Ok => "ok",
-        _ => "failed"
-    };
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
+
+    private static string? TruncateNullable(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
 
     private static void AddParam(DbCommand cmd, string name, object? value)
     {
@@ -78,135 +95,18 @@ public sealed class PgIngestionRunRepository(IPgConnectionFactory factory) : IIn
         cmd.CommandText =
             @"update ingestion_run set status=@status, error_code=@error_code, error_message=@error_message, finished_at=now()
 where ingestion_run_id=@ingestion_run_id;";
-        AddParam(cmd, "@status", status == RunStatus.Ok ? "ok" : "failed");
-        AddParam(cmd, "@error_code", errorInfo?.Code);
-        AddParam(cmd, "@error_message", errorInfo?.Message);
+        AddParam(cmd, "@status", status == RunStatus.Ok ? "ok" : "error");
+        AddParam(cmd, "@error_code", TruncateNullable(errorInfo?.Code, 128));
+        AddParam(cmd, "@error_message", TruncateNullable(errorInfo?.Message, 512));
         AddParam(cmd, "@ingestion_run_id", ingestionRunId);
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
-    private static void AddParam(DbCommand cmd, string name, object? value)
-    {
-        var p = cmd.CreateParameter();
-        p.ParameterName = name;
-        p.Value = value ?? DBNull.Value;
-        cmd.Parameters.Add(p);
-    }
-}
-
-public sealed class PgPriceSnapshotRepository(IPgConnectionFactory factory) : IPriceSnapshotRepository
-{
-    public async Task<long> UpsertProductAsync(string productId, string name, string url, decimal? packValue,
-        string? packUnit, CancellationToken ct)
-    {
-        await using var cn = (DbConnection)factory.Create();
-        await cn.OpenAsync(ct);
-
-        await using var cmd = cn.CreateCommand();
-        cmd.CommandText = @"insert into product(product_id, name, url, pack_value, pack_unit)
-values(@pid, @name, @url, @pv, @pu)
-on conflict (product_id) do update set
-name=excluded.name, url=excluded.url, pack_value=excluded.pack_value, pack_unit=excluded.pack_unit
-returning product_key;";
-        AddParam(cmd, "@pid", productId);
-        AddParam(cmd, "@name", name);
-        AddParam(cmd, "@url", url);
-        AddParam(cmd, "@pv", packValue);
-        AddParam(cmd, "@pu", packUnit);
-        var scalar = await cmd.ExecuteScalarAsync(ct);
-        return Convert.ToInt64(scalar);
-    }
-
-    public async Task InsertSnapshotAsync(long runId, long productKey, string? city, decimal price, decimal? oldPrice,
-        bool promoFlag, bool? inStock, long? queueId, CancellationToken ct)
-    {
-        await using var cn = (DbConnection)factory.Create();
-        await cn.OpenAsync(ct);
-
-        await using var cmd = cn.CreateCommand();
-        cmd.CommandText =
-            @"insert into price_snapshot(queue_id, run_id, product_key, city, price, old_price, promo_flag, in_stock)
-values(@queue_id, @run_id, @product_key, @city, @price, @old_price, @promo_flag, @in_stock)
-on conflict (queue_id) do update set
-captured_at=now(),
-run_id=excluded.run_id,
-product_key=excluded.product_key,
-city=excluded.city,
-price=excluded.price,
-old_price=excluded.old_price,
-promo_flag=excluded.promo_flag,
-in_stock=excluded.in_stock;";
-        AddParam(cmd, "@queue_id", queueId);
-        AddParam(cmd, "@run_id", runId);
-        AddParam(cmd, "@product_key", productKey);
-        AddParam(cmd, "@city", city);
-        AddParam(cmd, "@price", price);
-        AddParam(cmd, "@old_price", oldPrice);
-        AddParam(cmd, "@promo_flag", promoFlag);
-        AddParam(cmd, "@in_stock", inStock);
-        await cmd.ExecuteNonQueryAsync(ct);
-    }
-
-    public async Task InsertProductErrorAsync(long runId, long? productKey, string? city, decimal price,
-        decimal? oldPrice,
-        bool promoFlag, bool? inStock, CancellationToken ct)
-        => await InsertProductErrorAsync(
-            runId,
-            null,
-            city ?? string.Empty,
-            CrawlerErrorCodes.Unknown,
-            null,
-            "Legacy product error overload invoked",
-            ct);
-
-    public async Task InsertProductErrorAsync(long runId, string url, string errorCode, int? httpStatus,
-        string? message, CancellationToken ct)
-        => await InsertProductErrorAsync(runId, null, url, errorCode, httpStatus, message, ct);
-
-    public async Task InsertProductErrorAsync(long runId, long? queueId, string url, string errorCode, int? httpStatus,
-        string? message, CancellationToken ct)
-    {
-        await using var cn = (DbConnection)factory.Create();
-        await cn.OpenAsync(ct);
-
-        await using var cmd = cn.CreateCommand();
-        cmd.CommandText =
-            @"insert into product_errors(queue_id, run_id, product_id, name, url, pack_value, pack_unit, error_string, error_code, http_status, error_message)
-values(@queue_id, @run_id, @product_id, @name, @url, @pack_value, @pack_unit, @error_string, @error_code, @http_status, @error_message)
-on conflict (queue_id) do update set
-created_at=now(),
-run_id=excluded.run_id,
-error_string=excluded.error_string,
-error_code=excluded.error_code,
-http_status=excluded.http_status,
-error_message=excluded.error_message,
-url=excluded.url;";
-        var normalizedCode = string.IsNullOrWhiteSpace(errorCode)
-            ? CrawlerErrorCodes.Unknown
-            : errorCode.Trim().ToLowerInvariant();
-        var normalizedUrl = Truncate(url, 1024);
-        var normalizedMessage = Truncate(message, 512);
-        var shortError = Truncate($"{normalizedCode}: {normalizedMessage}", 256);
-
-        AddParam(cmd, "@queue_id", queueId);
-        AddParam(cmd, "@run_id", runId);
-        AddParam(cmd, "@product_id", DBNull.Value);
-        AddParam(cmd, "@name", Truncate("crawler_error", 512));
-        AddParam(cmd, "@url", normalizedUrl);
-        AddParam(cmd, "@pack_value", DBNull.Value);
-        AddParam(cmd, "@pack_unit", DBNull.Value);
-        AddParam(cmd, "@error_string", shortError);
-        AddParam(cmd, "@error_code", Truncate(normalizedCode, 64));
-        AddParam(cmd, "@http_status", httpStatus);
-        AddParam(cmd, "@error_message", normalizedMessage);
-        await cmd.ExecuteNonQueryAsync(ct);
-    }
-
-    private static string Truncate(string? value, int maxLength)
+    private static string? TruncateNullable(string? value, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            return string.Empty;
+            return null;
         }
 
         var trimmed = value.Trim();
@@ -220,6 +120,231 @@ url=excluded.url;";
         p.Value = value ?? DBNull.Value;
         cmd.Parameters.Add(p);
     }
+}
+
+public sealed class PgPriceSnapshotRepository(IPgConnectionFactory factory) : IPriceSnapshotRepository
+{
+    public async Task<ProductObservationWriteResult> StoreObservationAsync(
+        long runId,
+        long? queueId,
+        ProductObservation observation,
+        CancellationToken ct)
+    {
+        await using var cn = (DbConnection)factory.Create();
+        await cn.OpenAsync(ct);
+        await using var tx = await cn.BeginTransactionAsync(ct);
+
+        var productKey = await UpsertProductAsync(cn, tx, observation, ct);
+        var latestSnapshot = await GetLatestSnapshotAsync(cn, tx, productKey, ct);
+        var snapshotId = latestSnapshot?.SnapshotId;
+        var snapshotCreated = false;
+
+        if (observation.HasMinimalValidState)
+        {
+            if (latestSnapshot is null || HasMeaningfulChange(latestSnapshot, observation))
+            {
+                snapshotId = await InsertSnapshotAsync(cn, tx, runId, productKey, queueId, observation, ct);
+                snapshotCreated = true;
+            }
+        }
+
+        await tx.CommitAsync(ct);
+        return new ProductObservationWriteResult(productKey, snapshotId, snapshotCreated);
+    }
+
+    public async Task<long> InsertProductErrorAsync(ProductErrorRecord error, CancellationToken ct)
+    {
+        await using var cn = (DbConnection)factory.Create();
+        await cn.OpenAsync(ct);
+
+        await using var cmd = cn.CreateCommand();
+        cmd.CommandText = @"insert into product_errors(
+product_key,
+run_id,
+price_snapshot_id,
+queue_id,
+occurred_at,
+stage,
+error_code,
+error_message,
+details_json)
+values(
+@product_key,
+@run_id,
+@price_snapshot_id,
+@queue_id,
+@occurred_at,
+@stage,
+@error_code,
+@error_message,
+cast(@details_json as jsonb))
+returning product_error_id;";
+        AddParam(cmd, "@product_key", error.ProductKey);
+        AddParam(cmd, "@run_id", error.RunId);
+        AddParam(cmd, "@price_snapshot_id", error.PriceSnapshotId);
+        AddParam(cmd, "@queue_id", error.QueueId);
+        AddParam(cmd, "@occurred_at", error.OccurredAtUtc.UtcDateTime);
+        AddParam(cmd, "@stage", Truncate(error.Stage, 64));
+        AddParam(cmd, "@error_code", Truncate(NormalizeErrorCode(error.ErrorCode), 64));
+        AddParam(cmd, "@error_message", Truncate(error.ErrorMessage, 512));
+        AddParam(cmd, "@details_json", string.IsNullOrWhiteSpace(error.DetailsJson) ? null : error.DetailsJson);
+        var scalar = await cmd.ExecuteScalarAsync(ct);
+        return Convert.ToInt64(scalar);
+    }
+
+    private static async Task<long> UpsertProductAsync(
+        DbConnection cn,
+        DbTransaction tx,
+        ProductObservation observation,
+        CancellationToken ct)
+    {
+        await using var cmd = cn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = @"insert into product(product_id, name, url, pack_value, pack_unit, last_seen_at)
+values(@pid, @name, @url, @pv, @pu, @last_seen_at)
+on conflict (product_id) do update set
+name=excluded.name,
+url=excluded.url,
+pack_value=excluded.pack_value,
+pack_unit=excluded.pack_unit,
+last_seen_at=excluded.last_seen_at
+returning product_key;";
+        AddParam(cmd, "@pid", Truncate(observation.ProductId, 64));
+        AddParam(cmd, "@name", Truncate(observation.Name, 512));
+        AddParam(cmd, "@url", Truncate(observation.Url, 1024));
+        AddParam(cmd, "@pv", observation.PackValue);
+        AddParam(cmd, "@pu", TruncateNullable(observation.PackUnit, 16));
+        AddParam(cmd, "@last_seen_at", observation.ObservedAtUtc.UtcDateTime);
+        var scalar = await cmd.ExecuteScalarAsync(ct);
+        return Convert.ToInt64(scalar);
+    }
+
+    private static async Task<SnapshotState?> GetLatestSnapshotAsync(
+        DbConnection cn,
+        DbTransaction tx,
+        long productKey,
+        CancellationToken ct)
+    {
+        await using var cmd = cn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = @"select snapshot_id, regular_price, final_price, discount_percent, promo_flag, in_stock
+from price_snapshot
+where product_key=@product_key
+order by captured_at desc, snapshot_id desc
+limit 1;";
+        AddParam(cmd, "@product_key", productKey);
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct))
+        {
+            return null;
+        }
+
+        return new SnapshotState(
+            reader.GetInt64(0),
+            reader.IsDBNull(1) ? null : reader.GetDecimal(1),
+            reader.IsDBNull(2) ? null : reader.GetDecimal(2),
+            reader.IsDBNull(3) ? null : reader.GetInt32(3),
+            reader.GetBoolean(4),
+            reader.IsDBNull(5) ? null : reader.GetBoolean(5));
+    }
+
+    private static async Task<long> InsertSnapshotAsync(
+        DbConnection cn,
+        DbTransaction tx,
+        long runId,
+        long productKey,
+        long? queueId,
+        ProductObservation observation,
+        CancellationToken ct)
+    {
+        await using var cmd = cn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = @"insert into price_snapshot(
+run_id,
+captured_at,
+product_key,
+city,
+regular_price,
+final_price,
+discount_percent,
+promo_flag,
+in_stock,
+queue_id)
+values(
+@run_id,
+@captured_at,
+@product_key,
+@city,
+@regular_price,
+@final_price,
+@discount_percent,
+@promo_flag,
+@in_stock,
+@queue_id)
+returning snapshot_id;";
+        AddParam(cmd, "@run_id", runId);
+        AddParam(cmd, "@captured_at", observation.ObservedAtUtc.UtcDateTime);
+        AddParam(cmd, "@product_key", productKey);
+        AddParam(cmd, "@queue_id", queueId);
+        AddParam(cmd, "@city", TruncateNullable(observation.City, 128));
+        AddParam(cmd, "@regular_price", observation.RegularPrice);
+        AddParam(cmd, "@final_price", observation.FinalPrice);
+        AddParam(cmd, "@discount_percent", observation.DiscountPercent);
+        AddParam(cmd, "@promo_flag", observation.PromoFlag);
+        AddParam(cmd, "@in_stock", observation.InStock);
+        var scalar = await cmd.ExecuteScalarAsync(ct);
+        return Convert.ToInt64(scalar);
+    }
+
+    private static string Truncate(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
+
+    private static string? TruncateNullable(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+    }
+
+    private static string NormalizeErrorCode(string? errorCode)
+        => string.IsNullOrWhiteSpace(errorCode)
+            ? CrawlerErrorCodes.Unknown
+            : errorCode.Trim().ToLowerInvariant();
+
+    private static bool HasMeaningfulChange(SnapshotState snapshot, ProductObservation observation)
+        => snapshot.RegularPrice != observation.RegularPrice
+           || snapshot.FinalPrice != observation.FinalPrice
+           || snapshot.DiscountPercent != observation.DiscountPercent
+           || snapshot.PromoFlag != observation.PromoFlag
+           || snapshot.InStock != observation.InStock;
+
+    private static void AddParam(DbCommand cmd, string name, object? value)
+    {
+        var p = cmd.CreateParameter();
+        p.ParameterName = name;
+        p.Value = value ?? DBNull.Value;
+        cmd.Parameters.Add(p);
+    }
+
+    private sealed record SnapshotState(
+        long SnapshotId,
+        decimal? RegularPrice,
+        decimal? FinalPrice,
+        int? DiscountPercent,
+        bool PromoFlag,
+        bool? InStock);
 }
 
 public sealed class PgPriceCollectQueueRepository(IPgConnectionFactory factory) : IPriceCollectQueueRepository
