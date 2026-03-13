@@ -24,7 +24,7 @@ public sealed class VarPriceDbContext(DbContextOptions<VarPriceDbContext> option
         {
             entity.ToTable("crawler_run");
             entity.HasKey(x => x.Id);
-            entity.HasCheckConstraint("ck_crawler_run_status", "status in (0,1,2)");
+            entity.ToTable(t => t.HasCheckConstraint("ck_crawler_run_status", "status in (0,1,2)"));
             entity.HasIndex(x => new { x.Source, x.StartedAtUtc })
                 .IsDescending(false, true)
                 .HasDatabaseName("ix_crawler_run_source_started_at_desc");
