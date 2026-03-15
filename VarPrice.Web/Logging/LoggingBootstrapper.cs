@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace VarPrice.Web.Logging;
+﻿namespace VarPrice.Web.Logging;
 
 public interface ILoggingBootstrapper
 {

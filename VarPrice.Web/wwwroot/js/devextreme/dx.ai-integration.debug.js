@@ -1,7 +1,7 @@
 /*!
  * DevExtreme (dx.ai-integration.debug.js)
- * Version: 25.2.4
- * Build date: Mon Jan 26 2026
+ * Version: 25.2.5
+ * Build date: Fri Feb 20 2026
  *
  * Copyright (c) 2012 - 2026 Developer Express Inc. ALL RIGHTS RESERVED
  * Read about DevExtreme licensing here: https://js.devexpress.com/Licensing/
@@ -15,8 +15,8 @@
           \*************************************************************/
             (__unused_webpack_module, exports) => {
                 exports.version = exports.fullVersion = void 0;
-                exports.version = "25.2.4";
-                exports.fullVersion = "25.2.4"
+                exports.version = "25.2.5";
+                exports.fullVersion = "25.2.5"
             },
         5583:
         /*!*************************************************************************!*\
@@ -100,12 +100,10 @@
                 });
                 exports.ChangeStyleCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class ChangeStyleCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "changeStyle"
                     }
-
                     buildPromptData(params) {
                         return {
                             system: {
@@ -116,12 +114,10 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         return response
                     }
                 }
-
                 exports.ChangeStyleCommand = ChangeStyleCommand
             },
         11121:
@@ -134,12 +130,10 @@
                 });
                 exports.ProofreadCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class ProofreadCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "proofread"
                     }
-
                     buildPromptData(params) {
                         return {
                             user: {
@@ -147,12 +141,10 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         return response
                     }
                 }
-
                 exports.ProofreadCommand = ProofreadCommand
             },
         11528:
@@ -274,12 +266,10 @@
                 });
                 exports.SummarizeCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class SummarizeCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "summarize"
                     }
-
                     buildPromptData(params) {
                         return {
                             user: {
@@ -287,12 +277,10 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         return response
                     }
                 }
-
                 exports.SummarizeCommand = SummarizeCommand
             },
         15436:
@@ -305,12 +293,10 @@
                 });
                 exports.ExecuteCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class ExecuteCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "execute"
                     }
-
                     buildPromptData(params) {
                         return {
                             user: {
@@ -318,12 +304,10 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         return response
                     }
                 }
-
                 exports.ExecuteCommand = ExecuteCommand
             },
         16927:
@@ -336,12 +320,10 @@
                 });
                 exports.ChangeToneCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class ChangeToneCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "changeTone"
                     }
-
                     buildPromptData(params) {
                         return {
                             system: {
@@ -352,12 +334,10 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         return response
                     }
                 }
-
                 exports.ChangeToneCommand = ChangeToneCommand
             },
         17083:
@@ -378,13 +358,11 @@
                         this.provider = provider;
                         this.validateProvider()
                     }
-
                     validateProvider() {
                         if ("function" !== typeof this.provider.sendRequest) {
                             throw _errors.default.Error("E0122")
                         }
                     }
-
                     sendRequest(prompt, callbacks, data) {
                         let aborted = false;
                         const params = {
@@ -482,7 +460,6 @@
                         default: e
                     }
                 }
-
                 class SmartPasteCommand extends _base.BaseCommand {
                     static toTyped(values, desiredType, fieldName) {
                         const errorValue = JSON.stringify(values);
@@ -544,11 +521,9 @@
                                 return arr ?? single
                         }
                     }
-
                     getTemplateName() {
                         return "smartPaste"
                     }
-
                     buildPromptData(params) {
                         const fieldsInstructions = this.generateFieldsInstructions(params.fields);
                         return {
@@ -558,7 +533,6 @@
                             }
                         }
                     }
-
                     parseResult(response, params) {
                         const result = [];
                         response.split(";;;").forEach((data => {
@@ -578,7 +552,6 @@
                         }));
                         return result
                     }
-
                     generateFieldsInstructions(fields) {
                         const fieldData = fields.map((field => {
                             const instruction = field.instruction ?? "";
@@ -587,7 +560,6 @@
                         return fieldData.join(";;;")
                     }
                 }
-
                 exports.SmartPasteCommand = SmartPasteCommand
             },
         32527:
@@ -696,7 +668,6 @@
                             throw new Error(message)
                         }
                     }
-
                     return {
                         assert: assert,
                         assertParam: function (parameter, message) {
@@ -723,7 +694,6 @@
                         default: e
                     }
                 }
-
                 exports.default = (0, _error.default)(_errors.default.ERROR_MESSAGES, {
                     E1001: "Module '{0}'. Controller '{1}' is already registered",
                     E1002: "Module '{0}'. Controller '{1}' does not inherit from DevExpress.ui.dxDataGrid.Controller",
@@ -818,12 +788,10 @@
                 });
                 exports.ShortenCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class ShortenCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "shorten"
                     }
-
                     buildPromptData(params) {
                         return {
                             user: {
@@ -831,12 +799,10 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         return response
                     }
                 }
-
                 exports.ShortenCommand = ShortenCommand
             },
         37025:
@@ -849,12 +815,10 @@
                 });
                 exports.TranslateCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class TranslateCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "translate"
                     }
-
                     buildPromptData(params) {
                         return {
                             system: {
@@ -865,12 +829,10 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         return response
                     }
                 }
-
                 exports.TranslateCommand = TranslateCommand
             },
         37887:
@@ -883,12 +845,10 @@
                 });
                 exports.ExpandCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class ExpandCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "expand"
                     }
-
                     buildPromptData(params) {
                         return {
                             user: {
@@ -896,12 +856,10 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         return response
                     }
                 }
-
                 exports.ExpandCommand = ExpandCommand
             },
         39171:
@@ -1173,10 +1131,8 @@
                     function getErrorUrl(id) {
                         return ERROR_URL + id
                     }
-
                     return exports
                 }
-
                 exports.default = error
             },
         43101:
@@ -1237,7 +1193,6 @@
                         this.requestManager = new _request_manager.RequestManager(provider);
                         this.commands = new Map
                     }
-
                     executeCommand(commandName, params, callbacks) {
                         let command = this.commands.get(commandName);
                         if (!command) {
@@ -1247,43 +1202,33 @@
                         }
                         return command.execute(params, callbacks)
                     }
-
                     changeStyle(params, callbacks) {
                         return this.executeCommand(CommandNames.ChangeStyle, params, callbacks)
                     }
-
                     changeTone(params, callbacks) {
                         return this.executeCommand(CommandNames.ChangeTone, params, callbacks)
                     }
-
                     execute(params, callbacks) {
                         return this.executeCommand(CommandNames.Execute, params, callbacks)
                     }
-
                     expand(params, callbacks) {
                         return this.executeCommand(CommandNames.Expand, params, callbacks)
                     }
-
                     proofread(params, callbacks) {
                         return this.executeCommand(CommandNames.Proofread, params, callbacks)
                     }
-
                     shorten(params, callbacks) {
                         return this.executeCommand(CommandNames.Shorten, params, callbacks)
                     }
-
                     summarize(params, callbacks) {
                         return this.executeCommand(CommandNames.Summarize, params, callbacks)
                     }
-
                     translate(params, callbacks) {
                         return this.executeCommand(CommandNames.Translate, params, callbacks)
                     }
-
                     smartPaste(params, callbacks) {
                         return this.executeCommand(CommandNames.SmartPaste, params, callbacks)
                     }
-
                     generateGridColumn(params, callbacks) {
                         return this.executeCommand(CommandNames.GenerateGridColumn, params, callbacks)
                     }
@@ -1778,7 +1723,6 @@
                     }
                     return true
                 }
-
                 Color.prototype = {
                     constructor: Color,
                     highlight(step) {
@@ -1851,7 +1795,6 @@
                         this.promptManager = promptManager;
                         this.requestManager = requestManager
                     }
-
                     execute(params, callbacks) {
                         const templateName = this.getTemplateName();
                         const data = this.buildPromptData(params);
@@ -1932,7 +1875,6 @@
                     constructor() {
                         this.templates = new Map(Object.entries(_index.templates))
                     }
-
                     buildPrompt(templateName, data) {
                         const template = this.templates.get(templateName);
                         if (!template) {
@@ -1946,7 +1888,6 @@
                         };
                         return prompt
                     }
-
                     generateMessage(promptTemplate, placeholders) {
                         if (!placeholders && !promptTemplate) {
                             return
@@ -1960,7 +1901,6 @@
                         const result = this.replacePlaceholders(promptTemplate, placeholders);
                         return result
                     }
-
                     replacePlaceholders(promptTemplate, placeholders) {
                         const result = Object.entries(placeholders).reduce(((acc, _ref) => {
                             let [key, value] = _ref;
@@ -1994,12 +1934,10 @@
                 });
                 exports.GenerateGridColumnCommand = void 0;
                 var _base = __webpack_require__( /*! ../../../core/ai_integration/commands/base */ 55390);
-
                 class GenerateGridColumnCommand extends _base.BaseCommand {
                     getTemplateName() {
                         return "generateGridColumn"
                     }
-
                     buildPromptData(params) {
                         const dataDescription = this.generateDataDescription(params.data);
                         return {
@@ -2009,7 +1947,6 @@
                             }
                         }
                     }
-
                     parseResult(response) {
                         if ("string" === typeof response) {
                             if ("" === response) {
@@ -2026,13 +1963,11 @@
                             data: data
                         }
                     }
-
                     generateDataDescription(data) {
                         const result = JSON.stringify(data);
                         return result
                     }
                 }
-
                 exports.GenerateGridColumnCommand = GenerateGridColumnCommand
             },
         94977:

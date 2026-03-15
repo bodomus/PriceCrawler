@@ -1,7 +1,7 @@
 /*!
 * DevExtreme (dx.messages.de.js)
-* Version: 25.2.4
-* Build date: Mon Jan 26 2026
+* Version: 25.2.5
+* Build date: Fri Feb 20 2026
 *
 * Copyright (c) 2012 - 2026 Developer Express Inc. ALL RIGHTS RESERVED
 * Read about DevExtreme licensing here: https://js.devexpress.com/Licensing/
@@ -276,17 +276,17 @@
             "dxScheduler-appointmentAriaLabel-group": "Gruppe: {0}",
             "dxScheduler-appointmentAriaLabel-recurring": "Wiederkehrender Termin",
             "dxScheduler-appointmentListAriaLabel": "Terminliste",
-            "dxScheduler-newPopupTitle": "New Appointment",
-            "dxScheduler-editPopupTitle": "Edit Appointment",
-            "dxScheduler-editPopupSaveButtonText": "Save",
+            "dxScheduler-newPopupTitle": "Neuer Termin",
+            "dxScheduler-editPopupTitle": "Termin bearbeiten",
+            "dxScheduler-editPopupSaveButtonText": "Speichern",
             "dxScheduler-editorLabelTitle": "Betreff",
             "dxScheduler-editorLabelStartDate": "Anfangszeit",
-            "dxScheduler-editorAriaLabelStartTime": "Start time",
+            "dxScheduler-editorAriaLabelStartTime": "Anfangszeit",
             "dxScheduler-editorLabelEndDate": "Endzeit",
-            "dxScheduler-editorAriaLabelEndTime": "End time",
+            "dxScheduler-editorAriaLabelEndTime": "Endzeit",
             "dxScheduler-editorLabelDescription": "Beschreibung",
             "dxScheduler-editorLabelRecurrence": "Wiederholen",
-            "dxScheduler-noSubject": "(No subject)",
+            "dxScheduler-noSubject": "(Kein Betreff)",
             "dxScheduler-navigationToday": "Heute",
             "dxScheduler-navigationPrevious": "Vorherige Seite",
             "dxScheduler-navigationNext": "N\xe4chste Seite",

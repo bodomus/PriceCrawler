@@ -1,7 +1,7 @@
 /*!
 * DevExtreme (dx.messages.sl.js)
-* Version: 25.2.4
-* Build date: Mon Jan 26 2026
+* Version: 25.2.5
+* Build date: Fri Feb 20 2026
 *
 * Copyright (c) 2012 - 2026 Developer Express Inc. ALL RIGHTS RESERVED
 * Read about DevExtreme licensing here: https://js.devexpress.com/Licensing/
