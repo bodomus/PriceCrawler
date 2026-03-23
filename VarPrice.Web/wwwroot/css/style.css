@@ -590,3 +590,141 @@ body.runs-dashboard-page .dashboard-grid a:hover {
         font-size: 0.78rem;
     }
 }
+
+/* Kendo overrides for the migrated /Runs screen. */
+body.runs-dashboard-page .top-toolbar-host .k-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+body.runs-dashboard-page .top-toolbar-host .k-toolbar-items {
+    width: 100%;
+}
+
+body.runs-dashboard-page .top-btn.k-button {
+    min-width: auto;
+}
+
+body.runs-dashboard-page .top-btn .k-button-text {
+    font-weight: 600;
+}
+
+body.runs-dashboard-page .workspace-tabs-host .k-button-group {
+    flex-wrap: wrap;
+    gap: 9px;
+    border: 0;
+    background: transparent;
+}
+
+body.runs-dashboard-page .workspace-tabs-host .k-button {
+    border: 1px solid #ccd9d4;
+    background: #ecf2f1;
+    color: #25362e;
+    border-radius: 999px;
+    box-shadow: none;
+}
+
+body.runs-dashboard-page .workspace-tabs-host .k-button-text {
+    padding: 8px 16px;
+}
+
+body.runs-dashboard-page .workspace-tabs-host .k-button.k-selected {
+    background: #ffffff;
+    border-color: #c4d2cc;
+    box-shadow: 0 4px 10px rgba(34, 50, 43, 0.1);
+}
+
+body.runs-dashboard-page .dashboard-primary-button.k-button {
+    border: 0;
+    border-radius: 999px;
+    box-shadow: 0 14px 24px rgba(19, 110, 66, 0.28);
+    background: linear-gradient(135deg, #15975b 0%, #115f3a 100%);
+}
+
+body.runs-dashboard-page .dashboard-primary-button .k-button-text {
+    padding: 12px 20px;
+    color: #eff8f3;
+    font-weight: 700;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid {
+    color: #1f342b;
+    border: 0;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid-header,
+body.runs-dashboard-page .dashboard-grid .k-grid-toolbar,
+body.runs-dashboard-page .dashboard-grid .k-pager-wrap {
+    border-color: var(--line-soft);
+    background: #fff;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid-header .k-table-th {
+    background: #f1f8f4;
+    color: #294137;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-color: var(--line-soft);
+}
+
+body.runs-dashboard-page .dashboard-grid .k-table-td {
+    border-color: var(--line-soft);
+    font-size: 0.81rem;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-selected > td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-state-selected > td {
+    background-color: var(--accent-soft) !important;
+    color: #123322;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr:hover > td {
+    background-color: #f7fcf8;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid-toolbar {
+    gap: 10px;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid-search {
+    margin-left: auto;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid-search input {
+    border-color: #ccddd5;
+    border-radius: 8px;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-link,
+body.runs-dashboard-page .dashboard-grid .k-grid-content a {
+    color: #177b49;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid-content a:hover {
+    text-decoration: underline;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid-norecords td {
+    padding: 18px 16px;
+    color: var(--text-muted);
+    text-align: left;
+}
+
+body.runs-dashboard-page .dashboard-grid .k-pager-wrap .k-button {
+    border-radius: 7px;
+}
+
+@media (max-width: 768px) {
+    body.runs-dashboard-page .dashboard-primary-button.k-button {
+        width: 100%;
+    }
+
+    body.runs-dashboard-page .workspace-tabs-host .k-button-text {
+        padding: 7px 12px;
+        font-size: 0.78rem;
+    }
+}

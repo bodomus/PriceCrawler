@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 
-using DevExtreme.AspNet.Data;
-using DevExtreme.AspNet.Mvc;
+using Kendo.Mvc.Extensions;
+using Kendo.Mvc.UI;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -43,7 +43,7 @@ public sealed class RunsController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> RunsGrid(DataSourceLoadOptions loadOptions, CancellationToken ct)
+    public async Task<IActionResult> RunsGrid([DataSourceRequest] DataSourceRequest request, CancellationToken ct)
     {
         try
         {
@@ -57,22 +57,23 @@ public sealed class RunsController(
                     ItemsCount = row.ItemsCount
                 });
 
-            var result = await DataSourceLoader.LoadAsync(query, loadOptions, ct);
+            var result = await query.ToDataSourceResultAsync(request, ct);
             return Json(result);
         }
         catch (Exception ex)
         {
-            log.LogError(ex, "DevExtreme load failed for {Operation}", nameof(RunsGrid));
+            log.LogError(ex, "Kendo load failed for {Operation}", nameof(RunsGrid));
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
         }
     }
 
     [HttpGet]
-    public async Task<IActionResult> SnapshotsGrid(long? runId, DataSourceLoadOptions loadOptions, CancellationToken ct)
+    public async Task<IActionResult> SnapshotsGrid(long? runId, [DataSourceRequest] DataSourceRequest request,
+        CancellationToken ct)
     {
         if (runId is null)
         {
-            return Json(DataSourceLoader.Load(Array.Empty<SnapshotGridRowDto>(), loadOptions));
+            return Json(Array.Empty<SnapshotGridRowDto>().ToDataSourceResult(request));
         }
 
         try
@@ -91,23 +92,23 @@ public sealed class RunsController(
                     InStock = row.InStock
                 });
 
-            var result = await DataSourceLoader.LoadAsync(query, loadOptions, ct);
+            var result = await query.ToDataSourceResultAsync(request, ct);
             return Json(result);
         }
         catch (Exception ex)
         {
-            log.LogError(ex, "DevExtreme load failed for {Operation}", nameof(SnapshotsGrid));
+            log.LogError(ex, "Kendo load failed for {Operation}", nameof(SnapshotsGrid));
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
         }
     }
 
     [HttpGet]
-    public async Task<IActionResult> ProductsGrid(long? snapshotId, DataSourceLoadOptions loadOptions,
+    public async Task<IActionResult> ProductsGrid(long? snapshotId, [DataSourceRequest] DataSourceRequest request,
         CancellationToken ct)
     {
         if (snapshotId is null)
         {
-            return Json(DataSourceLoader.Load(Array.Empty<ProductGridRowDto>(), loadOptions));
+            return Json(Array.Empty<ProductGridRowDto>().ToDataSourceResult(request));
         }
 
         try
@@ -126,8 +127,8 @@ public sealed class RunsController(
                 })
                 .ToListAsync(ct);
 
-            var result = DataSourceLoader.Load(
-                records.Select(row => new ProductGridRowDto
+            var result = records
+                .Select(row => new ProductGridRowDto
                 {
                     Id = row.ProductKey,
                     Name = row.Name,
@@ -136,14 +137,14 @@ public sealed class RunsController(
                     Price = row.SnapshotPrice,
                     Unit = FormatUnit(row.PackValue, row.PackUnit),
                     UpdatedAtUtc = row.LastSeenAtUtc
-                }),
-                loadOptions);
+                })
+                .ToDataSourceResult(request);
 
             return Json(result);
         }
         catch (Exception ex)
         {
-            log.LogError(ex, "DevExtreme load failed for {Operation}", nameof(ProductsGrid));
+            log.LogError(ex, "Kendo load failed for {Operation}", nameof(ProductsGrid));
             return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
         }
     }

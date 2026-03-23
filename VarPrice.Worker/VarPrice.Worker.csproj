@@ -3,6 +3,9 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
+    <PropertyGroup>
+        <ApplicationIcon>app.ico</ApplicationIcon>
+    </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\VarPrice.Application\VarPrice.Application.csproj" />
     <ProjectReference Include="..\VarPrice.Infrastructure\VarPrice.Infrastructure.csproj" />
