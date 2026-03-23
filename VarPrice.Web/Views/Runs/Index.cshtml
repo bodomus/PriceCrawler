@@ -1,4 +1,5 @@
-﻿@model VarPrice.Web.ViewModels.Runs.RunsDashboardVm
+@using Kendo.Mvc.UI
+@model VarPrice.Web.ViewModels.Runs.RunsDashboardVm
 
 @{
     ViewData["Title"] = Model.PageTitle;
@@ -33,8 +34,8 @@
                         <div class="action-intro">
                             <h1 class="action-title">VARUS price cockpit</h1>
                             <p class="action-copy">
-                                DevExpress dashboard with the current shell, brand palette, and the same cascading data
-                                exploration flow.
+                                Kendo dashboard with the current shell, brand palette, and the same cascading
+                                data-exploration flow.
                             </p>
                             <div class="action-links">
                                 <a href="/health">Health check</a>
@@ -45,7 +46,8 @@
                             <form id="ingestForm" asp-action="IngestVegetables" asp-controller="Runs" method="post">
                                 @Html.AntiForgeryToken()
                             </form>
-                            <div id="ingestVegetablesButton"></div>
+                            <button id="ingestVegetablesButton" type="button">Collect price snapshot (vegetables)
+                            </button>
                         </div>
 
                         @if (Model.LatestRun is not null)

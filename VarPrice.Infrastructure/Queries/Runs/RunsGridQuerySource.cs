@@ -10,7 +10,7 @@ public sealed class RunsGridQuerySource(VarPriceDbContext dbContext) : IRunsGrid
 {
     public IQueryable<RunGridQueryRow> Build()
     {
-        return dbContext.CrawlerRuns
+        var query = dbContext.CrawlerRuns
             .AsNoTracking()
             .Select(run => new RunGridQueryRow
             {
@@ -24,5 +24,6 @@ public sealed class RunsGridQuerySource(VarPriceDbContext dbContext) : IRunsGrid
                         : "error",
                 ItemsCount = dbContext.PriceSnapshots.Count(snapshot => snapshot.RunId == run.Id)
             });
+        return query;
     }
 }

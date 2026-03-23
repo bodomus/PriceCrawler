@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Context;
 
+using Kendo.Mvc;
+
 using VarPrice.Application.DependencyInjection;
 using VarPrice.Application.Grids.Runs;
 using VarPrice.Infrastructure.DependencyInjection;
@@ -21,6 +23,7 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
     .Enrich.WithEnvironmentName());
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddKendo();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<VarPriceDbContext>(options =>
 {
