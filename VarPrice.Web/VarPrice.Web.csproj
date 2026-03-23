@@ -10,11 +10,14 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+      <PackageReference Include="Telerik.UI.for.AspNet.Core" Version="2025.2.520"/>
   </ItemGroup>
   <ItemGroup>
     <None Update="config\url-filters.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <PackageReference Include="DevExtreme.AspNet.Data" Version="5.1.0" />
+  </ItemGroup>
+    <ItemGroup>
+        <Folder Include="wwwroot\vendor\kendo\2025.2.520\"/>
   </ItemGroup>
 </Project>
