@@ -187,7 +187,7 @@ public sealed class VarusProductCardExtractor(
                 return ProductExtractResult.Fail(
                     CrawlerErrorCodes.ParseFailed,
                     httpStatus,
-                    "Could not parse product_id or price from HTML",
+                    "Could not parse product card from HTML",
                     sw.ElapsedMilliseconds,
                     rps,
                     false);
@@ -305,15 +305,16 @@ public sealed class VarusProductCardExtractor(
                    ?? doc.Title?.Trim();
 
         var text = doc.Body?.TextContent ?? string.Empty;
-        string? productId = (ld?.Sku?.Trim()).NullIfEmpty() ?? TryMatchProductId(text);
+        string? externalId = (ld?.Sku?.Trim()).NullIfEmpty() ?? TryMatchProductId(text);
 
-        if (productId is null)
+        if (externalId is null)
         {
-            log.LogDebug("No product_id found for {Url}", url);
-            return null;
+            log.LogDebug("No external_id found for {Url}", url);
         }
-
-        log.LogDebug("product_id found for {Url} sku={Sku}", url, productId);
+        else
+        {
+            log.LogDebug("external_id found for {Url} external_id={ExternalId}", url, externalId);
+        }
 
         var (packValue, packUnit) = PackParser.TryParse(text);
 
@@ -326,7 +327,7 @@ public sealed class VarusProductCardExtractor(
         int? discountPercent = null;
         bool? inStock = null;
 
-        var sqpp = SkuInlineJsonFallback.TryExtractSqpp(html, productId);
+        var sqpp = SkuInlineJsonFallback.TryExtractSqpp(html, externalId ?? string.Empty);
         if (sqpp is not null)
         {
             // On Varus: sqpp.special_price is promo price, sqpp.price is regular price.
@@ -340,11 +341,11 @@ public sealed class VarusProductCardExtractor(
             inStock = sqpp.Available;
 
             log.LogDebug("SQPP found for {Sku}: regular={Regular} special={Special} available={Available}",
-                productId, sqpp.RegularPrice, sqpp.SpecialPrice, sqpp.Available);
+                externalId, sqpp.RegularPrice, sqpp.SpecialPrice, sqpp.Available);
         }
         else
         {
-            log.LogDebug("SQPP not found for {Sku}", productId);
+            log.LogDebug("SQPP not found for {ExternalId}", externalId);
         }
 
         if (!finalPrice.HasValue || finalPrice.Value <= 0m)
@@ -372,20 +373,18 @@ public sealed class VarusProductCardExtractor(
         discountPercent ??= CalculateDiscountPercent(regularPrice, finalPrice);
         var promoFlag = (discountPercent.HasValue && discountPercent.Value > 0)
                         || (regularPrice.HasValue && finalPrice.HasValue && regularPrice.Value > finalPrice.Value);
-        var city = CityParser.TryParseFromUrl(url);
 
         return new ProductCard(
-            productId,
-            name ?? productId,
+            externalId,
+            name ?? externalId ?? url,
             url,
-            regularPrice,
+            TryBuildSlug(url),
             finalPrice,
-            discountPercent,
+            regularPrice,
             promoFlag,
-            inStock,
+            inStock ?? false,
             packValue,
-            packUnit,
-            city);
+            packUnit);
     }
 
     private TimeSpan BuildRetryDelay(int attempt, string errorCode)
@@ -440,14 +439,17 @@ public sealed class VarusProductCardExtractor(
         var value = ((regularPrice.Value - finalPrice.Value) / regularPrice.Value) * 100m;
         return (int)Math.Round(value, MidpointRounding.AwayFromZero);
     }
-}
 
-public static class CityParser
-{
-    public static string? TryParseFromUrl(string url)
+    private static string? TryBuildSlug(string url)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
-        return uri.Segments.Select(s => s.Trim('/')).FirstOrDefault(s => s.Length > 0);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        return uri.Segments
+            .Select(segment => segment.Trim('/'))
+            .LastOrDefault(segment => !string.IsNullOrWhiteSpace(segment));
     }
 }
 

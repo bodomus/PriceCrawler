@@ -1,14 +1,12 @@
 namespace VarPrice.Domain.Entities;
 
 public sealed record PriceSnapshot(
-    long SnapshotId,
+    long Id,
     long RunId,
-    long ProductKey,
-    string? City,
-    decimal? RegularPrice,
-    decimal? FinalPrice,
-    int? DiscountPercent,
+    long ProductId,
+    decimal? Price,
+    decimal? OldPrice,
     bool PromoFlag,
-    bool? InStock,
+    bool InStock,
     long? QueueId,
     DateTimeOffset CapturedAt);

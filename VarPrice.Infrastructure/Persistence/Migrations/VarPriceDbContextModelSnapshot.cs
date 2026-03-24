@@ -1,5 +1,6 @@
 #nullable disable
 
+#if false
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -387,3 +388,4 @@ partial class VarPriceDbContextModelSnapshot : ModelSnapshot
 #pragma warning restore 612, 618
     }
 }
+#endif

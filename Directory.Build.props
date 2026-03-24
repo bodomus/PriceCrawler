@@ -16,6 +16,7 @@
 
     <ContinuousIntegrationBuild Condition="'$(CI)'=='true'">true</ContinuousIntegrationBuild>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)'=='true'">true</ContinuousIntegrationBuild>
+      <NBGV_CacheMode>None</NBGV_CacheMode>
   </PropertyGroup>
 
   <ItemGroup>

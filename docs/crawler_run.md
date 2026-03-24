@@ -1,128 +1,142 @@
-# crawler_run and snapshots
+# crawler_run and price snapshots
 
-## Что такое `crawler_run`
+## What `crawler_run` stores
 
-`crawler_run` это журнал конкретных запусков crawler.
+`crawler_run` is the journal of concrete crawler executions.
 
-- Одна запись = один запуск.
-- Таблица не является справочником crawler-ов.
-- Поле `status` хранится как `smallint` с ограничением `check (status in (0,1,2))`.
+- One row = one run.
+- It is not a reference table of crawler definitions.
+- `status` is stored as text, not as numeric enum values.
 
-Соответствие enum:
+Current `crawler_run` columns:
 
-```csharp
-public enum RunStatus
-{
-    Running = 0,
-    Ok = 1,
-    Error = 2
-}
-```
-
-Основные поля `crawler_run`:
-
-- `run_id`
+- `id`
 - `started_at`
 - `finished_at`
 - `status`
 - `source`
 - `note`
 
-Индекс для выборок по источнику и последним запускам:
+Allowed `crawler_run.status` values:
+
+- `running`
+- `ok`
+- `error`
+
+Useful index:
 
 - `crawler_run(source, started_at desc)`
 
-## Что такое append-only `price_snapshot`
+## What `product` stores
 
-`price_snapshot` хранит только значимые изменения состояния товара.
+`product` is the normalized product dimension.
 
-Это append-only таблица:
+- Internal PK: `product.id`
+- External VARUS identifier: `product.external_id`
+- Stable product URL: `product.url`
+- Optional normalized slug and pack metadata: `slug`, `pack_value`, `pack_unit`
 
-- существующие записи не переписываются;
-- `captured_at` у старой записи не обновляется;
-- новый snapshot создается только когда состояние реально изменилось.
+All links from facts and errors to a product go only through `product.id`.
 
-Поля `price_snapshot`:
+Current `product` columns:
 
-- `snapshot_id`
+- `id`
+- `external_id`
+- `name`
+- `url`
+- `slug`
+- `pack_value`
+- `pack_unit`
+- `created_at`
+- `updated_at`
+
+## What append-only `price_snapshot` stores
+
+`price_snapshot` keeps only meaningful product state changes.
+
+It is append-only:
+
+- existing rows are not overwritten;
+- `captured_at` for existing rows does not change;
+- a new snapshot is created only when the observed state actually changed.
+
+Current `price_snapshot` columns:
+
+- `id`
 - `run_id`
+- `product_id`
 - `captured_at`
-- `product_key`
-- `city`
-- `regular_price`
-- `final_price`
-- `discount_percent`
+- `price`
+- `old_price`
 - `promo_flag`
 - `in_stock`
 - `queue_id`
 
-Индексы:
+Indexes:
 
-- `price_snapshot(product_key, captured_at desc)`
+- `price_snapshot(product_id, captured_at desc)`
 - `price_snapshot(run_id)`
 
-`queue_id` в `price_snapshot` не уникален. Мы не фиксируем жесткую модель
-`one queue item = one snapshot`, пока это явно не доказано.
+`queue_id` in `price_snapshot` is nullable and is not unique.
 
-## Когда создается snapshot
+## When a snapshot is created
 
-Новая запись в `price_snapshot` создается, если товар имеет минимально валидное состояние:
+A new row in `price_snapshot` can be created only when the product has a minimally valid observed state:
 
-- известен `product_key`;
-- и заполнено хотя бы одно из:
-  `regular_price`, `final_price`, `in_stock`.
+- `url` is known;
+- and at least one of these values is available:
+  `price`, `old_price`, `in_stock`.
 
-После этого snapshot создается только если изменилось хотя бы одно поле:
+After that, a new snapshot is inserted only when at least one field changed:
 
-- `regular_price`
-- `final_price`
-- `discount_percent`
+- `price`
+- `old_price`
 - `promo_flag`
 - `in_stock`
 
-Если товар новый:
+If the product is new:
 
-1. создается `product`;
-2. при наличии минимально валидного состояния создается первый `price_snapshot`;
-3. обновляется `product.last_seen_at`.
+1. a row is inserted into `product`;
+2. the first `price_snapshot` is inserted if the observed state is valid;
+3. `product.updated_at` is synchronized with the observation timestamp.
 
-## Когда обновляется только `product.last_seen_at`
+## When only `product.updated_at` changes
 
-Если товар успешно обработан, но состояние не изменилось, новый snapshot не создается.
+If a product is processed successfully and its state did not change, a new snapshot is not inserted.
 
-Вместо этого обновляется только:
+Instead, only:
 
-- `product.last_seen_at`
+- `product.updated_at`
 
-Это отделяет событие "товар снова увидели" от события "состояние товара изменилось".
+is refreshed.
 
-## Как работают `product_errors`
+This separates the event "we saw the product again" from the event "the product state changed".
 
-`product_errors` сохраняет ошибки с полным контекстом обработки товара.
+## How `crawl_error` works
 
-Поля:
+`crawl_error` stores processing failures with normalized links to the current schema.
 
-- `product_error_id`
-- `run_id` - обязательно
-- `product_key` - nullable
-- `price_snapshot_id` - nullable
-- `queue_id` - nullable
-- `occurred_at`
-- `stage`
+Current columns:
+
+- `id`
+- `run_id`
+- `queue_id`
+- `product_id`
+- `url`
 - `error_code`
+- `http_status`
 - `error_message`
-- `details_json`
+- `created_at`
 
-Индексы:
+Indexes:
 
-- `product_errors(run_id)`
-- `product_errors(product_key)`
+- `crawl_error(run_id)`
+- `crawl_error(product_id)`
 
-Правила записи:
+Write rules:
 
-- Если ошибка некритическая и удалось собрать валидное состояние товара, может быть создан snapshot,
-  затем ошибка сохраняется в `product_errors` со ссылкой на `price_snapshot_id`.
-- Если ошибка критическая и валидный snapshot собрать нельзя, snapshot не создается,
-  сохраняется только запись в `product_errors`.
-- Для транзиентных retry в очередь сохраняется контекст последней ошибки в `price_collect_queue`,
-  а финальная запись в `product_errors` фиксирует невосстановимую ошибку обработки.
+- If the issue is non-critical and we have a valid product state, the pipeline may store both
+  `price_snapshot` and `crawl_error`.
+- If the issue is critical and no valid state exists, only `crawl_error` is stored.
+- Retry-related transient failures keep their latest context in `price_collect_queue`, while the final
+  unrecoverable failure is persisted in `crawl_error`.

@@ -178,7 +178,7 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Queue__RetryMaxDelayMs`
 - `Queue__ReaperIntervalSeconds`
 
-Коды ошибок crawler, сохраняемые в `product_errors.error_code`:
+Коды ошибок crawler, сохраняемые в `crawl_error.error_code`:
 
 - `not_found`
 - `too_many_requests`
@@ -190,21 +190,22 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 ## Модель хранения результатов обхода
 
 - `crawler_run` хранит именно журнал конкретных запусков crawler, а не справочник crawler-ов.
-- `crawler_run.status` хранится как `smallint` со значениями `0=Running`, `1=Ok`, `2=Error`.
+- `crawler_run.status` хранится как `varchar(32)` со значениями `running`, `ok`, `error`.
+- `product` нормализован и использует внутренний PK `product.id`; внешний идентификатор хранится отдельно в `product.external_id`.
 - `price_snapshot` работает как append-only журнал значимых изменений состояния товара.
 - Новый `price_snapshot` создается только если изменилось хотя бы одно из полей:
-  `regular_price`, `final_price`, `discount_percent`, `promo_flag`, `in_stock`.
+  `price`, `old_price`, `promo_flag`, `in_stock`.
 - Если товар успешно обработан, но его состояние не изменилось, новый snapshot не создается.
-  В этом случае обновляется только `product.last_seen_at`.
+  В этом случае обновляется только `product.updated_at`.
 - Для нового товара создается запись в `product`, затем первый `price_snapshot`, если удалось собрать
-  минимально валидное состояние: известен `product_key` и есть хотя бы одно из
-  `regular_price`, `final_price`, `in_stock`.
-- `product_errors` хранит ошибки с полным контекстом запуска:
-  `run_id`, `product_key`, `price_snapshot_id`, `queue_id`, `occurred_at`, `stage`,
-  `error_code`, `error_message`, `details_json`.
+  минимально валидное состояние: известен `url` и есть хотя бы одно из
+  `price`, `old_price`, `in_stock`.
+- Все внешние связи на товар проходят только через внутренний `product.id`.
+- `crawl_error` хранит ошибки с полным контекстом запуска:
+  `run_id`, `queue_id`, `product_id`, `url`, `created_at`, `error_code`, `http_status`, `error_message`.
 - При некритической ошибке и валидном состоянии товара может быть создан и snapshot, и связанная запись
-  в `product_errors`.
-- При критической ошибке без валидного состояния snapshot не создается, сохраняется только `product_errors`.
+  в `crawl_error`.
+- При критической ошибке без валидного состояния snapshot не создается, сохраняется только `crawl_error`.
 
 ## Версионирование (Git tags + Nerdbank.GitVersioning)
 

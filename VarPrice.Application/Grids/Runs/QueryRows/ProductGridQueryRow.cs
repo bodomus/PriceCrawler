@@ -2,9 +2,9 @@ namespace VarPrice.Application.Grids.Runs.QueryRows;
 
 public sealed class ProductGridQueryRow
 {
-    public long ProductKey { get; init; }
+    public long Id { get; init; }
 
-    public string ProductId { get; init; } = string.Empty;
+    public string? ExternalId { get; init; }
 
     public string Name { get; init; } = string.Empty;
 
@@ -14,7 +14,7 @@ public sealed class ProductGridQueryRow
 
     public string? PackUnit { get; init; }
 
-    public DateTime? LastSeenAtUtc { get; init; }
+    public DateTime? UpdatedAtUtc { get; init; }
 
     public decimal? SnapshotPrice { get; init; }
 }

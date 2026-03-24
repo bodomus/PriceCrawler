@@ -152,6 +152,34 @@
             : `Selected Snapshot: #${selectedSnapshotId}`;
     };
 
+    const syncSnapshotGridSelection = (grid) => {
+        if (!grid) {
+            return;
+        }
+
+        let selectedRow = $();
+
+        grid.tbody.children("tr").each((_, row) => {
+            const dataItem = grid.dataItem(row);
+            const isCurrentRow = dataItem?.id === selectedSnapshotId;
+            const cells = $(row).children("td, .k-table-td");
+
+            $(row).toggleClass("snapshot-current-row", isCurrentRow);
+            cells.toggleClass("snapshot-current-cell", isCurrentRow);
+
+            if (isCurrentRow) {
+                selectedRow = $(row);
+            }
+        });
+
+        if (selectedSnapshotId === null || selectedRow.length === 0) {
+            grid.clearSelection();
+            return;
+        }
+
+        grid.select(selectedRow);
+    };
+
     const treeIcon = (nodeType) => {
         switch (nodeType) {
             case "date":
@@ -461,6 +489,7 @@
         search: {
             fields: ["id", "city", "status"]
         },
+        persistSelection: true,
         columns: [
             {field: "id", title: "Id", width: 90},
             {field: "status", title: "Status", width: 120},
@@ -499,10 +528,13 @@
                 $(row).toggleClass("snapshot-promo", isPromo);
                 $(row).toggleClass("snapshot-promo-strong", isStrongDiscount);
             });
+
+            syncSnapshotGridSelection(e.sender);
         },
         change() {
             const row = this.dataItem(this.select());
             selectedSnapshotId = row ? row.id : null;
+            syncSnapshotGridSelection(this);
             refreshContextLabels();
             reloadGrid(productsGrid);
         }

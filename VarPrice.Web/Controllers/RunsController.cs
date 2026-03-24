@@ -175,12 +175,10 @@ public sealed class RunsController(
             var resultQuery = query
                 .Select(row => new SnapshotGridRowDto
                 {
-                    //TODO check invalid city parser
                     Id = row.Id,
                     CreatedAtUtc = row.CapturedAtUtc,
-                    City = row.City,
-                    Price = row.FinalPrice,
-                    OldPrice = row.RegularPrice,
+                    Price = row.Price,
+                    OldPrice = row.OldPrice,
                     DiscountPercent = row.DiscountPercent,
                     PromoFlag = row.PromoFlag,
                     InStock = row.InStock,
@@ -211,27 +209,27 @@ public sealed class RunsController(
             var records = await productsGridQuerySource.Build(snapshotId.Value)
                 .Select(row => new
                 {
-                    row.ProductKey,
+                    row.Id,
                     row.Name,
-                    row.ProductId,
+                    row.ExternalId,
                     row.Url,
                     row.SnapshotPrice,
                     row.PackValue,
                     row.PackUnit,
-                    row.LastSeenAtUtc
+                    row.UpdatedAtUtc
                 })
                 .ToListAsync(ct);
 
             var result = records
                 .Select(row => new ProductGridRowDto
                 {
-                    Id = row.ProductKey,
+                    Id = row.Id,
                     Name = row.Name,
-                    Sku = row.ProductId,
+                    Sku = row.ExternalId ?? string.Empty,
                     Url = row.Url,
                     Price = row.SnapshotPrice,
                     Unit = FormatUnit(row.PackValue, row.PackUnit),
-                    UpdatedAtUtc = row.LastSeenAtUtc
+                    UpdatedAtUtc = row.UpdatedAtUtc
                 })
                 .ToDataSourceResult(request);
 

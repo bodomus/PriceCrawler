@@ -23,7 +23,7 @@ public sealed class RunCrawlerUseCaseTests
         var snapshotRepo = new FakePriceSnapshotRepository();
         var source = new FakeSource(["https://example/ovochi/1"]);
         var extractor = new FakeExtractor(ProductExtractResult.Success(
-            new ProductCard("1", "name", "url", 12m, 10m, 17, true, true, null, null, "kyiv"), 200, 10, 1.0d));
+            new ProductCard("1", "name", "url", "item", 10m, 12m, true, true, null, null), 200, 10, 1.0d));
 
         var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor);
         var result = await sut.RunVegetablesAsync(CancellationToken.None);
@@ -59,7 +59,7 @@ public sealed class RunCrawlerUseCaseTests
     }
 
     [Fact]
-    public async Task RunVegetablesAsync_CriticalItemFailure_MarksRunAsErrorAndPersistsProductError()
+    public async Task RunVegetablesAsync_CriticalItemFailure_MarksRunAsErrorAndPersistsCrawlError()
     {
         var crawlerRepo = new FakeCrawlerRunRepository();
         var ingestionRepo = new FakeIngestionRunRepository();
@@ -77,7 +77,7 @@ public sealed class RunCrawlerUseCaseTests
         Assert.Equal(1, result.Errors);
         Assert.Single(snapshotRepo.Errors);
         Assert.Equal(CrawlerErrorCodes.NotFound, snapshotRepo.Errors[0].ErrorCode);
-        Assert.Equal("extract", snapshotRepo.Errors[0].Stage);
+        Assert.Equal("https://example/ovochi/missing", snapshotRepo.Errors[0].Url);
         Assert.Empty(snapshotRepo.Observations);
     }
 
@@ -93,7 +93,7 @@ public sealed class RunCrawlerUseCaseTests
         };
         var source = new FakeSource(["https://example/ovochi/partial"]);
         var extractor = new FakeExtractor(ProductExtractResult.Partial(
-            new ProductCard("sku-1", "name", "url", 12m, 10m, 17, true, true, 1m, "kg", "kyiv"),
+            new ProductCard("sku-1", "name", "url", "partial", 10m, 12m, true, true, 1m, "kg"),
             CrawlerErrorCodes.ParseFailed,
             200,
             "discount label missing",
@@ -106,8 +106,8 @@ public sealed class RunCrawlerUseCaseTests
         Assert.Equal("ok", result.Status);
         Assert.Single(snapshotRepo.Observations);
         Assert.Single(snapshotRepo.Errors);
-        Assert.Equal(5, snapshotRepo.Errors[0].ProductKey);
-        Assert.Equal(77, snapshotRepo.Errors[0].PriceSnapshotId);
+        Assert.Equal(5, snapshotRepo.Errors[0].ProductId);
+        Assert.Equal("url", snapshotRepo.Errors[0].Url);
         Assert.Equal(CrawlerErrorCodes.ParseFailed, snapshotRepo.Errors[0].ErrorCode);
     }
 
@@ -217,7 +217,7 @@ public sealed class RunCrawlerUseCaseTests
 
         public List<ProductObservation> Observations { get; } = [];
 
-        public List<ProductErrorRecord> Errors { get; } = [];
+        public List<CrawlErrorRecord> Errors { get; } = [];
 
         public Task<ProductObservationWriteResult> StoreObservationAsync(long runId, long? queueId,
             ProductObservation observation,
@@ -227,7 +227,7 @@ public sealed class RunCrawlerUseCaseTests
             return Task.FromResult(NextWriteResult);
         }
 
-        public Task<long> InsertProductErrorAsync(ProductErrorRecord error, CancellationToken ct)
+        public Task<long> InsertCrawlErrorAsync(CrawlErrorRecord error, CancellationToken ct)
         {
             Errors.Add(error);
             return Task.FromResult((long)Errors.Count);
@@ -252,7 +252,7 @@ public sealed class RunCrawlerUseCaseTests
 
                 _rows[_nextId] = new QueueRow
                 {
-                    QueueId = _nextId,
+                    Id = _nextId,
                     RunId = runId,
                     Url = item.Url,
                     Attempt = 0,
@@ -272,7 +272,7 @@ public sealed class RunCrawlerUseCaseTests
             var reserved = _rows.Values
                 .Where(x => x.RunId == runId &&
                             (x.Status == QueueItemStatuses.Pending || x.Status == QueueItemStatuses.Retry))
-                .OrderBy(x => x.QueueId)
+                .OrderBy(x => x.Id)
                 .Take(Math.Max(1, batchSize))
                 .ToList();
 
@@ -282,7 +282,7 @@ public sealed class RunCrawlerUseCaseTests
             }
 
             var mapped = reserved
-                .Select(x => new ReservedQueueItem(x.QueueId, x.Url, null, x.Attempt, x.MaxAttempts, "fake"))
+                .Select(x => new ReservedQueueItem(x.Id, x.Url, x.Attempt, x.MaxAttempts, "fake"))
                 .ToList();
             return Task.FromResult<IReadOnlyList<ReservedQueueItem>>(mapped);
         }
@@ -334,7 +334,7 @@ public sealed class RunCrawlerUseCaseTests
 
         private sealed class QueueRow
         {
-            public long QueueId { get; init; }
+            public long Id { get; init; }
             public long RunId { get; init; }
             public string Url { get; init; } = string.Empty;
             public int Attempt { get; set; }
