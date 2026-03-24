@@ -28,8 +28,8 @@ public sealed class WorkerIntegrationTests
             factory,
             source: new StaticSource(["https://varus.ua/kyiv/ovochi/item"]),
             extractor: new DelegatingExtractor(_ => Task.FromResult(ProductExtractResult.Success(
-                new ProductCard("sku1", "Name", "https://varus.ua/kyiv/ovochi/item", 12m, 10m, 17, true, true, 1m,
-                    "kg", "kyiv"),
+                new ProductCard("sku1", "Name", "https://varus.ua/kyiv/ovochi/item", "item", 10m, 12m, true, true, 1m,
+                    "kg"),
                 200,
                 10,
                 1.0d))));
@@ -46,14 +46,14 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from ingestion_run"));
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_collect_queue where status='succeeded'"));
-        Assert.Equal(1, await ScalarAsync(conn, "select status from crawler_run limit 1"));
+        Assert.Equal("ok", await StringScalarAsync(conn, "select status from crawler_run limit 1"));
         Assert.Equal(0,
             await ScalarAsync(conn,
                 "select count(*) from price_collect_queue where status in ('pending','retry','reserved')"));
     }
 
     [Fact]
-    public async Task StoreObservation_NewProduct_CreatesSnapshotAndUpdatesLastSeenAt()
+    public async Task StoreObservation_NewProduct_CreatesSnapshotAndUpdatesProductTimestamp()
     {
         var factory = CreateFactory();
         await PrepareSchemaAsync();
@@ -65,7 +65,7 @@ public sealed class WorkerIntegrationTests
         var result = await snapshotRepo.StoreObservationAsync(
             runId,
             queueId: null,
-            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true),
+            CreateObservation(oldPrice: 12m, price: 10m, promoFlag: true, inStock: true),
             CancellationToken.None);
 
         Assert.True(result.SnapshotCreated);
@@ -75,11 +75,11 @@ public sealed class WorkerIntegrationTests
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product"));
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
-        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product where last_seen_at is not null"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product where updated_at is not null"));
     }
 
     [Fact]
-    public async Task StoreObservation_UnchangedProduct_UpdatesOnlyLastSeenAt()
+    public async Task StoreObservation_UnchangedProduct_UpdatesOnlyUpdatedAt()
     {
         var factory = CreateFactory();
         await PrepareSchemaAsync();
@@ -91,14 +91,14 @@ public sealed class WorkerIntegrationTests
         await snapshotRepo.StoreObservationAsync(
             runId,
             queueId: null,
-            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true,
+            CreateObservation(oldPrice: 12m, price: 10m, promoFlag: true, inStock: true,
                 observedAt: new DateTimeOffset(2026, 03, 10, 10, 0, 0, TimeSpan.Zero)),
             CancellationToken.None);
 
         var second = await snapshotRepo.StoreObservationAsync(
             runId,
             queueId: null,
-            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true,
+            CreateObservation(oldPrice: 12m, price: 10m, promoFlag: true, inStock: true,
                 observedAt: new DateTimeOffset(2026, 03, 10, 11, 0, 0, TimeSpan.Zero)),
             CancellationToken.None);
 
@@ -110,11 +110,11 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
         Assert.Equal(
             new DateTime(2026, 03, 10, 11, 0, 0, DateTimeKind.Utc),
-            await TimestampAsync(conn, "select last_seen_at from product limit 1"));
+            await TimestampAsync(conn, "select updated_at from product limit 1"));
     }
 
     [Fact]
-    public async Task StoreObservation_WhenOnlyDiscountChanges_CreatesNewSnapshot()
+    public async Task StoreObservation_WhenOnlyOldPriceChanges_CreatesNewSnapshot()
     {
         var factory = CreateFactory();
         await PrepareSchemaAsync();
@@ -126,13 +126,13 @@ public sealed class WorkerIntegrationTests
         await snapshotRepo.StoreObservationAsync(
             runId,
             queueId: null,
-            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true),
+            CreateObservation(oldPrice: 12m, price: 10m, promoFlag: true, inStock: true),
             CancellationToken.None);
 
         var second = await snapshotRepo.StoreObservationAsync(
             runId,
             queueId: null,
-            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 20, inStock: true,
+            CreateObservation(oldPrice: 13m, price: 10m, promoFlag: true, inStock: true,
                 observedAt: new DateTimeOffset(2026, 03, 10, 12, 0, 0, TimeSpan.Zero)),
             CancellationToken.None);
 
@@ -142,8 +142,8 @@ public sealed class WorkerIntegrationTests
         await conn.OpenAsync();
 
         Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_snapshot"));
-        Assert.Equal(20,
-            await ScalarAsync(conn, "select discount_percent from price_snapshot order by snapshot_id desc limit 1"));
+        Assert.Equal(10m,
+            await DecimalScalarAsync(conn, "select price from price_snapshot order by id desc limit 1"));
     }
 
     [Fact]
@@ -159,13 +159,13 @@ public sealed class WorkerIntegrationTests
         await snapshotRepo.StoreObservationAsync(
             runId,
             queueId: null,
-            CreateObservation(regularPrice: 12m, finalPrice: 10m, discountPercent: 17, inStock: true),
+            CreateObservation(oldPrice: 12m, price: 10m, promoFlag: true, inStock: true),
             CancellationToken.None);
 
         var second = await snapshotRepo.StoreObservationAsync(
             runId,
             queueId: null,
-            CreateObservation(regularPrice: 12m, finalPrice: 9m, discountPercent: 25, inStock: true,
+            CreateObservation(oldPrice: 12m, price: 9m, promoFlag: true, inStock: true,
                 observedAt: new DateTimeOffset(2026, 03, 10, 12, 30, 0, TimeSpan.Zero)),
             CancellationToken.None);
 
@@ -176,11 +176,11 @@ public sealed class WorkerIntegrationTests
 
         Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_snapshot"));
         Assert.Equal(9m,
-            await DecimalScalarAsync(conn, "select final_price from price_snapshot order by snapshot_id desc limit 1"));
+            await DecimalScalarAsync(conn, "select price from price_snapshot order by id desc limit 1"));
     }
 
     [Fact]
-    public async Task RunCrawlerUseCase_NonCriticalIssue_CreatesSnapshotAndLinkedProductError()
+    public async Task RunCrawlerUseCase_NonCriticalIssue_CreatesSnapshotAndLinkedCrawlError()
     {
         var factory = CreateFactory();
         await PrepareSchemaAsync();
@@ -189,8 +189,9 @@ public sealed class WorkerIntegrationTests
             factory,
             source: new StaticSource(["https://varus.ua/kyiv/ovochi/warn"]),
             extractor: new DelegatingExtractor(_ => Task.FromResult(ProductExtractResult.Partial(
-                new ProductCard("sku-warn", "Warn", "https://varus.ua/kyiv/ovochi/warn", 12m, 10m, 17, true, true, 1m,
-                    "kg", "kyiv"),
+                new ProductCard("sku-warn", "Warn", "https://varus.ua/kyiv/ovochi/warn", "warn", 10m, 12m, true, true,
+                    1m,
+                    "kg"),
                 CrawlerErrorCodes.ParseFailed,
                 200,
                 "promo badge missing",
@@ -204,9 +205,8 @@ public sealed class WorkerIntegrationTests
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
-        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product_errors"));
-        Assert.Equal(1,
-            await ScalarAsync(conn, "select count(*) from product_errors where price_snapshot_id is not null"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawl_error"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawl_error where product_id is not null"));
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public sealed class WorkerIntegrationTests
         var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
 
         var items = Enumerable.Range(1, 10)
-            .Select(i => new QueueEnqueueItem($"https://varus.ua/p/{i}", null, $"k-{i}"))
+            .Select(i => new QueueEnqueueItem($"https://varus.ua/p/{i}", $"k-{i}"))
             .ToList();
         await queueRepo.EnqueueAsync(runId, items, maxAttempts: 3, CancellationToken.None);
 
@@ -231,8 +231,8 @@ public sealed class WorkerIntegrationTests
             queueRepo.ReserveBatchAsync(runId, batchSize: 6, workerId: "worker-b", lease, CancellationToken.None);
         await Task.WhenAll(firstTask, secondTask);
 
-        var first = firstTask.Result.Select(x => x.QueueId).ToHashSet();
-        var second = secondTask.Result.Select(x => x.QueueId).ToHashSet();
+        var first = firstTask.Result.Select(x => x.Id).ToHashSet();
+        var second = secondTask.Result.Select(x => x.Id).ToHashSet();
 
         Assert.True(first.Count > 0);
         Assert.True(second.Count > 0);
@@ -252,7 +252,7 @@ public sealed class WorkerIntegrationTests
 
         await queueRepo.EnqueueAsync(
             runId,
-            [new QueueEnqueueItem("https://varus.ua/p/reaper", null, "reaper-1")],
+            [new QueueEnqueueItem("https://varus.ua/p/reaper", "reaper-1")],
             maxAttempts: 3,
             CancellationToken.None);
 
@@ -267,7 +267,7 @@ public sealed class WorkerIntegrationTests
         var secondReserve = await queueRepo.ReserveBatchAsync(runId, 1, "worker-b", TimeSpan.FromSeconds(30),
             CancellationToken.None);
         Assert.Single(secondReserve);
-        Assert.Equal(firstReserve[0].QueueId, secondReserve[0].QueueId);
+        Assert.Equal(firstReserve[0].Id, secondReserve[0].Id);
     }
 
     [Fact]
@@ -307,8 +307,8 @@ public sealed class WorkerIntegrationTests
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_collect_queue where status='dead'"));
         Assert.Equal(2, await ScalarAsync(conn, "select attempt from price_collect_queue limit 1"));
-        Assert.Equal(2, await ScalarAsync(conn, "select status from crawler_run limit 1"));
-        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product_errors where price_snapshot_id is null"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status='error'"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawl_error where product_id is null"));
     }
 
     [Fact]
@@ -334,7 +334,7 @@ public sealed class WorkerIntegrationTests
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
 
-        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status=2"));
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status='error'"));
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from ingestion_run where status='error'"));
     }
 
@@ -372,22 +372,21 @@ public sealed class WorkerIntegrationTests
             NullLogger<RunCrawlerUseCase>.Instance);
 
     private static ProductObservation CreateObservation(
-        decimal? regularPrice,
-        decimal? finalPrice,
-        int? discountPercent,
-        bool? inStock,
+        decimal? oldPrice,
+        decimal? price,
+        bool promoFlag,
+        bool inStock,
         DateTimeOffset? observedAt = null)
         => new(
             "sku-1",
             "Name",
             "https://varus.ua/kyiv/ovochi/item",
+            "item",
             1m,
             "kg",
-            "kyiv",
-            regularPrice,
-            finalPrice,
-            discountPercent,
-            discountPercent.GetValueOrDefault() > 0,
+            price,
+            oldPrice,
+            promoFlag,
             inStock,
             observedAt ?? new DateTimeOffset(2026, 03, 10, 9, 0, 0, TimeSpan.Zero));
 
@@ -409,7 +408,7 @@ public sealed class WorkerIntegrationTests
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
-            "truncate table price_snapshot, product_errors, price_collect_queue, product, ingestion_run, crawler_run restart identity cascade;",
+            "truncate table crawl_error, price_snapshot, price_collect_queue, product, ingestion_run, crawler_run restart identity cascade;",
             conn);
         await cmd.ExecuteNonQueryAsync();
     }
@@ -434,6 +433,13 @@ public sealed class WorkerIntegrationTests
         await using var cmd = new NpgsqlCommand(sql, conn);
         var value = await cmd.ExecuteScalarAsync();
         return Convert.ToDecimal(value);
+    }
+
+    private static async Task<string> StringScalarAsync(NpgsqlConnection conn, string sql)
+    {
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        var value = await cmd.ExecuteScalarAsync();
+        return Convert.ToString(value)!;
     }
 
     private static async Task<DateTime> TimestampAsync(NpgsqlConnection conn, string sql)

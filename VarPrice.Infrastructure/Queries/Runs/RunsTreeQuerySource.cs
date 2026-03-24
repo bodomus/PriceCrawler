@@ -25,10 +25,14 @@ public sealed class RunsTreeQuerySource(VarPriceDbContext dbContext) : IRunsTree
                 ItemsCount = dbContext.PriceSnapshots.Count(snapshot => snapshot.RunId == run.Id),
                 SuccessfulSnapshotsCount = dbContext.PriceSnapshots.Count(snapshot =>
                     snapshot.RunId == run.Id
-                    && !dbContext.ProductErrors.Any(error => error.PriceSnapshotId == snapshot.Id)),
+                    && !dbContext.CrawlErrors.Any(error =>
+                        error.RunId == snapshot.RunId
+                        && error.ProductId == snapshot.ProductId)),
                 FailedSnapshotsCount = dbContext.PriceSnapshots.Count(snapshot =>
                     snapshot.RunId == run.Id
-                    && dbContext.ProductErrors.Any(error => error.PriceSnapshotId == snapshot.Id))
+                    && dbContext.CrawlErrors.Any(error =>
+                        error.RunId == snapshot.RunId
+                        && error.ProductId == snapshot.ProductId))
             });
     }
 }

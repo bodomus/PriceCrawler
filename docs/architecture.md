@@ -3,9 +3,9 @@
 ## Layer responsibilities
 
 ### VarPrice.Domain
-- Core entities: `CrawlerRun`, `IngestionRun`, `Product`, `PriceSnapshot`.
+- Core entities: `CrawlerRun`, `IngestionRun`, `Product`, `PriceSnapshot`, `CrawlError`.
 - Domain enums/value objects: `RunStatus`, `ErrorInfo`.
-- Repository ports: `ICrawlerRunRepository`, `IIngestionRunRepository`, `IPriceSnapshotRepository`.
+- Repository ports: `ICrawlerRunRepository`, `IIngestionRunRepository`, `IPriceCollectQueueRepository`, `IPriceSnapshotRepository`.
 
 ### VarPrice.Application
 - `RunCrawlerUseCase` orchestrates:
@@ -14,7 +14,7 @@
   3. Collect and filter product urls.
   4. Enqueue urls into `price_collect_queue`.
   5. Reserve queue batches with lease (`FOR UPDATE SKIP LOCKED`).
-  6. Extract cards and write idempotent snapshot/error records.
+  6. Extract cards and write idempotent `price_snapshot` / `crawl_error` records.
   7. Retry transient failures with backoff; move exhausted items to dead-letter state.
   8. Run reaper for expired leases.
   9. Finalize statuses when queue is drained.
@@ -23,13 +23,14 @@
 ### VarPrice.Infrastructure
 - `PgCrawlerRunRepository`, `PgIngestionRunRepository`, `PgPriceSnapshotRepository`.
 - `PgPriceCollectQueueRepository` for queue enqueue/reserve/retry/dead/reap/stats.
-- `SchemaBootstrapper` ensures required tables/indexes.
+- `SchemaBootstrapper` ensures required tables/indexes and migrates legacy tables into the normalized schema.
 - HTTP adapters: `SitemapReader`, `VarusProductCardExtractor`.
 - Composition root extension: `AddVarPriceInfrastructure(configuration)`.
 
 ### VarPrice.Web
-- Razor Pages only call use-cases (`RunCrawlerUseCase`).
-- No direct DB access from UI layer.
+- MVC dashboard uses query sources and triggers `RunCrawlerUseCase`.
+- No direct write-side DB access from the UI layer.
+- Read-side data for grids is served through dedicated query sources over EF Core.
 
 ### VarPrice.Worker
 - Standalone console runner.

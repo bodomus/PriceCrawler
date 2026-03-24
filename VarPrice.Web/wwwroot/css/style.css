@@ -797,11 +797,38 @@ body.runs-dashboard-page .dashboard-grid .k-table-td {
     font-size: 0.81rem;
 }
 
+body.runs-dashboard-page .dashboard-grid .k-grid tbody td.k-selected,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody .k-table-td.k-selected,
 body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-selected > td,
-body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-state-selected > td {
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-selected > .k-table-td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-state-selected > td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-state-selected > .k-table-td {
     background-color: var(--selection-bg) !important;
     color: var(--selection-text);
-    box-shadow: inset 0 0 0 1px var(--selection-border);
+    box-shadow: inset 0 0 0 1px var(--selection-border), inset 4px 0 0 var(--accent);
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid tbody td.k-selected:hover,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody .k-table-td.k-selected:hover,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-selected:hover > td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-selected:hover > .k-table-td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-state-selected:hover > td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.k-state-selected:hover > .k-table-td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.snapshot-current-row > td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.snapshot-current-row > .k-table-td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.snapshot-current-row:hover > td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.snapshot-current-row:hover > .k-table-td,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody td.snapshot-current-cell,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody .k-table-td.snapshot-current-cell,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody td.snapshot-current-cell:hover,
+body.runs-dashboard-page .dashboard-grid .k-grid tbody .k-table-td.snapshot-current-cell:hover {
+    background-color: var(--selection-bg) !important;
+    color: var(--selection-text);
+    box-shadow: inset 0 0 0 1px var(--selection-border), inset 4px 0 0 var(--accent);
+}
+
+body.runs-dashboard-page .dashboard-grid .k-grid tbody tr.snapshot-current-row {
+    position: relative;
 }
 
 body.runs-dashboard-page .dashboard-grid .k-grid tbody tr:hover > td {

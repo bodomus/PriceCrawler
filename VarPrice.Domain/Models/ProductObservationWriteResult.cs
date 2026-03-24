@@ -1,6 +1,6 @@
 namespace VarPrice.Domain.Models;
 
 public sealed record ProductObservationWriteResult(
-    long ProductKey,
-    long? SnapshotId,
+    long ProductId,
+    long? PriceSnapshotId,
     bool SnapshotCreated);

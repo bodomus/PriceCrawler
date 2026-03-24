@@ -1,10 +1,12 @@
 namespace VarPrice.Domain.Entities;
 
 public sealed record Product(
-    long ProductKey,
-    string ProductId,
+    long Id,
+    string? ExternalId,
     string Name,
     string Url,
+    string? Slug,
     decimal? PackValue,
     string? PackUnit,
-    DateTimeOffset? LastSeenAt);
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? UpdatedAtUtc);

@@ -12,27 +12,27 @@ public sealed class ProductsGridQuerySource(VarPriceDbContext dbContext) : IProd
         return dbContext.Database
             .SqlQuery<ProductGridRow>($"""
                                        select
-                                           p.product_key as "ProductKey",
+                                           p.id as "Id",
                                            p.name as "Name",
-                                           p.product_id as "ProductId",
+                                           p.external_id as "ExternalId",
                                            p.url as "Url",
                                            p.pack_value as "PackValue",
                                            p.pack_unit as "PackUnit",
-                                           p.last_seen_at as "LastSeenAtUtc",
-                                           coalesce(s.final_price, s.regular_price) as "SnapshotPrice"
+                                           p.updated_at as "UpdatedAtUtc",
+                                           coalesce(s.price, s.old_price) as "SnapshotPrice"
                                        from price_snapshot s
-                                       join product p on p.product_key = s.product_key
-                                       where s.snapshot_id = {snapshotId}
+                                       join product p on p.id = s.product_id
+                                       where s.id = {snapshotId}
                                        """)
             .Select(row => new ProductGridQueryRow
             {
-                ProductKey = row.ProductKey,
-                ProductId = row.ProductId,
+                Id = row.Id,
+                ExternalId = row.ExternalId,
                 Name = row.Name,
                 Url = row.Url,
                 PackValue = row.PackValue,
                 PackUnit = row.PackUnit,
-                LastSeenAtUtc = row.LastSeenAtUtc,
+                UpdatedAtUtc = row.UpdatedAtUtc,
                 SnapshotPrice = row.SnapshotPrice
             });
     }

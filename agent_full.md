@@ -136,7 +136,7 @@ Main path:
 4. enqueue URLs into `price_collect_queue`
 5. reserve batches from queue
 6. process pages in parallel through `VarusProductCardExtractor`
-7. persist products, snapshots, and product errors
+7. persist normalized products, price snapshots, and crawl errors
 8. finish `crawler_run` and `ingestion_run`
 
 Important characteristics:
@@ -252,7 +252,7 @@ Responsibilities:
 - loading XML sitemap index and nested sitemaps
 - filtering excluded URLs
 - parsing product HTML / JSON-LD
-- extracting SKU, price, promo state, pack/unit, city
+- extracting external id, price, promo state, slug, and pack metadata
 - rate limiting and request pacing
 - retry backoff and temporary failure coordination
 
@@ -331,7 +331,7 @@ Main tables in PostgreSQL:
 - `ingestion_run`
 - `price_collect_queue`
 - `product`
-- `product_errors`
+- `crawl_error`
 - `price_snapshot`
 
 ### Meaning of tables
@@ -340,14 +340,15 @@ Main tables in PostgreSQL:
 - `ingestion_run`: ingestion-specific execution tracking and errors
 - `price_collect_queue`: queue of URLs to process with attempts, leases, retry timing
 - `product`: deduplicated product catalog
-- `product_errors`: failed product processing attempts
-- `price_snapshot`: collected price snapshots for a run/product
+- `crawl_error`: failed product processing attempts linked through normalized `product.id`
+- `price_snapshot`: collected price snapshots for a run/product fact
 
 ### Important persistence design choices
 
 - uniqueness on `(run_id, url)` in queue
 - separate `idempotency_key` for queue insertion safety
-- `queue_id` unique in both `price_snapshot` and `product_errors`
+- all product-facing links use internal `product.id`
+- `queue_id` is nullable and non-unique in `price_snapshot` and `crawl_error`
 - retries managed by status fields and `next_attempt_at`
 - lease-based reservation for parallel workers
 
@@ -431,7 +432,7 @@ Notable point:
 - queue draining
 - reservation isolation across workers
 - reaper behavior
-- idempotent snapshot/product-error persistence
+- idempotent snapshot/crawl-error persistence
 
 ## 11. Architectural Assessment
 

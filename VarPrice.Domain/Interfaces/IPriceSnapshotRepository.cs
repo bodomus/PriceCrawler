@@ -10,5 +10,5 @@ public interface IPriceSnapshotRepository
         ProductObservation observation,
         CancellationToken ct);
 
-    Task<long> InsertProductErrorAsync(ProductErrorRecord error, CancellationToken ct);
+    Task<long> InsertCrawlErrorAsync(CrawlErrorRecord error, CancellationToken ct);
 }

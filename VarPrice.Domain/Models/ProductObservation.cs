@@ -1,20 +1,19 @@
 namespace VarPrice.Domain.Models;
 
 public sealed record ProductObservation(
-    string ProductId,
+    string? ExternalId,
     string Name,
     string Url,
+    string? Slug,
     decimal? PackValue,
     string? PackUnit,
-    string? City,
-    decimal? RegularPrice,
-    decimal? FinalPrice,
-    int? DiscountPercent,
+    decimal? Price,
+    decimal? OldPrice,
     bool PromoFlag,
-    bool? InStock,
+    bool InStock,
     DateTimeOffset ObservedAtUtc)
 {
     public bool HasMinimalValidState =>
-        !string.IsNullOrWhiteSpace(ProductId) &&
-        (RegularPrice.HasValue || FinalPrice.HasValue || InStock.HasValue);
+        !string.IsNullOrWhiteSpace(Url) &&
+        (Price.HasValue || OldPrice.HasValue || InStock);
 }

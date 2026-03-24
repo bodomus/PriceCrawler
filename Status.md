@@ -18,7 +18,7 @@ Source: `VarPrice.Domain.Constants.QueueItemStatuses`
 - Set in `PgPriceCollectQueueRepository.ReserveBatchAsync`.
 
 ### `succeeded`
-- Applied after the product card is processed successfully.
+-
 - This is the final successful state for a queue item.
 - Set in `PgPriceCollectQueueRepository.MarkSucceededAsync`.
 
@@ -62,11 +62,11 @@ Source: `VarPrice.Domain.Enums.RunStatus`
 
 ### `crawler_run.status`
 
-`crawler_run.status` is stored as `smallint`:
+`crawler_run.status` is stored as text:
 
-- `0` -> `RunStatus.Running`
-- `1` -> `RunStatus.Ok`
-- `2` -> `RunStatus.Error`
+- `running` -> `RunStatus.Running`
+- `ok` -> `RunStatus.Ok`
+- `error` -> `RunStatus.Error`
 
 There is no separate table of crawler run statuses.
 
@@ -90,7 +90,7 @@ Source: `VarPrice.Application.UseCases.RunCrawlerUseCase`
 
 Important:
 - Inside the domain this is `RunStatus.Ok` / `RunStatus.Error`.
-- In `crawler_run` it is stored as `smallint`.
+- In `crawler_run` it is stored as `running` / `ok` / `error`.
 - In the result returned to UI and worker it is exposed as `ok` / `error`.
 
 ## 5. Snapshot and error semantics
@@ -100,13 +100,12 @@ Important:
 - No status column is used here.
 - No new snapshot is created for "same state seen again".
 
-### `product.last_seen_at`
+### `product.updated_at`
 - Updated when a product is seen successfully without a meaningful state change.
 
-### `product_errors`
-- Stores structured processing errors with `run_id` and optional links to `product_key`,
-  `price_snapshot_id`, and `queue_id`.
-- For non-critical parsing issues with a valid product state, the error can point to a created snapshot.
+### `crawl_error`
+- Stores structured processing errors with `run_id` and optional links to `product_id` and `queue_id`.
+- For non-critical parsing issues with a valid product state, the error points to the normalized `product.id`.
 - For critical failures without a valid snapshot, only the error row is saved.
 
 ## 6. UI status bar levels
@@ -170,16 +169,16 @@ Source: `VarPrice.Web.Controllers.RunsController`, `VarPrice.Web.ViewModels.Runs
 ### UI snapshot statuses
 
 ### `OK`
-- Returned by `SnapshotsGrid` for snapshots where no linked `product_errors` row exists for that snapshot.
+- Returned by `SnapshotsGrid` for snapshots where no linked `crawl_error` row exists for the same `run_id` and `product_id`.
 - This is the UI label used for successful snapshots.
 
 ### `Failed`
-- Returned by `SnapshotsGrid` for snapshots that have at least one linked `product_errors` row.
+- Returned by `SnapshotsGrid` for snapshots that have at least one linked `crawl_error` row for the same `run_id` and `product_id`.
 - This is the UI label used for failed snapshots.
 
 Important:
 - `price_snapshot` still has no physical `status` column in the database.
 - `OK` / `Failed` are derived UI statuses.
 - The current rule is:
-  `OK` = no `product_errors` linked by `price_snapshot_id`
-  `Failed` = one or more `product_errors` linked by `price_snapshot_id`
+  `OK` = no `crawl_error` linked by `run_id + product_id`
+  `Failed` = one or more `crawl_error` linked by `run_id + product_id`

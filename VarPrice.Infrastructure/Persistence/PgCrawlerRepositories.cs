@@ -17,7 +17,7 @@ public sealed class PgCrawlerRunRepository(IPgConnectionFactory factory) : ICraw
         await cn.OpenAsync(ct);
 
         await using var cmd = cn.CreateCommand();
-        cmd.CommandText = "insert into crawler_run(status, source) values (@status, @source) returning run_id;";
+        cmd.CommandText = "insert into crawler_run(status, source) values (@status, @source) returning id;";
         AddParam(cmd, "@status", ToStorage(RunStatus.Running));
         AddParam(cmd, "@source", Truncate(source, 64));
         var scalar = await cmd.ExecuteScalarAsync(ct);
@@ -30,14 +30,20 @@ public sealed class PgCrawlerRunRepository(IPgConnectionFactory factory) : ICraw
         await cn.OpenAsync(ct);
 
         await using var cmd = cn.CreateCommand();
-        cmd.CommandText = "update crawler_run set status=@status, note=@note, finished_at=now() where run_id=@run_id;";
+        cmd.CommandText = "update crawler_run set status=@status, note=@note, finished_at=now() where id=@id;";
         AddParam(cmd, "@status", ToStorage(status));
         AddParam(cmd, "@note", TruncateNullable(note, 255));
-        AddParam(cmd, "@run_id", runId);
+        AddParam(cmd, "@id", runId);
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
-    private static short ToStorage(RunStatus status) => (short)status;
+    private static string ToStorage(RunStatus status)
+        => status switch
+        {
+            RunStatus.Running => "running",
+            RunStatus.Ok => "ok",
+            _ => "error"
+        };
 
     private static string Truncate(string? value, int maxLength)
     {
@@ -134,60 +140,57 @@ public sealed class PgPriceSnapshotRepository(IPgConnectionFactory factory) : IP
         await cn.OpenAsync(ct);
         await using var tx = await cn.BeginTransactionAsync(ct);
 
-        var productKey = await UpsertProductAsync(cn, tx, observation, ct);
-        var latestSnapshot = await GetLatestSnapshotAsync(cn, tx, productKey, ct);
-        var snapshotId = latestSnapshot?.SnapshotId;
+        var productId = await UpsertProductAsync(cn, tx, observation, ct);
+        var latestSnapshot = await GetLatestSnapshotAsync(cn, tx, productId, ct);
+        var snapshotId = latestSnapshot?.Id;
         var snapshotCreated = false;
 
         if (observation.HasMinimalValidState)
         {
             if (latestSnapshot is null || HasMeaningfulChange(latestSnapshot, observation))
             {
-                snapshotId = await InsertSnapshotAsync(cn, tx, runId, productKey, queueId, observation, ct);
+                snapshotId = await InsertSnapshotAsync(cn, tx, runId, productId, queueId, observation, ct);
                 snapshotCreated = true;
             }
         }
 
         await tx.CommitAsync(ct);
-        return new ProductObservationWriteResult(productKey, snapshotId, snapshotCreated);
+        return new ProductObservationWriteResult(productId, snapshotId, snapshotCreated);
     }
 
-    public async Task<long> InsertProductErrorAsync(ProductErrorRecord error, CancellationToken ct)
+    public async Task<long> InsertCrawlErrorAsync(CrawlErrorRecord error, CancellationToken ct)
     {
         await using var cn = (DbConnection)factory.Create();
         await cn.OpenAsync(ct);
 
         await using var cmd = cn.CreateCommand();
-        cmd.CommandText = @"insert into product_errors(
-product_key,
-run_id,
-price_snapshot_id,
-queue_id,
-occurred_at,
-stage,
-error_code,
-error_message,
-details_json)
-values(
-@product_key,
-@run_id,
-@price_snapshot_id,
-@queue_id,
-@occurred_at,
-@stage,
-@error_code,
-@error_message,
-cast(@details_json as jsonb))
-returning product_error_id;";
-        AddParam(cmd, "@product_key", error.ProductKey);
+        cmd.CommandText = @"insert into crawl_error(
+ run_id,
+ queue_id,
+ product_id,
+ url,
+ error_code,
+ http_status,
+ error_message,
+ created_at)
+ values(
+ @run_id,
+ @queue_id,
+ @product_id,
+ @url,
+ @error_code,
+ @http_status,
+ @error_message,
+ @created_at)
+ returning id;";
         AddParam(cmd, "@run_id", error.RunId);
-        AddParam(cmd, "@price_snapshot_id", error.PriceSnapshotId);
         AddParam(cmd, "@queue_id", error.QueueId);
-        AddParam(cmd, "@occurred_at", error.OccurredAtUtc.UtcDateTime);
-        AddParam(cmd, "@stage", Truncate(error.Stage, 64));
-        AddParam(cmd, "@error_code", Truncate(NormalizeErrorCode(error.ErrorCode), 64));
-        AddParam(cmd, "@error_message", Truncate(error.ErrorMessage, 512));
-        AddParam(cmd, "@details_json", string.IsNullOrWhiteSpace(error.DetailsJson) ? null : error.DetailsJson);
+        AddParam(cmd, "@product_id", error.ProductId);
+        AddParam(cmd, "@url", TruncateNullable(error.Url, 1024));
+        AddParam(cmd, "@error_code", TruncateNullable(NormalizeErrorCode(error.ErrorCode), 64));
+        AddParam(cmd, "@http_status", error.HttpStatus);
+        AddParam(cmd, "@error_message", TruncateNullable(error.ErrorMessage, 512));
+        AddParam(cmd, "@created_at", error.CreatedAtUtc.UtcDateTime);
         var scalar = await cmd.ExecuteScalarAsync(ct);
         return Convert.ToInt64(scalar);
     }
@@ -198,41 +201,97 @@ returning product_error_id;";
         ProductObservation observation,
         CancellationToken ct)
     {
+        var existingProductId = await FindExistingProductIdAsync(cn, tx, observation.Url, observation.ExternalId, ct);
+
         await using var cmd = cn.CreateCommand();
         cmd.Transaction = tx;
-        cmd.CommandText = @"insert into product(product_id, name, url, pack_value, pack_unit, last_seen_at)
-values(@pid, @name, @url, @pv, @pu, @last_seen_at)
-on conflict (product_id) do update set
-name=excluded.name,
-url=excluded.url,
-pack_value=excluded.pack_value,
-pack_unit=excluded.pack_unit,
-last_seen_at=excluded.last_seen_at
-returning product_key;";
-        AddParam(cmd, "@pid", Truncate(observation.ProductId, 64));
+
+        if (existingProductId.HasValue)
+        {
+            cmd.CommandText = @"update product
+set external_id = coalesce(@external_id, external_id),
+    name = @name,
+    url = @url,
+    slug = @slug,
+    pack_value = @pack_value,
+    pack_unit = @pack_unit,
+    updated_at = @updated_at
+where id = @id
+returning id;";
+            AddParam(cmd, "@id", existingProductId.Value);
+        }
+        else
+        {
+            cmd.CommandText = @"insert into product(
+external_id,
+name,
+url,
+slug,
+pack_value,
+pack_unit,
+created_at,
+updated_at)
+values(
+@external_id,
+@name,
+@url,
+@slug,
+@pack_value,
+@pack_unit,
+@created_at,
+@updated_at)
+returning id;";
+            AddParam(cmd, "@created_at", observation.ObservedAtUtc.UtcDateTime);
+        }
+
+        AddParam(cmd, "@external_id", TruncateNullable(observation.ExternalId, 64));
         AddParam(cmd, "@name", Truncate(observation.Name, 512));
         AddParam(cmd, "@url", Truncate(observation.Url, 1024));
-        AddParam(cmd, "@pv", observation.PackValue);
-        AddParam(cmd, "@pu", TruncateNullable(observation.PackUnit, 16));
-        AddParam(cmd, "@last_seen_at", observation.ObservedAtUtc.UtcDateTime);
+        AddParam(cmd, "@slug", TruncateNullable(observation.Slug, 512));
+        AddParam(cmd, "@pack_value", observation.PackValue);
+        AddParam(cmd, "@pack_unit", TruncateNullable(observation.PackUnit, 16));
+        AddParam(cmd, "@updated_at", observation.ObservedAtUtc.UtcDateTime);
         var scalar = await cmd.ExecuteScalarAsync(ct);
         return Convert.ToInt64(scalar);
+    }
+
+    private static async Task<long?> FindExistingProductIdAsync(
+        DbConnection cn,
+        DbTransaction tx,
+        string url,
+        string? externalId,
+        CancellationToken ct)
+    {
+        await using var cmd = cn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+                          select id
+                          from product
+                          where url = @url
+                             or (@external_id is not null and external_id = @external_id)
+                          order by case when url = @url then 0 else 1 end, id
+                          limit 1;
+                          """;
+        AddParam(cmd, "@url", Truncate(url, 1024));
+        AddParam(cmd, "@external_id", TruncateNullable(externalId, 64));
+        var scalar = await cmd.ExecuteScalarAsync(ct);
+        return scalar is null or DBNull ? null : Convert.ToInt64(scalar);
     }
 
     private static async Task<SnapshotState?> GetLatestSnapshotAsync(
         DbConnection cn,
         DbTransaction tx,
-        long productKey,
+        long productId,
         CancellationToken ct)
     {
         await using var cmd = cn.CreateCommand();
         cmd.Transaction = tx;
-        cmd.CommandText = @"select snapshot_id, regular_price, final_price, discount_percent, promo_flag, in_stock
+        cmd.CommandText = @"select id, price, old_price, promo_flag, in_stock
 from price_snapshot
-where product_key=@product_key
-order by captured_at desc, snapshot_id desc
+where product_id=@product_id
+order by captured_at desc, id desc
 limit 1;";
-        AddParam(cmd, "@product_key", productKey);
+        AddParam(cmd, "@product_id", productId);
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         if (!await reader.ReadAsync(ct))
         {
@@ -243,16 +302,15 @@ limit 1;";
             reader.GetInt64(0),
             reader.IsDBNull(1) ? null : reader.GetDecimal(1),
             reader.IsDBNull(2) ? null : reader.GetDecimal(2),
-            reader.IsDBNull(3) ? null : reader.GetInt32(3),
-            reader.GetBoolean(4),
-            reader.IsDBNull(5) ? null : reader.GetBoolean(5));
+            reader.GetBoolean(3),
+            reader.GetBoolean(4));
     }
 
     private static async Task<long> InsertSnapshotAsync(
         DbConnection cn,
         DbTransaction tx,
         long runId,
-        long productKey,
+        long productId,
         long? queueId,
         ProductObservation observation,
         CancellationToken ct)
@@ -261,37 +319,31 @@ limit 1;";
         cmd.Transaction = tx;
         cmd.CommandText = @"insert into price_snapshot(
 run_id,
+product_id,
 captured_at,
-product_key,
-city,
-regular_price,
-final_price,
-discount_percent,
+price,
+old_price,
 promo_flag,
 in_stock,
 queue_id)
 values(
 @run_id,
+@product_id,
 @captured_at,
-@product_key,
-@city,
-@regular_price,
-@final_price,
-@discount_percent,
+@price,
+@old_price,
 @promo_flag,
 @in_stock,
 @queue_id)
-returning snapshot_id;";
+returning id;";
         AddParam(cmd, "@run_id", runId);
+        AddParam(cmd, "@product_id", productId);
         AddParam(cmd, "@captured_at", observation.ObservedAtUtc.UtcDateTime);
-        AddParam(cmd, "@product_key", productKey);
-        AddParam(cmd, "@queue_id", queueId);
-        AddParam(cmd, "@city", TruncateNullable(observation.City, 128));
-        AddParam(cmd, "@regular_price", observation.RegularPrice);
-        AddParam(cmd, "@final_price", observation.FinalPrice);
-        AddParam(cmd, "@discount_percent", observation.DiscountPercent);
+        AddParam(cmd, "@price", observation.Price);
+        AddParam(cmd, "@old_price", observation.OldPrice);
         AddParam(cmd, "@promo_flag", observation.PromoFlag);
         AddParam(cmd, "@in_stock", observation.InStock);
+        AddParam(cmd, "@queue_id", queueId);
         var scalar = await cmd.ExecuteScalarAsync(ct);
         return Convert.ToInt64(scalar);
     }
@@ -324,9 +376,8 @@ returning snapshot_id;";
             : errorCode.Trim().ToLowerInvariant();
 
     private static bool HasMeaningfulChange(SnapshotState snapshot, ProductObservation observation)
-        => snapshot.RegularPrice != observation.RegularPrice
-           || snapshot.FinalPrice != observation.FinalPrice
-           || snapshot.DiscountPercent != observation.DiscountPercent
+        => snapshot.Price != observation.Price
+           || snapshot.OldPrice != observation.OldPrice
            || snapshot.PromoFlag != observation.PromoFlag
            || snapshot.InStock != observation.InStock;
 
@@ -339,12 +390,11 @@ returning snapshot_id;";
     }
 
     private sealed record SnapshotState(
-        long SnapshotId,
-        decimal? RegularPrice,
-        decimal? FinalPrice,
-        int? DiscountPercent,
+        long Id,
+        decimal? Price,
+        decimal? OldPrice,
         bool PromoFlag,
-        bool? InStock);
+        bool InStock);
 }
 
 public sealed class PgPriceCollectQueueRepository(IPgConnectionFactory factory) : IPriceCollectQueueRepository
@@ -358,22 +408,20 @@ public sealed class PgPriceCollectQueueRepository(IPgConnectionFactory factory) 
         }
 
         var urls = items.Select(x => Truncate(x.Url, 1024)).ToArray();
-        var cities = items.Select(x => TruncateNullable(x.City, 128)).ToArray();
         var idempotencyKeys = items.Select(x => Truncate(x.IdempotencyKey, 128)).ToArray();
 
         await using var cn = (DbConnection)factory.Create();
         await cn.OpenAsync(ct);
         await using var cmd = cn.CreateCommand();
         cmd.CommandText =
-            $@"insert into price_collect_queue(run_id, url, city, status, attempt, max_attempts, next_attempt_at, idempotency_key)
-select @run_id, x.url, x.city, @status, 0, @max_attempts, now(), x.idempotency_key
-from unnest(@urls::varchar[], @cities::varchar[], @idempotency_keys::varchar[]) as x(url, city, idempotency_key)
-on conflict (run_id, url) do nothing;";
+            $@"insert into price_collect_queue(run_id, url, status, attempt, max_attempts, next_attempt_at, idempotency_key, created_at, updated_at)
+ select @run_id, x.url, @status, 0, @max_attempts, now(), x.idempotency_key, now(), now()
+ from unnest(@urls::varchar[], @idempotency_keys::varchar[]) as x(url, idempotency_key)
+ on conflict (run_id, url) do nothing;";
         AddParam(cmd, "@run_id", runId);
         AddParam(cmd, "@status", QueueItemStatuses.Pending);
         AddParam(cmd, "@max_attempts", Math.Max(1, maxAttempts));
         AddParam(cmd, "@urls", urls);
-        AddParam(cmd, "@cities", cities);
         AddParam(cmd, "@idempotency_keys", idempotencyKeys);
 
         return await cmd.ExecuteNonQueryAsync(ct);
@@ -394,12 +442,12 @@ on conflict (run_id, url) do nothing;";
         await using var cmd = cn.CreateCommand();
         cmd.CommandText = $"""
                            with candidates as (
-                               select queue_id
+                               select id
                                from price_collect_queue
                                where run_id=@run_id
                                  and status in (@pending, @retry)
-                                 and next_attempt_at <= now()
-                               order by next_attempt_at, queue_id
+                                 and coalesce(next_attempt_at, created_at, now()) <= now()
+                               order by coalesce(next_attempt_at, created_at, now()), id
                                limit @limit
                                for update skip locked
                            ),
@@ -407,16 +455,16 @@ on conflict (run_id, url) do nothing;";
                                update price_collect_queue q
                                set status=@reserved,
                                    reserved_at=now(),
-                                   lease_until=now() + (@lease_seconds * interval '1 second'),
-                                   reserved_by=@reserved_by,
-                                   updated_at=now()
+                                    lease_until=now() + (@lease_seconds * interval '1 second'),
+                                    reserved_by=@reserved_by,
+                                    updated_at=now()
                                from candidates c
-                               where q.queue_id = c.queue_id
-                               returning q.queue_id, q.url, q.city, q.attempt, q.max_attempts, q.idempotency_key
+                               where q.id = c.id
+                               returning q.id, q.url, q.attempt, q.max_attempts, q.idempotency_key
                            )
-                           select queue_id, url, city, attempt, max_attempts, idempotency_key
+                           select id, url, attempt, max_attempts, coalesce(idempotency_key, '')
                            from updated
-                           order by queue_id;
+                           order by id;
                            """;
         AddParam(cmd, "@run_id", runId);
         AddParam(cmd, "@pending", QueueItemStatuses.Pending);
@@ -433,10 +481,9 @@ on conflict (run_id, url) do nothing;";
             result.Add(new ReservedQueueItem(
                 reader.GetInt64(0),
                 reader.GetString(1),
-                reader.IsDBNull(2) ? null : reader.GetString(2),
+                reader.GetInt32(2),
                 reader.GetInt32(3),
-                reader.GetInt32(4),
-                reader.GetString(5)));
+                reader.GetString(4)));
         }
 
         return result;
@@ -455,10 +502,10 @@ on conflict (run_id, url) do nothing;";
                               lease_until=null,
                               reserved_by=null,
                               updated_at=now()
-                          where queue_id=@queue_id;
+                          where id=@id;
                           """;
         AddParam(cmd, "@status", QueueItemStatuses.Succeeded);
-        AddParam(cmd, "@queue_id", queueId);
+        AddParam(cmd, "@id", queueId);
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
@@ -480,14 +527,14 @@ on conflict (run_id, url) do nothing;";
                               lease_until=null,
                               reserved_by=null,
                               updated_at=now()
-                          where queue_id=@queue_id;
+                          where id=@id;
                           """;
         AddParam(cmd, "@status", QueueItemStatuses.Retry);
         AddParam(cmd, "@next_attempt_at", nextAttemptAt.UtcDateTime);
         AddParam(cmd, "@error_code", Truncate(errorCode, 64));
         AddParam(cmd, "@http_status", httpStatus);
-        AddParam(cmd, "@error_message", Truncate(message, 512));
-        AddParam(cmd, "@queue_id", queueId);
+        AddParam(cmd, "@error_message", TruncateNullable(message, 512));
+        AddParam(cmd, "@id", queueId);
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
@@ -509,13 +556,13 @@ on conflict (run_id, url) do nothing;";
                               reserved_by=null,
                               updated_at=now(),
                               finished_at=now()
-                          where queue_id=@queue_id;
+                          where id=@id;
                           """;
         AddParam(cmd, "@status", QueueItemStatuses.Dead);
         AddParam(cmd, "@error_code", Truncate(errorCode, 64));
         AddParam(cmd, "@http_status", httpStatus);
-        AddParam(cmd, "@error_message", Truncate(message, 512));
-        AddParam(cmd, "@queue_id", queueId);
+        AddParam(cmd, "@error_message", TruncateNullable(message, 512));
+        AddParam(cmd, "@id", queueId);
         await cmd.ExecuteNonQueryAsync(ct);
     }
 

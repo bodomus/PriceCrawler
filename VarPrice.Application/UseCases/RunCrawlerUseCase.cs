@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -55,7 +54,7 @@ public sealed class RunCrawlerUseCase(
             urls = urls.Take(Math.Min(maxProductsPerRun, maxUrls)).ToList();
 
             var queueItems = urls
-                .Select(url => new QueueEnqueueItem(url, null, BuildIdempotencyKey(runId, url)))
+                .Select(url => new QueueEnqueueItem(url, BuildIdempotencyKey(runId, url)))
                 .ToList();
             var enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
 
@@ -167,7 +166,7 @@ public sealed class RunCrawlerUseCase(
                 logger.LogWarning(
                     "Queue item failed run_id={RunId} queue_id={QueueId} url={Url} error_code={ErrorCode} http_status={HttpStatus} transient={Transient}",
                     runId,
-                    item.QueueId,
+                    item.Id,
                     item.Url,
                     issue.ErrorCode,
                     issue.HttpStatus,
@@ -177,49 +176,47 @@ public sealed class RunCrawlerUseCase(
 
             var card = extractResult.Card;
             var observation = new ProductObservation(
-                card.ProductId,
+                card.ExternalId,
                 card.Name,
                 card.Url,
+                card.Slug,
                 card.PackValue,
                 card.PackUnit,
-                card.City,
-                card.RegularPrice,
-                card.FinalPrice,
-                card.DiscountPercent,
+                card.Price,
+                card.OldPrice,
                 card.PromoFlag,
                 card.InStock,
                 DateTimeOffset.UtcNow);
 
             var writeResult = await priceSnapshotRepository.StoreObservationAsync(
                 runId,
-                item.QueueId,
+                item.Id,
                 observation,
                 ct);
 
             if (extractResult.Issue is not null)
             {
                 var issue = NormalizeIssue(extractResult.Issue, isCritical: false);
-                await priceSnapshotRepository.InsertProductErrorAsync(
-                    new ProductErrorRecord(
+                await priceSnapshotRepository.InsertCrawlErrorAsync(
+                    new CrawlErrorRecord(
                         runId,
-                        writeResult.ProductKey,
-                        writeResult.SnapshotId,
-                        item.QueueId,
+                        item.Id,
+                        writeResult.ProductId,
+                        card.Url,
                         DateTimeOffset.UtcNow,
-                        issue.Stage,
                         issue.ErrorCode,
-                        issue.Message ?? string.Empty,
-                        BuildIssueDetailsJson(item, issue, card)),
+                        issue.HttpStatus,
+                        issue.Message),
                     ct);
             }
 
-            await queueRepository.MarkSucceededAsync(item.QueueId, ct);
+            await queueRepository.MarkSucceededAsync(item.Id, ct);
 
             logger.LogInformation(
-                "Queue item succeeded run_id={RunId} queue_id={QueueId} sku={Sku} latency_ms={LatencyMs} http_status={HttpStatus}",
+                "Queue item succeeded run_id={RunId} queue_id={QueueId} external_id={ExternalId} latency_ms={LatencyMs} http_status={HttpStatus}",
                 runId,
-                item.QueueId,
-                card.ProductId,
+                item.Id,
+                card.ExternalId,
                 extractResult.LatencyMs,
                 extractResult.Issue?.HttpStatus);
         }
@@ -252,11 +249,11 @@ public sealed class RunCrawlerUseCase(
                     persistEx,
                     "Queue item failure persistence failed run_id={RunId} queue_id={QueueId}",
                     runId,
-                    item.QueueId);
+                    item.Id);
             }
 
             logger.LogWarning(ex, "Queue item processing failed run_id={RunId} queue_id={QueueId}", runId,
-                item.QueueId);
+                item.Id);
         }
     }
 
@@ -285,25 +282,24 @@ public sealed class RunCrawlerUseCase(
                 delay = TimeSpan.FromMilliseconds(doubledMs);
             }
 
-            await queueRepository.MarkRetryAsync(item.QueueId, issue.ErrorCode, issue.HttpStatus, issue.Message,
+            await queueRepository.MarkRetryAsync(item.Id, issue.ErrorCode, issue.HttpStatus, issue.Message,
                 DateTimeOffset.UtcNow.Add(delay), ct);
             return;
         }
 
-        await priceSnapshotRepository.InsertProductErrorAsync(
-            new ProductErrorRecord(
+        await priceSnapshotRepository.InsertCrawlErrorAsync(
+            new CrawlErrorRecord(
                 runId,
+                item.Id,
                 null,
-                null,
-                item.QueueId,
+                item.Url,
                 DateTimeOffset.UtcNow,
-                issue.Stage,
                 issue.ErrorCode,
-                issue.Message ?? string.Empty,
-                BuildIssueDetailsJson(item, issue, null)),
+                issue.HttpStatus,
+                issue.Message),
             ct);
 
-        await queueRepository.MarkDeadAsync(item.QueueId, issue.ErrorCode, issue.HttpStatus, issue.Message, ct);
+        await queueRepository.MarkDeadAsync(item.Id, issue.ErrorCode, issue.HttpStatus, issue.Message, ct);
     }
 
     private static string BuildWorkerId()
@@ -362,32 +358,4 @@ public sealed class RunCrawlerUseCase(
             IsCritical = isCritical
         };
     }
-
-    private static string BuildIssueDetailsJson(ReservedQueueItem item, ProductExtractIssue issue, ProductCard? card)
-        => JsonSerializer.Serialize(new
-        {
-            queue_id = item.QueueId,
-            item.Url,
-            item.City,
-            item.Attempt,
-            item.MaxAttempts,
-            http_status = issue.HttpStatus,
-            is_transient = issue.IsTransient,
-            is_critical = issue.IsCritical,
-            issue.DetailsJson,
-            product = card is null
-                ? null
-                : new
-                {
-                    card.ProductId,
-                    card.Name,
-                    card.Url,
-                    card.City,
-                    card.RegularPrice,
-                    card.FinalPrice,
-                    card.DiscountPercent,
-                    card.PromoFlag,
-                    card.InStock
-                }
-        });
 }

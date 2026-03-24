@@ -8,8 +8,6 @@ public sealed class SnapshotGridRowDto
 
     [JsonPropertyName("createdAtUtc")] public DateTime CreatedAtUtc { get; init; }
 
-    [JsonPropertyName("city")] public string? City { get; init; }
-
     [JsonPropertyName("price")] public decimal? Price { get; init; }
 
     [JsonPropertyName("oldPrice")] public decimal? OldPrice { get; init; }

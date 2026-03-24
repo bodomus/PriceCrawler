@@ -1,11 +1,10 @@
 namespace VarPrice.Domain.Models;
 
-public sealed record QueueEnqueueItem(string Url, string? City, string IdempotencyKey);
+public sealed record QueueEnqueueItem(string Url, string IdempotencyKey);
 
 public sealed record ReservedQueueItem(
-    long QueueId,
+    long Id,
     string Url,
-    string? City,
     int Attempt,
     int MaxAttempts,
     string IdempotencyKey);
