@@ -120,3 +120,66 @@ Source: `VarPrice.Web.Controllers.RunsController`, `VarPrice.Web.ViewModels.Shar
 ### `error`
 - Shown in the UI when the run result is unsuccessful.
 - Used to display an error message to the user.
+
+## 7. Runs dashboard TreeList and snapshot UI statuses
+
+Source: `VarPrice.Web.Controllers.RunsController`, `VarPrice.Web.ViewModels.Runs.RunTreeNodeVm`,
+`VarPrice.Web.wwwroot.js.runs-dashboard.js`
+
+### TreeList node types
+
+### `date`
+- Root node in the `/Runs` TreeList.
+- Groups crawler runs by `StartedAtUtc.Date`.
+- Title is formatted as `dd.MM.yyyy (count)`.
+- Does not select a concrete run for the snapshots grid.
+
+### `run`
+- Child node under a date group.
+- Represents one concrete crawler run.
+- Selecting it loads all snapshots for that run.
+
+### `successful`
+- Child node under a run.
+- Represents the subset of snapshots that are considered successful in the UI.
+- Selecting it loads only successful snapshots for the selected run.
+
+### `failed`
+- Child node under a run.
+- Represents the subset of snapshots that are considered failed in the UI.
+- Selecting it loads only failed snapshots for the selected run.
+
+### Snapshot scopes used by the `/Runs` page
+
+### `none`
+- Used for date nodes.
+- Means the snapshots grid should stay empty and must not fail.
+
+### `all`
+- Used for run nodes.
+- Means the snapshots grid loads all snapshots for the selected run.
+
+### `successful`
+- Used for the `Successful snapshots` node.
+- Means the snapshots grid loads only snapshots where `IsSuccessful == true`.
+
+### `failed`
+- Used for the `Failed snapshots` node.
+- Means the snapshots grid loads only snapshots where `IsSuccessful == false`.
+
+### UI snapshot statuses
+
+### `OK`
+- Returned by `SnapshotsGrid` for snapshots where no linked `product_errors` row exists for that snapshot.
+- This is the UI label used for successful snapshots.
+
+### `Failed`
+- Returned by `SnapshotsGrid` for snapshots that have at least one linked `product_errors` row.
+- This is the UI label used for failed snapshots.
+
+Important:
+- `price_snapshot` still has no physical `status` column in the database.
+- `OK` / `Failed` are derived UI statuses.
+- The current rule is:
+  `OK` = no `product_errors` linked by `price_snapshot_id`
+  `Failed` = one or more `product_errors` linked by `price_snapshot_id`

@@ -9,16 +9,31 @@
     const selectedSnapshotLabel = document.getElementById("selectedSnapshotLabel");
     const productContextLabel = document.getElementById("productContextLabel");
 
-    const snapshotEmptyNoRun = "Select a run to view snapshots";
-    const snapshotEmptyNoData = "No snapshots found for selected run";
+    const snapshotScopes = {
+        none: "none",
+        all: "all",
+        successful: "successful",
+        failed: "failed"
+    };
+
+    const snapshotEmptyNoSelection = "Select a run or snapshot group to view snapshots";
+    const snapshotEmptyByScope = {
+        [snapshotScopes.all]: "No snapshots found for selected run",
+        [snapshotScopes.successful]: "No successful snapshots found for selected run",
+        [snapshotScopes.failed]: "No failed snapshots found for selected run"
+    };
     const productEmptyNoSnapshot = "Select a snapshot to view products";
     const productEmptyNoData = "No products found for selected snapshot";
 
     let selectedRunId = null;
     let selectedSnapshotId = null;
+    let selectedSnapshotScope = snapshotScopes.none;
+    let selectedTreeNode = null;
+    let pendingTreeSelectionId = null;
+    let shouldExpandRoots = true;
 
     const encode = (value) => window.kendo.htmlEncode(value ?? "");
-
+    const formatDateTime = (value) => value ? window.kendo.toString(value, "yyyy-MM-dd HH:mm") : "";
     const readResultValue = (response, camelCaseKey, pascalCaseKey, fallbackValue) => {
         if (!response || typeof response !== "object") {
             return fallbackValue;
@@ -35,7 +50,7 @@
         return fallbackValue;
     };
 
-    const createDataSource = (url, extraDataFactory, fields, pageSize, sort) => new window.kendo.data.DataSource({
+    const createGridDataSource = (url, extraDataFactory, fields, pageSize, sort) => new window.kendo.data.DataSource({
         transport: {
             read: {
                 url,
@@ -59,6 +74,34 @@
         serverFiltering: true
     });
 
+    const createTreeDataSource = () => new window.kendo.data.TreeListDataSource({
+        transport: {
+            read: {
+                url: root.dataset.runsTreeUrl,
+                dataType: "json"
+            }
+        },
+        schema: {
+            model: {
+                id: "id",
+                parentId: "parentId",
+                fields: {
+                    id: {type: "string"},
+                    parentId: {nullable: true},
+                    nodeType: {type: "string"},
+                    title: {type: "string"},
+                    runId: {type: "number", nullable: true},
+                    snapshotScope: {type: "string"},
+                    startedAtUtc: {type: "date", nullable: true},
+                    finishedAtUtc: {type: "date", nullable: true},
+                    status: {type: "string"},
+                    itemsCount: {type: "number", nullable: true}
+                },
+                expanded: false
+            }
+        }
+    });
+
     const reloadGrid = (grid) => {
         if (grid.dataSource.page() !== 1) {
             grid.dataSource.page(1);
@@ -72,14 +115,194 @@
         grid.wrapper.find(".k-grid-norecords td").text(text);
     };
 
+    const getSnapshotEmptyText = () => {
+        if (selectedRunId === null) {
+            return snapshotEmptyNoSelection;
+        }
+
+        return snapshotEmptyByScope[selectedSnapshotScope] ?? snapshotEmptyByScope[snapshotScopes.all];
+    };
+
+    const describeTreeSelection = (node) => {
+        if (!node) {
+            return "Selected node: none";
+        }
+
+        switch (node.nodeType) {
+            case "date":
+                return `Selected date: ${node.title}`;
+            case "run":
+                return `Selected run: #${node.runId}`;
+            case "successful":
+                return `Selected group: Successful snapshots for run #${node.runId}`;
+            case "failed":
+                return `Selected group: Failed snapshots for run #${node.runId}`;
+            default:
+                return `Selected node: ${node.title}`;
+        }
+    };
+
     const refreshContextLabels = () => {
-        selectedRunLabel.textContent = selectedRunId === null ? "Selected Run: none" : `Selected Run: #${selectedRunId}`;
+        selectedRunLabel.textContent = describeTreeSelection(selectedTreeNode);
         selectedSnapshotLabel.textContent = selectedSnapshotId === null
             ? "Selected Snapshot: none"
             : `Selected Snapshot: #${selectedSnapshotId}`;
         productContextLabel.textContent = selectedSnapshotId === null
             ? productEmptyNoSnapshot
             : `Selected Snapshot: #${selectedSnapshotId}`;
+    };
+
+    const treeIcon = (nodeType) => {
+        switch (nodeType) {
+            case "date":
+                return `
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M16 2v4"></path>
+                        <path d="M8 2v4"></path>
+                        <path d="M3 10h18"></path>
+                        <rect x="3" y="4" width="18" height="17" rx="3"></rect>
+                    </svg>`;
+            case "run":
+                return `
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2H6a2 2 0 0 1 -2 -2V6a2 2 0 0 1 2 -2"></path>
+                        <path d="M10 8l6 4l-6 4z"></path>
+                    </svg>`;
+            case "successful":
+                return `
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M8.5 12.5l2.5 2.5l4.5 -5"></path>
+                    </svg>`;
+            case "failed":
+                return `
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M9 9l6 6"></path>
+                        <path d="M15 9l-6 6"></path>
+                    </svg>`;
+            default:
+                return `
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                    </svg>`;
+        }
+    };
+
+    const renderRunStatus = (status) => {
+        if (!status) {
+            return "";
+        }
+
+        return `<span class="tree-status tree-status-${encode(status)}">${encode(status)}</span>`;
+    };
+
+    const renderTreeTitle = (dataItem) => `
+        <span class="tree-node tree-node-${encode(dataItem.nodeType)}">
+            <span class="tree-node-icon">${treeIcon(dataItem.nodeType)}</span>
+            <span class="tree-node-text">${encode(dataItem.title)}</span>
+        </span>`;
+
+    const hasTreeNodeId = (value) => value !== null && value !== undefined && value !== "";
+
+    const getTreeRowById = (treeList, nodeId) => treeList.tbody.children("tr").filter((_, row) => {
+        const dataItem = treeList.dataItem(row);
+        return dataItem?.id === nodeId;
+    }).first();
+
+    const clearTreeSelection = (treeList) => {
+        if (typeof treeList.clearSelection === "function") {
+            treeList.clearSelection();
+            return;
+        }
+
+        treeList.select($());
+    };
+
+    const expandTreeAncestors = (treeList, dataItem) => {
+        if (!dataItem) {
+            return;
+        }
+
+        const ancestorIds = [];
+        let parentId = dataItem.parentId;
+
+        while (hasTreeNodeId(parentId)) {
+            ancestorIds.unshift(parentId);
+            parentId = treeList.dataSource.get(parentId)?.parentId ?? null;
+        }
+
+        ancestorIds.forEach((ancestorId) => {
+            const ancestorRow = getTreeRowById(treeList, ancestorId);
+            if (ancestorRow.length > 0) {
+                treeList.expand(ancestorRow);
+            }
+        });
+    };
+
+    const applyTreeSelection = (node, options = {}) => {
+        const {reloadRelated = true, resetSnapshotSelection = true} = options;
+
+        selectedTreeNode = node ?? null;
+        selectedRunId = node?.runId ?? null;
+        selectedSnapshotScope = node?.snapshotScope ?? snapshotScopes.none;
+
+        if (resetSnapshotSelection) {
+            selectedSnapshotId = null;
+        }
+
+        refreshContextLabels();
+
+        if (!reloadRelated) {
+            return;
+        }
+
+        snapshotsGrid.clearSelection();
+        productsGrid.clearSelection();
+        reloadGrid(snapshotsGrid);
+        reloadGrid(productsGrid);
+    };
+
+    const restoreTreeSelection = (treeList) => {
+        if (pendingTreeSelectionId === null) {
+            return;
+        }
+
+        const nodeIdToRestore = pendingTreeSelectionId;
+        pendingTreeSelectionId = null;
+
+        const restoredItem = treeList.dataSource.get(nodeIdToRestore);
+        if (!restoredItem) {
+            clearTreeSelection(treeList);
+            applyTreeSelection(null);
+            return;
+        }
+
+        expandTreeAncestors(treeList, restoredItem);
+
+        const restoredRow = getTreeRowById(treeList, nodeIdToRestore);
+        if (restoredRow.length === 0) {
+            clearTreeSelection(treeList);
+            applyTreeSelection(null);
+            return;
+        }
+
+        treeList.select(restoredRow);
+        applyTreeSelection(treeList.dataItem(restoredRow), {
+            reloadRelated: false,
+            resetSnapshotSelection: false
+        });
+    };
+
+    const refreshTreeList = () => {
+        const treeList = $("#runsTreeList").data("kendoTreeList");
+        if (!treeList) {
+            return;
+        }
+
+        pendingTreeSelectionId = selectedTreeNode?.id ?? null;
+        shouldExpandRoots = true;
+        treeList.dataSource.read();
     };
 
     $("#topToolbar").kendoToolBar({
@@ -132,71 +355,81 @@
         }
     });
     $("#ingestVegetablesButton").addClass("dashboard-primary-button");
+    $("#refreshRunsTreeButton").on("click", refreshTreeList);
 
-    const runsGrid = $("#runsGrid").kendoGrid({
-        dataSource: createDataSource(
-            root.dataset.runsUrl,
-            null,
-            {
-                id: {type: "number"},
-                startedAtUtc: {type: "date"},
-                finishedAtUtc: {type: "date"},
-                status: {type: "string"},
-                itemsCount: {type: "number"}
-            },
-            25,
-            [{field: "startedAtUtc", dir: "desc"}]
-        ),
+    $("#runsTreeList").kendoTreeList({
+        dataSource: createTreeDataSource(),
         selectable: "row",
-        sortable: {
-            mode: "multiple",
-            allowUnsort: true,
-            showIndexes: true
-        },
-        filterable: true,
-        columnMenu: true,
+        sortable: false,
         resizable: true,
         scrollable: true,
-        noRecords: {
-            template: "No crawler runs found"
-        },
-        pageable: {
-            refresh: true,
-            pageSizes: [25, 50, 100],
-            buttonCount: 5
-        },
-        toolbar: ["search"],
-        search: {
-            fields: ["id", "status"]
-        },
         columns: [
-            {field: "id", title: "Id", width: 90},
-            {field: "startedAtUtc", title: "StartedAtUtc", format: "{0:yyyy-MM-dd HH:mm}"},
-            {field: "status", title: "Status", minResizableWidth: 120},
-            {field: "finishedAtUtc", title: "FinishedAtUtc", format: "{0:yyyy-MM-dd HH:mm}"},
-            {field: "itemsCount", title: "ItemsCount", width: 120}
+            {
+                field: "title",
+                title: "Run / Group",
+                expandable: true,
+                minResizableWidth: 240,
+                width: 360,
+                template: renderTreeTitle
+            },
+            {
+                field: "status",
+                title: "Status",
+                width: 120,
+                template: (dataItem) => dataItem.nodeType === "run" ? renderRunStatus(dataItem.status) : ""
+            },
+            {
+                field: "startedAtUtc",
+                title: "StartedAtUtc",
+                width: 165,
+                template: (dataItem) => dataItem.nodeType === "run" ? encode(formatDateTime(dataItem.startedAtUtc)) : ""
+            },
+            {
+                field: "finishedAtUtc",
+                title: "FinishedAtUtc",
+                width: 165,
+                template: (dataItem) => dataItem.nodeType === "run" ? encode(formatDateTime(dataItem.finishedAtUtc)) : ""
+            },
+            {
+                field: "itemsCount",
+                title: "ItemsCount",
+                width: 110,
+                attributes: {class: "tree-metric-cell"},
+                template: (dataItem) => dataItem.itemsCount ?? ""
+            }
         ],
-        change() {
-            const row = this.dataItem(this.select());
-            selectedRunId = row ? row.id : null;
-            selectedSnapshotId = null;
-            refreshContextLabels();
+        dataBound(e) {
+            if (shouldExpandRoots) {
+                e.sender.tbody.children("tr").each((_, row) => {
+                    const dataItem = e.sender.dataItem(row);
+                    if (dataItem?.parentId == null) {
+                        e.sender.expand(row);
+                    }
+                });
+                shouldExpandRoots = false;
+            }
 
-            snapshotsGrid.clearSelection();
-            productsGrid.clearSelection();
-            reloadGrid(snapshotsGrid);
-            reloadGrid(productsGrid);
+            restoreTreeSelection(e.sender);
+        },
+        change() {
+            const row = this.select();
+            const item = row.length > 0 ? this.dataItem(row) : null;
+            applyTreeSelection(item);
         }
-    }).data("kendoGrid");
+    });
 
     const snapshotsGrid = $("#snapshotsGrid").kendoGrid({
-        dataSource: createDataSource(
+        dataSource: createGridDataSource(
             root.dataset.snapshotsUrl,
-            () => ({runId: selectedRunId}),
+            () => ({
+                runId: selectedRunId,
+                snapshotScope: selectedSnapshotScope
+            }),
             {
                 id: {type: "number"},
                 createdAtUtc: {type: "date"},
                 city: {type: "string"},
+                status: {type: "string"},
                 price: {type: "number"},
                 oldPrice: {type: "number"},
                 discountPercent: {type: "number"},
@@ -217,7 +450,7 @@
         resizable: true,
         scrollable: true,
         noRecords: {
-            template: snapshotEmptyNoRun
+            template: snapshotEmptyNoSelection
         },
         pageable: {
             refresh: true,
@@ -226,10 +459,11 @@
         },
         toolbar: ["search"],
         search: {
-            fields: ["id", "city"]
+            fields: ["id", "city", "status"]
         },
         columns: [
             {field: "id", title: "Id", width: 90},
+            {field: "status", title: "Status", width: 120},
             {field: "createdAtUtc", title: "CreatedAtUtc", format: "{0:yyyy-MM-dd HH:mm}"},
             {field: "city", title: "City", minResizableWidth: 140},
             {field: "price", title: "Price", format: "{0:n2}"},
@@ -249,7 +483,7 @@
             }
         ],
         dataBound(e) {
-            updateNoRecordsText(this, selectedRunId === null ? snapshotEmptyNoRun : snapshotEmptyNoData);
+            updateNoRecordsText(this, getSnapshotEmptyText());
 
             e.sender.tbody.children("tr").each((_, row) => {
                 const dataItem = e.sender.dataItem(row);
@@ -275,7 +509,7 @@
     }).data("kendoGrid");
 
     const productsGrid = $("#productsGrid").kendoGrid({
-        dataSource: createDataSource(
+        dataSource: createGridDataSource(
             root.dataset.productsUrl,
             () => ({snapshotId: selectedSnapshotId}),
             {

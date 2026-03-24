@@ -17,4 +17,6 @@ public sealed class SnapshotGridQueryRow
     public bool PromoFlag { get; init; }
 
     public bool? InStock { get; init; }
+
+    public bool IsSuccessful { get; init; }
 }

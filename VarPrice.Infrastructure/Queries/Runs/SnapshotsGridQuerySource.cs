@@ -21,7 +21,8 @@ public sealed class SnapshotsGridQuerySource(VarPriceDbContext dbContext) : ISna
                 RegularPrice = snapshot.RegularPrice,
                 DiscountPercent = snapshot.DiscountPercent,
                 PromoFlag = snapshot.PromoFlag,
-                InStock = snapshot.InStock
+                InStock = snapshot.InStock,
+                IsSuccessful = !dbContext.ProductErrors.Any(error => error.PriceSnapshotId == snapshot.Id)
             });
     }
 }

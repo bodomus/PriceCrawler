@@ -5,6 +5,7 @@ using Kendo.Mvc.UI;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Grids.Runs;
@@ -17,6 +18,7 @@ namespace VarPrice.Web.Controllers;
 
 public sealed class RunsController(
     IRunsGridQuerySource runsGridQuerySource,
+    IRunsTreeQuerySource runsTreeQuerySource,
     ISnapshotsGridQuerySource snapshotsGridQuerySource,
     IProductsGridQuerySource productsGridQuerySource,
     IRunCrawlerUseCase runCrawlerUseCase,
@@ -68,7 +70,89 @@ public sealed class RunsController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> SnapshotsGrid(long? runId, [DataSourceRequest] DataSourceRequest request,
+    public async Task<IActionResult> RunsTree(CancellationToken ct)
+    {
+        try
+        {
+            var runs = await ToListAsyncOrSync(
+                runsTreeQuerySource.Build()
+                    .OrderByDescending(row => row.StartedAtUtc),
+                ct);
+
+            var nodes = runs
+                .GroupBy(row => row.StartedAtUtc.Date)
+                .OrderByDescending(group => group.Key)
+                .SelectMany(group =>
+                {
+                    var dateNodeId = $"date:{group.Key:yyyy-MM-dd}";
+                    var dateNode = new RunTreeNodeVm
+                    {
+                        Id = dateNodeId,
+                        NodeType = "date",
+                        Title = $"{group.Key:dd.MM.yyyy} ({group.Count()})",
+                        SnapshotScope = SnapshotScopes.None,
+                        ItemsCount = group.Count()
+                    };
+
+                    var runNodes = group
+                        .OrderByDescending(row => row.StartedAtUtc)
+                        .SelectMany(row =>
+                        {
+                            var runNodeId = $"run:{row.Id}";
+                            return new[]
+                            {
+                                new RunTreeNodeVm
+                                {
+                                    Id = runNodeId,
+                                    ParentId = dateNodeId,
+                                    NodeType = "run",
+                                    Title = $"Run #{row.Id}",
+                                    RunId = row.Id,
+                                    SnapshotScope = SnapshotScopes.All,
+                                    StartedAtUtc = row.StartedAtUtc,
+                                    FinishedAtUtc = row.FinishedAtUtc,
+                                    Status = row.Status,
+                                    ItemsCount = row.ItemsCount
+                                },
+                                new RunTreeNodeVm
+                                {
+                                    Id = $"run:{row.Id}:successful",
+                                    ParentId = runNodeId,
+                                    NodeType = "successful",
+                                    Title = $"Successful snapshots ({row.SuccessfulSnapshotsCount})",
+                                    RunId = row.Id,
+                                    SnapshotScope = SnapshotScopes.Successful,
+                                    ItemsCount = row.SuccessfulSnapshotsCount
+                                },
+                                new RunTreeNodeVm
+                                {
+                                    Id = $"run:{row.Id}:failed",
+                                    ParentId = runNodeId,
+                                    NodeType = "failed",
+                                    Title = $"Failed snapshots ({row.FailedSnapshotsCount})",
+                                    RunId = row.Id,
+                                    SnapshotScope = SnapshotScopes.Failed,
+                                    ItemsCount = row.FailedSnapshotsCount
+                                }
+                            };
+                        });
+
+                    return new[] { dateNode }.Concat(runNodes);
+                })
+                .ToList();
+
+            return Json(nodes);
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "Kendo load failed for {Operation}", nameof(RunsTree));
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> SnapshotsGrid(long? runId, string? snapshotScope,
+        [DataSourceRequest] DataSourceRequest request,
         CancellationToken ct)
     {
         if (runId is null)
@@ -78,7 +162,17 @@ public sealed class RunsController(
 
         try
         {
-            var query = snapshotsGridQuerySource.Build(runId.Value)
+            var query = snapshotsGridQuerySource.Build(runId.Value);
+            var normalizedScope = NormalizeSnapshotScope(snapshotScope);
+
+            query = normalizedScope switch
+            {
+                SnapshotScopes.Successful => query.Where(row => row.IsSuccessful),
+                SnapshotScopes.Failed => query.Where(row => !row.IsSuccessful),
+                _ => query
+            };
+
+            var resultQuery = query
                 .Select(row => new SnapshotGridRowDto
                 {
                     //TODO check invalid city parser
@@ -89,10 +183,11 @@ public sealed class RunsController(
                     OldPrice = row.RegularPrice,
                     DiscountPercent = row.DiscountPercent,
                     PromoFlag = row.PromoFlag,
-                    InStock = row.InStock
+                    InStock = row.InStock,
+                    Status = row.IsSuccessful ? "OK" : "Failed"
                 });
 
-            var result = await query.ToDataSourceResultAsync(request, ct);
+            var result = await resultQuery.ToDataSourceResultAsync(request, ct);
             return Json(result);
         }
         catch (Exception ex)
@@ -164,6 +259,26 @@ public sealed class RunsController(
         return string.IsNullOrWhiteSpace(packUnit)
             ? packValue.Value.ToString("0.###")
             : $"{packValue.Value:0.###} {packUnit}";
+    }
+
+    private static string NormalizeSnapshotScope(string? snapshotScope)
+    {
+        return snapshotScope?.Trim().ToLowerInvariant() switch
+        {
+            SnapshotScopes.Successful => SnapshotScopes.Successful,
+            SnapshotScopes.Failed => SnapshotScopes.Failed,
+            _ => SnapshotScopes.All
+        };
+    }
+
+    private static Task<List<T>> ToListAsyncOrSync<T>(IQueryable<T> query, CancellationToken ct)
+    {
+        if (query.Provider is IAsyncQueryProvider)
+        {
+            return EntityFrameworkQueryableExtensions.ToListAsync(query, ct);
+        }
+
+        return Task.FromResult(query.ToList());
     }
 
     private RunsDashboardVm CreateViewModel(CrawlerRunResult? latestRun = null, StatusBarViewModel? statusBar = null)
