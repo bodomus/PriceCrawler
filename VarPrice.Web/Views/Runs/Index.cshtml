@@ -1,4 +1,3 @@
-@using Kendo.Mvc.UI
 @model VarPrice.Web.ViewModels.Runs.RunsDashboardVm
 
 @{
@@ -7,6 +6,7 @@
 
 <div id="runsDashboard"
      class="page-canvas"
+     data-runs-tree-url="@Url.Action("RunsTree", "Runs")"
      data-runs-url="@Url.Action("RunsGrid", "Runs")"
      data-snapshots-url="@Url.Action("SnapshotsGrid", "Runs")"
      data-products-url="@Url.Action("ProductsGrid", "Runs")">
@@ -18,107 +18,124 @@
             <div class="top-zone-gap" aria-hidden="true"></div>
         </header>
 
-        <section class="dashboard-zone" aria-label="Data workspace">
-            <div id="workspaceTabs" class="workspace-tabs-host"></div>
-
-            <main class="dashboard-cards">
-                <section class="dashboard-card dashboard-action-card" aria-labelledby="dashboard-actions-title">
-                    <div class="dashboard-card-header">
-                        <div class="card-headline">
-                            <h2 id="dashboard-actions-title" class="dashboard-card-title">Crawler Control</h2>
-                            <span
-                                class="context-label">Launch a crawl and review the latest data in one workspace.</span>
-                        </div>
-                    </div>
-                    <div class="dashboard-card-body dashboard-action-body">
-                        <div class="action-intro">
-                            <h1 class="action-title">VARUS price cockpit</h1>
-                            <p class="action-copy">
-                                Kendo dashboard with the current shell, brand palette, and the same cascading
-                                data-exploration flow.
-                            </p>
-                            <div class="action-links">
-                                <a href="/health">Health check</a>
-                            </div>
-                        </div>
-
-                        <div class="action-panel">
-                            <form id="ingestForm" asp-action="IngestVegetables" asp-controller="Runs" method="post">
-                                @Html.AntiForgeryToken()
-                            </form>
-                            <button id="ingestVegetablesButton" type="button">Collect price snapshot (vegetables)
-                            </button>
-                        </div>
-
-                        @if (Model.LatestRun is not null)
-                        {
-                            <div class="summary-strip" aria-label="Latest crawler run">
-                                <div class="summary-chip">
-                                    <span class="summary-label">Run</span>
-                                    <strong>#@Model.LatestRun.RunId</strong>
-                                </div>
-                                <div class="summary-chip">
-                                    <span class="summary-label">Status</span>
-                                    <strong>@Model.LatestRun.Status</strong>
-                                </div>
-                                <div class="summary-chip">
-                                    <span class="summary-label">Products</span>
-                                    <strong>@Model.LatestRun.ProductsProcessed</strong>
-                                </div>
-                                <div class="summary-chip">
-                                    <span class="summary-label">Errors</span>
-                                    <strong>@Model.LatestRun.Errors</strong>
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(Model.LatestRun.Note))
-                                {
-                                    <div class="summary-chip summary-chip-wide">
-                                        <span class="summary-label">Note</span>
-                                        <strong>@Model.LatestRun.Note</strong>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                </section>
-
-                <section class="dashboard-card" aria-labelledby="crawler-runs-title">
-                    <div class="dashboard-card-header">
+        <div class="dashboard-layout">
+            <section class="tree-zone" aria-labelledby="crawler-runs-title">
+                <div class="dashboard-card dashboard-card-stretch" aria-labelledby="crawler-runs-title">
+                    <div class="dashboard-card-header dashboard-card-header-with-actions">
                         <div class="card-headline">
                             <h2 id="crawler-runs-title" class="dashboard-card-title">Crawler Runs</h2>
-                            <span id="selectedRunLabel" class="context-label">Selected Run: none</span>
+                            <span id="selectedRunLabel" class="context-label">Selected node: none</span>
                         </div>
+                        <button id="refreshRunsTreeButton"
+                                class="tree-refresh-button"
+                                type="button"
+                                title="Refresh tree list"
+                                aria-label="Refresh tree list">
+                            <span class="tree-refresh-button-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path>
+                                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path>
+                                </svg>
+                            </span>
+                            <span class="tree-refresh-button-text">Refresh</span>
+                        </button>
                     </div>
-                    <div class="dashboard-card-body">
-                        <div id="runsGrid" class="dashboard-grid"></div>
+                    <div class="dashboard-card-body dashboard-tree-body">
+                        <div id="runsTreeList" class="dashboard-tree"></div>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                <section class="dashboard-card" aria-labelledby="snapshots-title">
-                    <div class="dashboard-card-header">
-                        <div class="card-headline">
-                            <h2 id="snapshots-title" class="dashboard-card-title">Snapshots</h2>
-                            <span id="selectedSnapshotLabel" class="context-label">Selected Snapshot: none</span>
-                        </div>
-                    </div>
-                    <div class="dashboard-card-body">
-                        <div id="snapshotsGrid" class="dashboard-grid"></div>
-                    </div>
-                </section>
+            <section class="dashboard-zone" aria-label="Data workspace">
+                <div id="workspaceTabs" class="workspace-tabs-host"></div>
 
-                <section class="dashboard-card" aria-labelledby="products-title">
-                    <div class="dashboard-card-header">
-                        <div class="card-headline">
-                            <h2 id="products-title" class="dashboard-card-title">Products</h2>
-                            <span id="productContextLabel"
-                                  class="context-label">Select a snapshot to view products</span>
+                <main class="dashboard-cards">
+                    <section class="dashboard-card dashboard-action-card" aria-labelledby="dashboard-actions-title">
+                        <div class="dashboard-card-header">
+                            <div class="card-headline">
+                                <h2 id="dashboard-actions-title" class="dashboard-card-title">Crawler Control</h2>
+                                <span
+                                    class="context-label">Launch a crawl and review the latest data in one workspace.</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="dashboard-card-body">
-                        <div id="productsGrid" class="dashboard-grid"></div>
-                    </div>
-                </section>
-            </main>
-        </section>
+                        <div class="dashboard-card-body dashboard-action-body">
+                            <div class="action-intro">
+                                <h1 class="action-title">VARUS price cockpit</h1>
+                                <p class="action-copy">
+                                    Kendo dashboard with the current shell, brand palette, and the same cascading
+                                    data-exploration flow.
+                                </p>
+                                <div class="action-links">
+                                    <a href="/health">Health check</a>
+                                </div>
+                            </div>
+
+                            <div class="action-panel">
+                                <form id="ingestForm" asp-action="IngestVegetables" asp-controller="Runs" method="post">
+                                    @Html.AntiForgeryToken()
+                                </form>
+                                <button id="ingestVegetablesButton" type="button">Collect price snapshot (vegetables)
+                                </button>
+                            </div>
+
+                            @if (Model.LatestRun is not null)
+                            {
+                                <div class="summary-strip" aria-label="Latest crawler run">
+                                    <div class="summary-chip">
+                                        <span class="summary-label">Run</span>
+                                        <strong>#@Model.LatestRun.RunId</strong>
+                                    </div>
+                                    <div class="summary-chip">
+                                        <span class="summary-label">Status</span>
+                                        <strong>@Model.LatestRun.Status</strong>
+                                    </div>
+                                    <div class="summary-chip">
+                                        <span class="summary-label">Products</span>
+                                        <strong>@Model.LatestRun.ProductsProcessed</strong>
+                                    </div>
+                                    <div class="summary-chip">
+                                        <span class="summary-label">Errors</span>
+                                        <strong>@Model.LatestRun.Errors</strong>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(Model.LatestRun.Note))
+                                    {
+                                        <div class="summary-chip summary-chip-wide">
+                                            <span class="summary-label">Note</span>
+                                            <strong>@Model.LatestRun.Note</strong>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </section>
+
+                    <section class="dashboard-card" aria-labelledby="snapshots-title">
+                        <div class="dashboard-card-header">
+                            <div class="card-headline">
+                                <h2 id="snapshots-title" class="dashboard-card-title">Snapshots</h2>
+                                <span id="selectedSnapshotLabel" class="context-label">Selected Snapshot: none</span>
+                            </div>
+                        </div>
+                        <div class="dashboard-card-body">
+                            <div id="snapshotsGrid" class="dashboard-grid"></div>
+                        </div>
+                    </section>
+
+                    <section class="dashboard-card" aria-labelledby="products-title">
+                        <div class="dashboard-card-header">
+                            <div class="card-headline">
+                                <h2 id="products-title" class="dashboard-card-title">Products</h2>
+                                <span id="productContextLabel"
+                                      class="context-label">Select a snapshot to view products</span>
+                            </div>
+                        </div>
+                        <div class="dashboard-card-body">
+                            <div id="productsGrid" class="dashboard-grid"></div>
+                        </div>
+                    </section>
+                </main>
+            </section>
+        </div>
     </div>
 </div>
 

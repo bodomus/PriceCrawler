@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Context;
 
-using Kendo.Mvc;
-
 using VarPrice.Application.DependencyInjection;
 using VarPrice.Application.Grids.Runs;
 using VarPrice.Infrastructure.DependencyInjection;
@@ -32,6 +30,7 @@ builder.Services.AddDbContext<VarPriceDbContext>(options =>
     options.UseNpgsql(connectionString);
 });
 builder.Services.AddScoped<IRunsGridQuerySource, InfrastructureRuns.RunsGridQuerySource>();
+builder.Services.AddScoped<IRunsTreeQuerySource, InfrastructureRuns.RunsTreeQuerySource>();
 builder.Services.AddScoped<ISnapshotsGridQuerySource, InfrastructureRuns.SnapshotsGridQuerySource>();
 builder.Services.AddScoped<IProductsGridQuerySource, InfrastructureRuns.ProductsGridQuerySource>();
 

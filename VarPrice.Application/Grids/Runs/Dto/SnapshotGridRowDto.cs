@@ -19,4 +19,6 @@ public sealed class SnapshotGridRowDto
     [JsonPropertyName("promoFlag")] public bool PromoFlag { get; init; }
 
     [JsonPropertyName("inStock")] public bool? InStock { get; init; }
+
+    [JsonPropertyName("status")] public string Status { get; init; } = string.Empty;
 }
