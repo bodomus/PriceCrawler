@@ -9,16 +9,18 @@
      data-runs-tree-url="@Url.Action("RunsTree", "Runs")"
      data-runs-url="@Url.Action("RunsGrid", "Runs")"
      data-snapshots-url="@Url.Action("SnapshotsGrid", "Runs")"
-     data-products-url="@Url.Action("ProductsGrid", "Runs")">
+     data-product-details-url="@Url.Action("ProductDetails", "Runs")"
+     data-product-analytics-url="@Url.Action("ProductAnalytics", "Runs")"
+     data-live-product-url="@Url.Action("RefreshLiveProduct", "Runs")"
+     data-product-history-url="@Url.Action("ProductHistory", "Runs")">
     <div class="page-shell">
         <div class="app-version">Version: @Model.AppVersion</div>
 
         <header class="top-zone">
             <div id="topToolbar" class="top-toolbar-host"></div>
-            <div class="top-zone-gap" aria-hidden="true"></div>
         </header>
 
-        <div class="dashboard-layout">
+        <div id="dashboardSplitter" class="dashboard-layout">
             <section class="tree-zone" aria-labelledby="crawler-runs-title">
                 <div class="dashboard-card dashboard-card-stretch" aria-labelledby="crawler-runs-title">
                     <div class="dashboard-card-header dashboard-card-header-with-actions">
@@ -62,8 +64,9 @@
                             <div class="action-intro">
                                 <h1 class="action-title">VARUS price cockpit</h1>
                                 <p class="action-copy">
-                                    Kendo dashboard with the current shell, brand palette, and the same cascading
-                                    data-exploration flow.
+                                    Use the existing run and snapshot navigation, then inspect the selected product in
+                                    the analytical panel below. Stage 1 reads only from Postgres and does not trigger
+                                    live VARUS requests.
                                 </p>
                                 <div class="action-links">
                                     <a href="/health">Health check</a>
@@ -113,7 +116,7 @@
                         <div class="dashboard-card-header">
                             <div class="card-headline">
                                 <h2 id="snapshots-title" class="dashboard-card-title">Snapshots</h2>
-                                <span id="selectedSnapshotLabel" class="context-label">Selected Snapshot: none</span>
+                                <span id="selectedSnapshotLabel" class="context-label">Selected snapshot: none</span>
                             </div>
                         </div>
                         <div class="dashboard-card-body">
@@ -121,18 +124,51 @@
                         </div>
                     </section>
 
-                    <section class="dashboard-card" aria-labelledby="products-title">
-                        <div class="dashboard-card-header">
-                            <div class="card-headline">
-                                <h2 id="products-title" class="dashboard-card-title">Products</h2>
-                                <span id="productContextLabel"
-                                      class="context-label">Select a snapshot to view products</span>
+                    <div class="analytics-stage">
+                        <section class="dashboard-card analytics-card" aria-labelledby="product-card-title">
+                            <div class="dashboard-card-header">
+                                <div class="card-headline">
+                                    <h2 id="product-card-title" class="dashboard-card-title">Product Card</h2>
+                                    <span id="productCardContextLabel"
+                                          class="context-label">Select a snapshot to inspect a product</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="dashboard-card-body">
-                            <div id="productsGrid" class="dashboard-grid"></div>
-                        </div>
-                    </section>
+                            <div class="dashboard-card-body product-card-body">
+                                <div id="productDetailsPanel" class="product-details-panel"></div>
+                            </div>
+                        </section>
+
+                        <section class="dashboard-card analytics-card" aria-labelledby="price-chart-title">
+                            <div class="dashboard-card-header">
+                                <div class="card-headline">
+                                    <h2 id="price-chart-title" class="dashboard-card-title">Price Chart</h2>
+                                    <span id="priceChartContextLabel"
+                                          class="context-label">Chart placeholder for the selected product</span>
+                                </div>
+                            </div>
+                            <div class="dashboard-card-body analytics-chart-body">
+                                <div id="priceChartPanel" class="price-chart-panel"></div>
+                            </div>
+                        </section>
+
+                        <section class="dashboard-card analytics-card analytics-history-card"
+                                 aria-labelledby="price-history-title">
+                            <div class="dashboard-card-header">
+                                <div class="card-headline">
+                                    <h2 id="price-history-title" class="dashboard-card-title">Price History</h2>
+                                    <span id="historyContextLabel"
+                                          class="context-label">Select a snapshot to load price history</span>
+                                </div>
+                            </div>
+                            <div class="dashboard-card-body">
+                                <div id="analyticsStatus"
+                                     class="analytics-status analytics-status-hidden"
+                                     role="status"
+                                     aria-live="polite"></div>
+                                <div id="productHistoryGrid" class="dashboard-grid"></div>
+                            </div>
+                        </section>
+                    </div>
                 </main>
             </section>
         </div>

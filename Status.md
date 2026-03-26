@@ -182,3 +182,25 @@ Important:
 - The current rule is:
   `OK` = no `crawl_error` linked by `run_id + product_id`
   `Failed` = one or more `crawl_error` linked by `run_id + product_id`
+
+## 8. Manual live refresh result statuses
+
+Source: `VarPrice.Web.Controllers.RunsController`, `VarPrice.Application.Models.ProductExtractResult`,
+`VarPrice.Web.wwwroot.js.runs-dashboard.js`
+
+### `success`
+- Returned by `RefreshLiveProduct` when VARUS extraction yields a complete product card without an issue.
+- Used in the UI when live data is available and the extractor reported no warning condition.
+
+### `partial`
+- Returned by `RefreshLiveProduct` when the extractor produced a product card together with a non-critical issue.
+- Used to show that live comparison is possible, but the result should be treated as incomplete.
+
+### `error`
+- Returned by `RefreshLiveProduct` when no usable live product card could be extracted.
+- Used for timeout, HTTP, parse, and other critical extractor failures.
+
+Important:
+- These are UI/API result statuses for the explicit manual live check.
+- They are not stored in `price_snapshot` or `crawler_run`.
+- A manual live refresh does not create a new snapshot automatically.

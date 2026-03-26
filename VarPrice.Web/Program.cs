@@ -33,6 +33,8 @@ builder.Services.AddScoped<IRunsGridQuerySource, InfrastructureRuns.RunsGridQuer
 builder.Services.AddScoped<IRunsTreeQuerySource, InfrastructureRuns.RunsTreeQuerySource>();
 builder.Services.AddScoped<ISnapshotsGridQuerySource, InfrastructureRuns.SnapshotsGridQuerySource>();
 builder.Services.AddScoped<IProductsGridQuerySource, InfrastructureRuns.ProductsGridQuerySource>();
+builder.Services.AddScoped<IProductDetailsQuerySource, InfrastructureRuns.ProductDetailsQuerySource>();
+builder.Services.AddScoped<IProductPriceHistoryQuerySource, InfrastructureRuns.ProductPriceHistoryQuerySource>();
 
 builder.Services.AddVarPriceApplication(builder.Configuration);
 builder.Services.AddVarPriceInfrastructure(builder.Configuration);

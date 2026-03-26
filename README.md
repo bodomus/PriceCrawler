@@ -10,9 +10,25 @@
 - `VarPrice.Web` - web/API хост.
 - `VarPrice.Worker` - консольный запуск crawler.
 
-## Runs Dashboard (MVC + DevExtreme)
+## Runs Dashboard (MVC + Kendo Analytics)
 
-Экран `Runs` переведен с Razor Pages/DataTables на ASP.NET Core MVC с DevExtreme.
+Экран `Runs` переведен на ASP.NET Core MVC + Kendo UI и теперь использует аналитическую панель товара:
+
+- слева остается навигация `date -> run -> snapshot`;
+- справа сохраняется рабочая зона со `Snapshots`;
+- нижняя детальная часть больше не показывает старый `Product grid`, а строит:
+  - `Product Card`,
+  - `Price History`,
+  - `Price Chart` с расширенной аналитикой по Postgres history,
+  - ручной `Live VARUS` comparison по явному действию пользователя.
+
+На `Этапе 3` экран остается детерминированным по умолчанию:
+
+- `Product Card` показывает выбранный snapshot;
+- `Price History` остается paged grid для ручного анализа;
+- `Price Chart` строится отдельным read-only payload и показывает trend, delta, диапазон, promo/in-stock coverage.
+- Live HTTP-запрос в VARUS выполняется только по явному нажатию `Refresh from VARUS`.
+- Результат live-запроса не меняет текущий selection и не пишет новый snapshot в БД автоматически.
 
 ### Слои
 
@@ -28,28 +44,34 @@
 - `VarPrice.Application`
   - `Grids/Runs/IRunsGridQuerySource.cs`
   - `Grids/Runs/ISnapshotsGridQuerySource.cs`
-  - `Grids/Runs/IProductsGridQuerySource.cs`
-  - `Grids/Runs/Dto/*` - DTO для JSON-контракта DevExtreme grid
+  - `Grids/Runs/IProductDetailsQuerySource.cs`
+  - `Grids/Runs/IProductPriceHistoryQuerySource.cs`
+  - `Grids/Runs/Dto/*` - DTO для JSON-контракта dashboard API
 - `VarPrice.Infrastructure`
   - `Queries/Runs/RunsGridQuerySource.cs` - EF query для runs
   - `Queries/Runs/SnapshotsGridQuerySource.cs` - EF query для snapshots
-  - `Queries/Runs/ProductsGridQuerySource.cs` - query для products
+  - `Queries/Runs/ProductDetailsQuerySource.cs` - карточка товара по выбранному snapshot
+  - `Queries/Runs/ProductPriceHistoryQuerySource.cs` - история цен по `product_id` выбранного snapshot
 
 ### MVC маршруты
 
 - `GET /` и `GET /Runs` - экран дашборда.
 - `POST /Runs/IngestVegetables` - запуск crawler из dashboard.
-- `GET /Runs/RunsGrid` - данные таблицы runs (DevExtreme).
-- `GET /Runs/SnapshotsGrid` - данные таблицы snapshots (DevExtreme).
-- `GET /Runs/ProductsGrid` - данные таблицы products (DevExtreme).
+- `GET /Runs/RunsGrid` - данные таблицы runs.
+- `GET /Runs/SnapshotsGrid` - данные таблицы snapshots.
+- `GET /Runs/ProductDetails` - карточка выбранного товара по `snapshotId`.
+- `GET /Runs/ProductAnalytics` - полный payload для chart и summary analytics по `snapshotId`.
+- `GET /Runs/ProductHistory` - история цены выбранного товара по `snapshotId`.
+- `POST /Runs/RefreshLiveProduct` - ручной live-запрос в VARUS по `snapshotId` с comparison against stored snapshot.
 
 Для `POST /Runs/IngestVegetables` используется anti-forgery token.
 
-### Где теперь находится data access для grid
+### Где теперь находится data access для dashboard
 
 - `Web` слой не делает EF/SQL запросы для `Runs`.
-- Весь доступ к данным для гридов находится в `VarPrice.Infrastructure/Queries/Runs`.
-- Фильтрация/сортировка/пагинация для DevExtreme выполняются через `DataSourceLoadOptions`/`DataSourceLoader`.
+- Весь доступ к данным для экрана находится в `VarPrice.Infrastructure/Queries/Runs`.
+- Фильтрация/сортировка/пагинация для Kendo grid выполняются через `DataSourceRequest`/`ToDataSourceResultAsync`.
+- Ручной live refresh использует существующий `IProductCardExtractor`, но не делает write-side действий в БД.
 
 ## Требования
 

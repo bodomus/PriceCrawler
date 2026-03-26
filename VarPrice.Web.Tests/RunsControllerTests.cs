@@ -221,16 +221,269 @@ public sealed class RunsControllerTests
         Assert.Equal("Failed", row.Status);
     }
 
+    [Fact]
+    public async Task ProductDetails_WhenSnapshotSelected_ReturnsAnalyticsCardPayload()
+    {
+        var details = new ProductDetailsQueryRow
+        {
+            Id = 501,
+            SnapshotId = 101,
+            RunId = 7,
+            ExternalId = "SKU-11",
+            Name = "Tomato",
+            Url = "https://varus.ua/tomato",
+            PackValue = 1,
+            PackUnit = "kg",
+            CurrentPrice = 49.9m,
+            OldPrice = 59.9m,
+            DiscountPercent = 16.7m,
+            PromoFlag = true,
+            InStock = true,
+            UpdatedAtUtc = new DateTime(2026, 3, 24, 8, 0, 0, DateTimeKind.Utc),
+            CapturedAtUtc = new DateTime(2026, 3, 24, 9, 0, 0, DateTimeKind.Utc),
+            Source = "varus"
+        };
+
+        var sut = CreateController(
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            productDetails: details);
+
+        var result = await sut.ProductDetails(101, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var dto = Assert.IsType<ProductDetailsDto>(json.Value);
+        Assert.Equal(501, dto.Id);
+        Assert.Equal("Tomato", dto.Name);
+        Assert.Equal("SKU-11", dto.Sku);
+        Assert.Equal("1 kg", dto.Unit);
+        Assert.Equal(49.9m, dto.CurrentPrice);
+        Assert.Equal(7, dto.RunId);
+    }
+
+    [Fact]
+    public async Task ProductHistory_WhenSnapshotSelected_ReturnsHistoryRows()
+    {
+        var historyRows = new[]
+        {
+            new ProductPriceHistoryQueryRow
+            {
+                Id = 101,
+                RunId = 21,
+                CapturedAtUtc = new DateTime(2026, 3, 24, 11, 0, 0, DateTimeKind.Utc),
+                Price = 19.9m,
+                OldPrice = 24.5m,
+                DiscountPercent = 19,
+                PromoFlag = true,
+                InStock = true,
+                Source = "varus"
+            },
+            new ProductPriceHistoryQueryRow
+            {
+                Id = 88,
+                RunId = 14,
+                CapturedAtUtc = new DateTime(2026, 3, 23, 8, 0, 0, DateTimeKind.Utc),
+                Price = 21.5m,
+                OldPrice = null,
+                DiscountPercent = null,
+                PromoFlag = false,
+                InStock = true,
+                Source = "varus"
+            }
+        };
+
+        var sut = CreateController(
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            productHistoryRows: historyRows);
+
+        var result = await sut.ProductHistory(101, new DataSourceRequest(), CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var dataSource = Assert.IsType<DataSourceResult>(json.Value);
+        var rows = Assert.IsAssignableFrom<IEnumerable>(dataSource.Data).Cast<ProductPriceHistoryRowDto>().ToList();
+
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(101, rows[0].Id);
+        Assert.Equal(21, rows[0].RunId);
+        Assert.Equal("varus", rows[0].Source);
+    }
+
+    [Fact]
+    public async Task ProductAnalytics_WhenSnapshotSelected_ReturnsChartSummaryAndSeries()
+    {
+        var historyRows = new[]
+        {
+            new ProductPriceHistoryQueryRow
+            {
+                Id = 88,
+                RunId = 14,
+                CapturedAtUtc = new DateTime(2026, 3, 23, 8, 0, 0, DateTimeKind.Utc),
+                Price = 21.5m,
+                OldPrice = null,
+                DiscountPercent = null,
+                PromoFlag = false,
+                InStock = true,
+                Source = "varus"
+            },
+            new ProductPriceHistoryQueryRow
+            {
+                Id = 101,
+                RunId = 21,
+                CapturedAtUtc = new DateTime(2026, 3, 24, 11, 0, 0, DateTimeKind.Utc),
+                Price = 19.9m,
+                OldPrice = 24.5m,
+                DiscountPercent = 19,
+                PromoFlag = true,
+                InStock = true,
+                Source = "varus"
+            },
+            new ProductPriceHistoryQueryRow
+            {
+                Id = 133,
+                RunId = 27,
+                CapturedAtUtc = new DateTime(2026, 3, 25, 9, 30, 0, DateTimeKind.Utc),
+                Price = 22.1m,
+                OldPrice = 22.1m,
+                DiscountPercent = 0,
+                PromoFlag = false,
+                InStock = false,
+                Source = "varus"
+            }
+        };
+
+        var sut = CreateController(
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            productHistoryRows: historyRows);
+
+        var result = await sut.ProductAnalytics(101, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var dto = Assert.IsType<ProductAnalyticsDto>(json.Value);
+
+        Assert.Equal(101, dto.SnapshotId);
+        Assert.Equal(3, dto.HistoryPointsCount);
+        Assert.Equal(3, dto.PricePointsCount);
+        Assert.Equal(1, dto.PromoMomentsCount);
+        Assert.Equal(2, dto.InStockMomentsCount);
+        Assert.Equal(19.9m, dto.SelectedPrice);
+        Assert.Equal(21.5m, dto.PreviousPrice);
+        Assert.Equal(21.5m, dto.FirstObservedPrice);
+        Assert.Equal(22.1m, dto.LatestObservedPrice);
+        Assert.Equal(19.9m, dto.MinPrice);
+        Assert.Equal(22.1m, dto.MaxPrice);
+        Assert.Equal(21.17m, dto.AveragePrice);
+        Assert.Equal(-1.6m, dto.ChangeFromPreviousAmount);
+        Assert.Equal(-7.4m, dto.ChangeFromPreviousPercent);
+        Assert.Equal(-1.6m, dto.ChangeFromFirstAmount);
+        Assert.Equal(-7.4m, dto.ChangeFromFirstPercent);
+        Assert.Equal(3, dto.Points.Count);
+        Assert.Equal(88, dto.Points[0].SnapshotId);
+        Assert.Equal(101, dto.Points[1].SnapshotId);
+    }
+
+    [Fact]
+    public async Task RefreshLiveProduct_WhenExtractorSucceeds_ReturnsManualLivePayload()
+    {
+        var productDetails = new ProductDetailsQueryRow
+        {
+            Id = 501,
+            SnapshotId = 101,
+            RunId = 7,
+            ExternalId = "SKU-11",
+            Name = "Tomato",
+            Url = "https://varus.ua/tomato",
+            Slug = "tomato",
+            PackValue = 1,
+            PackUnit = "kg",
+            CurrentPrice = 49.9m,
+            OldPrice = 59.9m,
+            PromoFlag = true,
+            InStock = true
+        };
+
+        var liveResult = ProductExtractResult.Success(
+            new ProductCard("SKU-11", "Tomato Premium", "https://varus.ua/tomato", "tomato", 47.9m, 59.9m, true, true,
+                1,
+                "kg"),
+            200,
+            812,
+            1.37);
+
+        var sut = CreateController(
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            productDetails: productDetails,
+            liveExtractResult: liveResult);
+
+        var result = await sut.RefreshLiveProduct(101, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var dto = Assert.IsType<ProductLiveResultDto>(json.Value);
+
+        Assert.Equal(101, dto.SnapshotId);
+        Assert.Equal("success", dto.Status);
+        Assert.Equal(200, dto.HttpStatus);
+        Assert.Equal(812, dto.LatencyMs);
+        Assert.Equal(1.37d, dto.ApproximateRps);
+        Assert.NotNull(dto.LiveCard);
+        Assert.Equal("Tomato Premium", dto.LiveCard!.Name);
+        Assert.Equal(47.9m, dto.LiveCard.CurrentPrice);
+        Assert.Null(dto.Issue);
+    }
+
+    [Fact]
+    public async Task RefreshLiveProduct_WhenExtractorFails_ReturnsErrorPayload()
+    {
+        var productDetails = new ProductDetailsQueryRow
+        {
+            Id = 501,
+            SnapshotId = 101,
+            RunId = 7,
+            ExternalId = "SKU-11",
+            Name = "Tomato",
+            Url = "https://varus.ua/tomato"
+        };
+
+        var liveResult = ProductExtractResult.Fail(
+            "timeout",
+            504,
+            "Request timed out after 15s",
+            15000,
+            0.8,
+            true);
+
+        var sut = CreateController(
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            productDetails: productDetails,
+            liveExtractResult: liveResult);
+
+        var result = await sut.RefreshLiveProduct(101, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var dto = Assert.IsType<ProductLiveResultDto>(json.Value);
+
+        Assert.Equal("error", dto.Status);
+        Assert.Null(dto.LiveCard);
+        Assert.NotNull(dto.Issue);
+        Assert.Equal("timeout", dto.Issue!.ErrorCode);
+        Assert.True(dto.Issue.IsTransient);
+        Assert.Equal(504, dto.HttpStatus);
+    }
+
     private static RunsController CreateController(
         CrawlerRunResult crawlerResponse,
         IEnumerable<RunTreeQueryRow>? treeRows = null,
-        IEnumerable<SnapshotGridQueryRow>? snapshotRows = null)
+        IEnumerable<SnapshotGridQueryRow>? snapshotRows = null,
+        ProductDetailsQueryRow? productDetails = null,
+        IEnumerable<ProductPriceHistoryQueryRow>? productHistoryRows = null,
+        ProductExtractResult? liveExtractResult = null)
     {
         return new RunsController(
             new EmptyRunsGridQuerySource(),
             new StubRunsTreeQuerySource(treeRows ?? Array.Empty<RunTreeQueryRow>()),
             new StubSnapshotsGridQuerySource(snapshotRows ?? Array.Empty<SnapshotGridQueryRow>()),
             new EmptyProductsGridQuerySource(),
+            new StubProductDetailsQuerySource(productDetails),
+            new StubProductPriceHistoryQuerySource(productHistoryRows ?? Array.Empty<ProductPriceHistoryQueryRow>()),
+            new StubProductCardExtractor(liveExtractResult),
             new FakeRunCrawlerUseCase(crawlerResponse),
             NullLogger<RunsController>.Instance);
     }
@@ -260,5 +513,31 @@ public sealed class RunsControllerTests
     {
         public IQueryable<ProductGridQueryRow> Build(long snapshotId) =>
             Array.Empty<ProductGridQueryRow>().AsQueryable();
+    }
+
+    private sealed class StubProductDetailsQuerySource(ProductDetailsQueryRow? row) : IProductDetailsQuerySource
+    {
+        public IQueryable<ProductDetailsQueryRow> Build(long snapshotId) =>
+            row is null ? Array.Empty<ProductDetailsQueryRow>().AsQueryable() : new[] { row }.AsQueryable();
+    }
+
+    private sealed class StubProductPriceHistoryQuerySource(IEnumerable<ProductPriceHistoryQueryRow> rows)
+        : IProductPriceHistoryQuerySource
+    {
+        public IQueryable<ProductPriceHistoryQueryRow> Build(long snapshotId) => rows.AsQueryable();
+    }
+
+    private sealed class StubProductCardExtractor(ProductExtractResult? result) : IProductCardExtractor
+    {
+        public Task<ProductExtractResult> ExtractAsync(string url, CancellationToken ct)
+        {
+            return Task.FromResult(result ?? ProductExtractResult.Fail(
+                "not-configured",
+                null,
+                "Live extractor stub was not configured.",
+                0,
+                0,
+                false));
+        }
     }
 }

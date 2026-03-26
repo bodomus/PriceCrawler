@@ -140,3 +140,25 @@ Write rules:
 - If the issue is critical and no valid state exists, only `crawl_error` is stored.
 - Retry-related transient failures keep their latest context in `price_collect_queue`, while the final
   unrecoverable failure is persisted in `crawl_error`.
+
+## Runs analytics screen
+
+The `Runs` dashboard uses the existing navigation chain:
+
+- date group
+- crawler run
+- selected `price_snapshot`
+
+In the Stage 3 analytics panel:
+
+- `Product Card` is built from the selected `price_snapshot` joined with `product` and `crawler_run`;
+- `Price History` is built from all `price_snapshot` rows with the same `product_id`;
+- `Price Chart` is rendered from a dedicated Postgres-only analytics payload built from the same history;
+- `Live VARUS` refresh is available only as an explicit user action on the selected product card.
+
+This keeps the screen read-only and deterministic:
+
+- no live VARUS request is made when a snapshot is selected automatically;
+- missing optional fields such as image, brand, or category must degrade to placeholders without breaking layout;
+- chart analytics can add derived metrics such as deltas, range, and promo / stock coverage without changing snapshot navigation semantics;
+- manual live refresh may compare current VARUS values with the selected snapshot, but it must not silently replace the current selection or persist new data without another explicit action.
