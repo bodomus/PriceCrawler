@@ -73,6 +73,22 @@ create table if not exists crawl_error (
     created_at     timestamptz not null default now()
 );
 
+create table if not exists db_routine_script
+(
+    script_name
+    varchar
+(
+    255
+) primary key,
+    script_hash varchar
+(
+    64
+) not null,
+    applied_at timestamptz not null default now
+(
+)
+    );
+
 create unique index if not exists ux_product_url on product(url);
 create index if not exists ix_product_external_id on product(external_id);
 create unique index if not exists ux_price_collect_queue_run_url on price_collect_queue(run_id, url);

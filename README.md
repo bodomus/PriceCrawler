@@ -26,7 +26,7 @@
 
 - `Product Card` показывает выбранный snapshot;
 - `Price History` остается paged grid для ручного анализа;
-- `Price Chart` строится отдельным read-only payload и показывает trend, delta, диапазон, promo/in-stock coverage.
+- `Product Card`, `Price History` и `Price Chart` теперь загружаются единым read-only payload `ProductAnalysis` по `snapshotId`.
 - Live HTTP-запрос в VARUS выполняется только по явному нажатию `Refresh from VARUS`.
 - Результат live-запроса не меняет текущий selection и не пишет новый snapshot в БД автоматически.
 
@@ -44,12 +44,14 @@
 - `VarPrice.Application`
   - `Grids/Runs/IRunsGridQuerySource.cs`
   - `Grids/Runs/ISnapshotsGridQuerySource.cs`
+  - `Grids/Runs/IProductAnalysisService.cs`
   - `Grids/Runs/IProductDetailsQuerySource.cs`
   - `Grids/Runs/IProductPriceHistoryQuerySource.cs`
   - `Grids/Runs/Dto/*` - DTO для JSON-контракта dashboard API
 - `VarPrice.Infrastructure`
   - `Queries/Runs/RunsGridQuerySource.cs` - EF query для runs
   - `Queries/Runs/SnapshotsGridQuerySource.cs` - EF query для snapshots
+  - `Queries/Runs/ProductAnalysisService.cs` - единый агрегатор product card + history + analytics
   - `Queries/Runs/ProductDetailsQuerySource.cs` - карточка товара по выбранному snapshot
   - `Queries/Runs/ProductPriceHistoryQuerySource.cs` - история цен по `product_id` выбранного snapshot
 
@@ -59,6 +61,8 @@
 - `POST /Runs/IngestVegetables` - запуск crawler из dashboard.
 - `GET /Runs/RunsGrid` - данные таблицы runs.
 - `GET /Runs/SnapshotsGrid` - данные таблицы snapshots.
+- `GET /Runs/ProductAnalysis` - единый payload аналитической панели по `snapshotId`:
+  `productCard`, `history`, `analytics`.
 - `GET /Runs/ProductDetails` - карточка выбранного товара по `snapshotId`.
 - `GET /Runs/ProductAnalytics` - полный payload для chart и summary analytics по `snapshotId`.
 - `GET /Runs/ProductHistory` - история цены выбранного товара по `snapshotId`.
@@ -70,6 +74,7 @@
 
 - `Web` слой не делает EF/SQL запросы для `Runs`.
 - Весь доступ к данным для экрана находится в `VarPrice.Infrastructure/Queries/Runs`.
+- `/Runs` использует единый application-level контракт `ProductAnalysis` для аналитической панели выбранного товара.
 - Фильтрация/сортировка/пагинация для Kendo grid выполняются через `DataSourceRequest`/`ToDataSourceResultAsync`.
 - Ручной live refresh использует существующий `IProductCardExtractor`, но не делает write-side действий в БД.
 
@@ -228,6 +233,44 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - При некритической ошибке и валидном состоянии товара может быть создан и snapshot, и связанная запись
   в `crawl_error`.
 - При критической ошибке без валидного состояния snapshot не создается, сохраняется только `crawl_error`.
+
+## DB routine scripts
+
+- Версионируемые SQL-скрипты DB routines находятся в `db/routines`.
+- Формат имени скрипта: `NNN__description.sql`, например `001__routine_support_text.sql`.
+- `SchemaBootstrapper` применяет `schema.sql`, затем последовательно выполняет все `db/routines/*.sql`
+  в лексикографическом порядке имени файла.
+- Для повторяемой поставки используется таблица `db_routine_script`:
+  она хранит `script_name`, `script_hash`, `applied_at` и позволяет повторно выполнять только изменившиеся скрипты.
+- Скрипты routines должны быть идемпотентными и использовать `create or replace function/procedure`
+  или эквивалентный безопасный шаблон.
+- Доменные write-side routines именуются по бизнес-операциям, например
+  `crawler_run_start`, `crawler_run_finish`, `price_observation_store`,
+  `price_collect_queue_reserve_batch`.
+- Весь write-side с бизнес-логикой теперь выполняется через DB routines:
+  `crawler_run_start`, `crawler_run_finish`,
+  `ingestion_run_start`, `ingestion_run_finish`,
+  `price_observation_store`,
+  `crawl_error_add`.
+- Для `price_collect_queue` через DB routines выполняются:
+  `price_collect_queue_enqueue`, `price_collect_queue_reserve_batch`,
+  `price_collect_queue_mark_succeeded`, `price_collect_queue_mark_retry`,
+  `price_collect_queue_mark_dead`, `price_collect_queue_reap_expired`,
+  `price_collect_queue_has_outstanding`, `price_collect_queue_get_run_stats`.
+- `price_observation_store` инкапсулирует единое доменное действие записи observation:
+  поиск existing product, upsert `product`, чтение latest snapshot,
+  проверку meaningful change, conditional insert `price_snapshot`
+  и возврат `(productId, snapshotId, snapshotCreated)`.
+- Общие SQL helper-объекты для будущих routines допускают префикс `routine_support_*`.
+- `schema.sql` и `db/routines/**/*.sql` копируются в output/publish для `VarPrice.Web` и `VarPrice.Worker`,
+  поэтому bootstrap работает как из репозитория, так и из опубликованного приложения.
+
+## Integration tests for DB routines
+
+- Ключевые write-side сценарии покрыты в `VarPrice.Web.Tests/WorkerIntegrationTests.cs`.
+- Тесты проверяют:
+  `crawler_run`, `ingestion_run`, `price_observation_store`,
+  `crawl_error_add`, queue lifecycle, reaper, stats и полную use-case интеграцию.
 
 ## Версионирование (Git tags + Nerdbank.GitVersioning)
 

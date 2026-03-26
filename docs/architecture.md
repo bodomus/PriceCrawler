@@ -22,8 +22,15 @@
 
 ### VarPrice.Infrastructure
 - `PgCrawlerRunRepository`, `PgIngestionRunRepository`, `PgPriceSnapshotRepository`.
-- `PgPriceCollectQueueRepository` for queue enqueue/reserve/retry/dead/reap/stats.
-- `SchemaBootstrapper` ensures required tables/indexes and migrates legacy tables into the normalized schema.
+- All write-side business operations now execute through DB routines instead of inline DML.
+- `crawler_run`, `ingestion_run`, and `crawl_error` are persisted through dedicated domain routines.
+- `PgPriceSnapshotRepository.StoreObservationAsync` calls `price_observation_store`, which performs product lookup/upsert,
+  latest snapshot read, meaningful-change detection, conditional `price_snapshot` insert, and returns the write result.
+- `PgPriceCollectQueueRepository` executes queue enqueue/reserve/retry/dead/reap/stats through DB routines,
+  preserving `FOR UPDATE SKIP LOCKED`, lease handling, and queue statistics semantics.
+- `SchemaBootstrapper` ensures required tables/indexes, applies versioned SQL routine scripts from `db/routines`,
+  tracks them in `db_routine_script`, and migrates legacy tables into the normalized schema.
+- `PgRoutineExecutor` provides reusable function/procedure invocation helpers for future write-side DB routines.
 - HTTP adapters: `SitemapReader`, `VarusProductCardExtractor`.
 - Composition root extension: `AddVarPriceInfrastructure(configuration)`.
 
@@ -31,12 +38,19 @@
 - MVC dashboard uses query sources and triggers `RunCrawlerUseCase`.
 - No direct write-side DB access from the UI layer.
 - Read-side data for grids is served through dedicated query sources over EF Core.
+- The product analytics panel is aggregated through `IProductAnalysisService`, which returns a unified payload for
+  product card, history, and chart analytics by `snapshotId`.
 - Manual live product refresh reuses `IProductCardExtractor` explicitly from the web layer, but stays read-only and does not persist a new snapshot by itself.
 
 ### VarPrice.Worker
 - Standalone console runner.
 - Parses CLI args and invokes `RunCrawlerUseCase`.
 - No web host required.
+
+## Verification
+
+- `VarPrice.Web.Tests/WorkerIntegrationTests` covers the key DB routine flows:
+  runs start/finish, observation writes, crawl errors, queue lifecycle, reaper, stats, and end-to-end crawler execution.
 
 ## Composition
 

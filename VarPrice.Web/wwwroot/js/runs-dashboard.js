@@ -42,9 +42,9 @@
     let shouldExpandRoots = true;
     let currentProductDetails = null;
     let currentProductAnalytics = null;
+    let currentProductHistory = [];
     let currentLiveProductResult = null;
-    let detailsRequestToken = 0;
-    let analyticsRequestToken = 0;
+    let analysisRequestToken = 0;
     let liveRequestToken = 0;
     let historyHasError = false;
     let historyTotalCount = 0;
@@ -188,6 +188,21 @@
 
         return dataSource;
     };
+
+    const createLocalGridDataSource = (fields, pageSize, sort) => new window.kendo.data.DataSource({
+        data: [],
+        schema: {
+            model: {
+                id: "id",
+                fields
+            }
+        },
+        pageSize,
+        sort,
+        serverPaging: false,
+        serverSorting: false,
+        serverFiltering: false
+    });
 
     const createTreeDataSource = () => new window.kendo.data.TreeListDataSource({
         transport: {
@@ -956,6 +971,7 @@
     const resetAnalyticsPanels = () => {
         currentProductDetails = null;
         currentProductAnalytics = null;
+        currentProductHistory = [];
         historyHasError = false;
         historyTotalCount = 0;
         chartHasError = false;
@@ -963,6 +979,9 @@
         clearAnalyticsStatus();
         renderProductCardEmpty();
         renderChartEmpty();
+        if (typeof productHistoryGrid !== "undefined" && productHistoryGrid?.dataSource) {
+            productHistoryGrid.dataSource.data([]);
+        }
     };
 
     const treeIcon = (nodeType) => {
@@ -1127,9 +1146,8 @@
         }
     };
 
-    const loadProductDetails = async () => {
-        const requestToken = ++detailsRequestToken;
-
+    const loadProductAnalysis = async () => {
+        const requestToken = ++analysisRequestToken;
         if (selectedSnapshotId === null) {
             resetAnalyticsPanels();
             refreshContextLabels();
@@ -1137,65 +1155,17 @@
         }
 
         currentProductDetails = null;
-        renderProductCardLoading();
-        refreshContextLabels();
-
-        const requestUrl = new URL(root.dataset.productDetailsUrl, window.location.origin);
-        requestUrl.searchParams.set("snapshotId", selectedSnapshotId);
-
-        try {
-            const response = await fetch(requestUrl.toString(), {
-                headers: {
-                    "Accept": "application/json"
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(await extractErrorMessage(response));
-            }
-
-            const payload = await response.json();
-            if (requestToken !== detailsRequestToken) {
-                return;
-            }
-
-            currentProductDetails = payload;
-            if (!payload) {
-                renderProductCardError();
-                setAnalyticsStatus("The selected snapshot has no product details in Postgres.");
-                refreshContextLabels();
-                return;
-            }
-
-            renderProductCard(payload);
-            refreshContextLabels();
-        } catch (error) {
-            if (requestToken !== detailsRequestToken) {
-                return;
-            }
-
-            currentProductDetails = null;
-            renderProductCardError();
-            setAnalyticsStatus(`Product analytics failed to load: ${error.message || "Unknown error"}`);
-            refreshContextLabels();
-        }
-    };
-
-    const loadProductChartAnalytics = async () => {
-        const requestToken = ++analyticsRequestToken;
-
-        if (selectedSnapshotId === null) {
-            resetAnalyticsPanels();
-            refreshContextLabels();
-            return;
-        }
-
         currentProductAnalytics = null;
+        currentProductHistory = [];
+        historyHasError = false;
+        historyTotalCount = 0;
         chartHasError = false;
+        renderProductCardLoading();
         renderChartLoading();
+        productHistoryGrid.dataSource.data([]);
         refreshContextLabels();
 
-        const requestUrl = new URL(root.dataset.productAnalyticsUrl, window.location.origin);
+        const requestUrl = new URL(root.dataset.productAnalysisUrl, window.location.origin);
         requestUrl.searchParams.set("snapshotId", selectedSnapshotId);
 
         try {
@@ -1210,11 +1180,12 @@
             }
 
             const payload = await response.json();
-            if (requestToken !== analyticsRequestToken) {
+            if (requestToken !== analysisRequestToken) {
                 return;
             }
 
-            currentProductAnalytics = payload || {
+            currentProductDetails = payload?.productCard ?? null;
+            currentProductAnalytics = payload?.analytics ?? {
                 snapshotId: selectedSnapshotId,
                 historyPointsCount: 0,
                 pricePointsCount: 0,
@@ -1222,18 +1193,39 @@
                 inStockMomentsCount: 0,
                 points: []
             };
+            currentProductHistory = Array.isArray(payload?.history) ? payload.history : [];
+            historyHasError = false;
+            historyTotalCount = currentProductHistory.length;
             chartHasError = false;
-            renderChartPanel();
-            refreshContextLabels();
-        } catch (error) {
-            if (requestToken !== analyticsRequestToken) {
+            productHistoryGrid.dataSource.data(currentProductHistory);
+            productHistoryGrid.dataSource.page(1);
+
+            if (!currentProductDetails) {
+                renderProductCardError();
+                renderChartPanel();
+                setAnalyticsStatus("The selected snapshot has no product details in Postgres.");
+                refreshContextLabels();
                 return;
             }
 
-            currentProductAnalytics = null;
-            chartHasError = true;
+            renderProductCard(currentProductDetails);
             renderChartPanel();
-            setAnalyticsStatus(`Chart analytics failed to load: ${error.message || "Unknown error"}`);
+            refreshContextLabels();
+        } catch (error) {
+            if (requestToken !== analysisRequestToken) {
+                return;
+            }
+
+            currentProductDetails = null;
+            currentProductAnalytics = null;
+            currentProductHistory = [];
+            historyHasError = true;
+            historyTotalCount = 0;
+            chartHasError = true;
+            productHistoryGrid.dataSource.data([]);
+            renderProductCardError();
+            renderChartPanel();
+            setAnalyticsStatus(`Product analytics failed to load: ${error.message || "Unknown error"}`);
             refreshContextLabels();
         }
     };
@@ -1468,18 +1460,15 @@
             resetLiveProductState();
             syncSnapshotGridSelection(this);
             clearAnalyticsStatus();
+            productHistoryGrid.dataSource.data([]);
             renderChartLoading();
             refreshContextLabels();
-            loadProductDetails();
-            loadProductChartAnalytics();
-            reloadGrid(productHistoryGrid);
+            loadProductAnalysis();
         }
     }).data("kendoGrid");
 
     const productHistoryGrid = $("#productHistoryGrid").kendoGrid({
-        dataSource: createGridDataSource(
-            root.dataset.productHistoryUrl,
-            () => ({snapshotId: selectedSnapshotId}),
+        dataSource: createLocalGridDataSource(
             {
                 id: {type: "number"},
                 runId: {type: "number"},
@@ -1492,15 +1481,7 @@
                 source: {type: "string"}
             },
             25,
-            [{field: "capturedAtUtc", dir: "desc"}],
-            (e) => {
-                historyHasError = true;
-                historyTotalCount = 0;
-                productHistoryGrid.dataSource.data([]);
-                updateNoRecordsText(productHistoryGrid, getHistoryEmptyText());
-                setAnalyticsStatus(e?.xhr?.responseJSON?.error || "Price history failed to load.");
-                refreshContextLabels();
-            }
+            [{field: "capturedAtUtc", dir: "desc"}]
         ),
         sortable: {
             mode: "multiple",

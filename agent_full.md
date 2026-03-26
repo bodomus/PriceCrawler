@@ -2,13 +2,13 @@
 
 ## 1. Purpose
 
-`VARUS Price Crawler` is a .NET solution for collecting product data from the VARUS website, normalizing product cards, storing price snapshots in PostgreSQL, and showing ingestion runs in a web dashboard.
+`VARUS Price Crawler` is a .NET solution for collecting product data from the VARUS website, normalizing product cards, storing price snapshots in PostgreSQL, and showing crawler runs, snapshots, and product analytics in a web dashboard.
 
 The project already has a separated multi-project structure and is moving toward a clean/layered architecture, but in practice it is currently a hybrid of:
 
 - clean-style layers (`Domain` -> `Application` -> `Infrastructure`)
 - dedicated host applications (`Web`, `Worker`)
-- a transitional legacy path that still exists inside `VarPrice.Web`
+- CQRS-like separation between DB-routine write side and query-oriented dashboard read side
 
 ## 2. Technology Stack
 
@@ -26,11 +26,11 @@ The project already has a separated multi-project structure and is moving toward
 - ASP.NET Core MVC: web host and dashboard
 - Entity Framework Core 8: read/query side for dashboard grids
 - Npgsql + PostgreSQL: storage and low-level persistence
-- Raw SQL / ADO.NET: write side repositories and queue operations
+- PostgreSQL DB routines + ADO.NET helpers: write-side business operations and queue lifecycle
 - Serilog: structured logging for `Web` and `Worker`
 - AngleSharp: HTML parsing of product pages
 - `System.Threading.RateLimiting`: request throttling
-- DevExtreme / DevExpress ASP.NET Core: dashboard grids
+- Kendo UI for ASP.NET Core: dashboard grids and widgets
 - xUnit: tests
 - DotNet.Testcontainers: integration-test infrastructure dependency
 
@@ -65,8 +65,8 @@ It is **not** a full DDD/Clean Architecture implementation in the strict sense, 
 
 - the domain layer is small and mostly contains entities/contracts, not rich business aggregates
 - application layer contains orchestration/use-case logic but no full mediator/CQRS pipeline
-- infrastructure mixes EF Core query models with raw SQL repositories
-- web host still contains its own crawler runner and repository abstraction outside the main application flow
+- infrastructure mixes EF Core query models with DB-routine backed repositories
+- some historical documents still describe older ingestion paths, but the active dashboard trigger uses the shared application use case
 
 ### Layer responsibilities
 
@@ -100,9 +100,9 @@ Contains:
 - schema bootstrapper
 - EF Core `DbContext`
 - crawler adapters
-- query sources for dashboard grids
+- query sources and analysis services for dashboard read models
 
-This layer implements all technical concerns: database access, HTTP crawling, throttling, parsing, query building.
+This layer implements all technical concerns: database access, DB routine execution, HTTP crawling, throttling, parsing, and dashboard query building.
 
 #### `VarPrice.Web`
 
@@ -110,9 +110,9 @@ Contains:
 
 - ASP.NET Core MVC host
 - dashboard controller/views/view models
-- DevExtreme integration
+- Kendo UI integration
 - logging bootstrap
-- a legacy crawler execution path (`CrawlerRunner`, `PgCrawlerRepository`, DB error wrapper)
+- dashboard endpoints for runs, snapshots, analytics, and manual live refresh
 
 #### `VarPrice.Worker`
 
@@ -148,21 +148,21 @@ Important characteristics:
 - simple circuit-breaker behavior
 - idempotency through `queue_id` and `idempotency_key`
 
-### 5.2 Web flow (dashboard / legacy ingestion path)
+### 5.2 Web flow (dashboard / analytics path)
 
 Main UI path:
 
 1. `VarPrice.Web/Program.cs`
 2. `RunsController`
-3. MVC views + DevExtreme grids
-4. EF Core query sources for run/snapshot/product data
+3. MVC views + Kendo UI widgets
+4. query sources plus a unified product analysis service for run/snapshot/product analytics data
 
-There is also a direct crawler trigger from the dashboard:
+There is also a crawler trigger from the dashboard:
 
 - `POST /Runs/IngestVegetables`
-- `RunsController -> ICrawlerRunner -> CrawlerRunner -> PgCrawlerRepository`
+- `RunsController -> IRunCrawlerUseCase`
 
-This path does **not** use the same queue-based orchestration as the `Worker`. It is simpler and more direct, so the solution currently has two ingestion paths.
+This path uses the same queue-based orchestration as the worker host and starts the shared crawler application flow from the dashboard.
 
 ## 6. Project-by-Project Class Map
 
@@ -195,7 +195,7 @@ This path does **not** use the same queue-based orchestration as the `Worker`. I
 
 Observation:
 
-`IClock` and `IUnitOfWork` exist, but they are not central to the current implementation. The project relies more on repository-per-concern and explicit persistence calls.
+`IClock` and `IUnitOfWork` exist, but they are not central to the current implementation. The project relies more on explicit repository boundaries, DB routines for write-side operations, and query services for dashboard read models.
 
 ### 6.2 `VarPrice.Application`
 
@@ -232,11 +232,12 @@ This class is the heart of the modern ingestion flow. It:
 - `ProductExtractResult`
 - `CrawlerErrorCodes`
 
-#### Dashboard grid contracts
+#### Dashboard read-model contracts
 
 - `IRunsGridQuerySource`
 - `ISnapshotsGridQuerySource`
 - `IProductsGridQuerySource`
+- `IProductAnalysisService`
 - DTO and QueryRow classes under `Grids/Runs/*`
 
 ### 6.3 `VarPrice.Infrastructure`
@@ -270,16 +271,19 @@ Important detail:
 
 the project uses **two persistence styles at once**:
 
-- raw SQL repositories for write/update flows
-- EF Core for dashboard read models and ad hoc query sources
+- DB routines plus ADO.NET helpers for write/update business flows
+- EF Core / SQL query sources for dashboard read models and ad hoc analysis payloads
 
 #### Query side for dashboard
 
 - `RunsGridQuerySource`
 - `SnapshotsGridQuerySource`
 - `ProductsGridQuerySource`
+- `ProductDetailsQuerySource`
+- `ProductPriceHistoryQuerySource`
+- `ProductAnalysisService`
 
-This is effectively a read-model layer tailored for the UI.
+This is effectively a read-model layer tailored for the UI, including a unified `ProductAnalysis` payload for the analytics panel.
 
 ### 6.4 `VarPrice.Web`
 
@@ -296,19 +300,15 @@ This is effectively a read-model layer tailored for the UI.
 - `Views/Runs/Index.cshtml`
 - `wwwroot/js/runs-dashboard.js`
 
-#### Legacy / web-specific ingestion support
+#### Dashboard-specific analytics support
 
-- `ICrawlerRunner`
-- `CrawlerRunner`
-- `ICrawlerRepository`
-- `PgCrawlerRepository`
-- `DbExecutor`
-- `DbErrorMapper`
-- `DbResult`, `DbResult<T>`
+- `RunsController`
+- `GET /Runs/ProductAnalysis`
+- `wwwroot/js/runs-dashboard.js`
 
 Observation:
 
-This part is architecturally separate from the main `Application` use case. It looks like an older ingestion path retained to support dashboard-triggered execution with DB-friendly error mapping.
+The dashboard now loads product card, history, and chart analytics through one application-level analysis contract, while manual live refresh remains a separate explicit action.
 
 ### 6.5 `VarPrice.Worker`
 
@@ -353,6 +353,25 @@ Main tables in PostgreSQL:
 - lease-based reservation for parallel workers
 
 This gives the crawler a simple but effective durable queue model directly in PostgreSQL.
+
+### Write-side routine layer
+
+The current write-side is implemented through versioned routines from `db/routines`:
+
+- `crawler_run_start`
+- `crawler_run_finish`
+- `ingestion_run_start`
+- `ingestion_run_finish`
+- `price_observation_store`
+- `crawl_error_add`
+- `price_collect_queue_enqueue`
+- `price_collect_queue_reserve_batch`
+- `price_collect_queue_mark_succeeded`
+- `price_collect_queue_mark_retry`
+- `price_collect_queue_mark_dead`
+- `price_collect_queue_reap_expired`
+- `price_collect_queue_has_outstanding`
+- `price_collect_queue_get_run_stats`
 
 ## 8. Configuration
 
