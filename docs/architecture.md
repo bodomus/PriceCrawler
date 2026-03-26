@@ -31,6 +31,7 @@
 - MVC dashboard uses query sources and triggers `RunCrawlerUseCase`.
 - No direct write-side DB access from the UI layer.
 - Read-side data for grids is served through dedicated query sources over EF Core.
+- Manual live product refresh reuses `IProductCardExtractor` explicitly from the web layer, but stays read-only and does not persist a new snapshot by itself.
 
 ### VarPrice.Worker
 - Standalone console runner.

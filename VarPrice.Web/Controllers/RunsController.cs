@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore.Query;
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Grids.Runs;
 using VarPrice.Application.Grids.Runs.Dto;
+using VarPrice.Application.Grids.Runs.QueryRows;
 using VarPrice.Application.Models;
 using VarPrice.Web.ViewModels.Runs;
 using VarPrice.Web.ViewModels.Shared;
@@ -21,6 +22,9 @@ public sealed class RunsController(
     IRunsTreeQuerySource runsTreeQuerySource,
     ISnapshotsGridQuerySource snapshotsGridQuerySource,
     IProductsGridQuerySource productsGridQuerySource,
+    IProductDetailsQuerySource productDetailsQuerySource,
+    IProductPriceHistoryQuerySource productPriceHistoryQuerySource,
+    IProductCardExtractor productCardExtractor,
     IRunCrawlerUseCase runCrawlerUseCase,
     ILogger<RunsController> log) : Controller
 {

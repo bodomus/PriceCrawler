@@ -224,13 +224,19 @@ public sealed class RunsControllerTests
     private static RunsController CreateController(
         CrawlerRunResult crawlerResponse,
         IEnumerable<RunTreeQueryRow>? treeRows = null,
-        IEnumerable<SnapshotGridQueryRow>? snapshotRows = null)
+        IEnumerable<SnapshotGridQueryRow>? snapshotRows = null,
+        ProductDetailsQueryRow? productDetails = null,
+        IEnumerable<ProductPriceHistoryQueryRow>? productHistoryRows = null,
+        ProductExtractResult? liveExtractResult = null)
     {
         return new RunsController(
             new EmptyRunsGridQuerySource(),
             new StubRunsTreeQuerySource(treeRows ?? Array.Empty<RunTreeQueryRow>()),
             new StubSnapshotsGridQuerySource(snapshotRows ?? Array.Empty<SnapshotGridQueryRow>()),
             new EmptyProductsGridQuerySource(),
+            new StubProductDetailsQuerySource(productDetails),
+            new StubProductPriceHistoryQuerySource(productHistoryRows ?? Array.Empty<ProductPriceHistoryQueryRow>()),
+            new StubProductCardExtractor(liveExtractResult),
             new FakeRunCrawlerUseCase(crawlerResponse),
             NullLogger<RunsController>.Instance);
     }
@@ -260,5 +266,31 @@ public sealed class RunsControllerTests
     {
         public IQueryable<ProductGridQueryRow> Build(long snapshotId) =>
             Array.Empty<ProductGridQueryRow>().AsQueryable();
+    }
+
+    private sealed class StubProductDetailsQuerySource(ProductDetailsQueryRow? row) : IProductDetailsQuerySource
+    {
+        public IQueryable<ProductDetailsQueryRow> Build(long snapshotId) =>
+            row is null ? Array.Empty<ProductDetailsQueryRow>().AsQueryable() : new[] { row }.AsQueryable();
+    }
+
+    private sealed class StubProductPriceHistoryQuerySource(IEnumerable<ProductPriceHistoryQueryRow> rows)
+        : IProductPriceHistoryQuerySource
+    {
+        public IQueryable<ProductPriceHistoryQueryRow> Build(long snapshotId) => rows.AsQueryable();
+    }
+
+    private sealed class StubProductCardExtractor(ProductExtractResult? result) : IProductCardExtractor
+    {
+        public Task<ProductExtractResult> ExtractAsync(string url, CancellationToken ct)
+        {
+            return Task.FromResult(result ?? ProductExtractResult.Fail(
+                "not-configured",
+                null,
+                "Live extractor stub was not configured.",
+                0,
+                0,
+                false));
+        }
     }
 }

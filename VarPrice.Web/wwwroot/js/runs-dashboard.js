@@ -7,7 +7,14 @@
     const $ = window.jQuery;
     const selectedRunLabel = document.getElementById("selectedRunLabel");
     const selectedSnapshotLabel = document.getElementById("selectedSnapshotLabel");
-    const productContextLabel = document.getElementById("productContextLabel");
+    const productCardContextLabel = document.getElementById("productCardContextLabel");
+    const historyContextLabel = document.getElementById("historyContextLabel");
+    const priceChartContextLabel = document.getElementById("priceChartContextLabel");
+    const productDetailsPanel = document.getElementById("productDetailsPanel");
+    const priceChartPanel = document.getElementById("priceChartPanel");
+    const analyticsStatus = document.getElementById("analyticsStatus");
+    const dashboardSplitterElement = $("#dashboardSplitter");
+    const desktopDashboardLayout = window.matchMedia("(min-width: 1181px)");
 
     const snapshotScopes = {
         none: "none",
@@ -22,8 +29,10 @@
         [snapshotScopes.successful]: "No successful snapshots found for selected run",
         [snapshotScopes.failed]: "No failed snapshots found for selected run"
     };
-    const productEmptyNoSnapshot = "Select a snapshot to view products";
-    const productEmptyNoData = "No products found for selected snapshot";
+    const historyEmptyNoSelection = "Select a snapshot to view product price history";
+    const historyEmptyNoData = "No historical price records found for the selected product";
+    const historyEmptyError = "Price history is temporarily unavailable";
+    const detailsLoadingText = "Loading product analytics from Postgres...";
 
     let selectedRunId = null;
     let selectedSnapshotId = null;
@@ -31,9 +40,62 @@
     let selectedTreeNode = null;
     let pendingTreeSelectionId = null;
     let shouldExpandRoots = true;
+    let currentProductDetails = null;
+    let currentProductAnalytics = null;
+    let currentLiveProductResult = null;
+    let detailsRequestToken = 0;
+    let analyticsRequestToken = 0;
+    let liveRequestToken = 0;
+    let historyHasError = false;
+    let historyTotalCount = 0;
+    let chartHasError = false;
+    let liveProductRequestState = "idle";
 
     const encode = (value) => window.kendo.htmlEncode(value ?? "");
-    const formatDateTime = (value) => value ? window.kendo.toString(value, "yyyy-MM-dd HH:mm") : "";
+    const formatDateTime = (value) => value ? window.kendo.toString(value, "yyyy-MM-dd HH:mm") : "Not available";
+    const formatPrice = (value) => value === null || value === undefined ? "Not available" : `${window.kendo.toString(value, "n2")} UAH`;
+    const formatSignedPrice = (value) => {
+        if (value === null || value === undefined) {
+            return "No change";
+        }
+
+        const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+        return `${sign}${window.kendo.toString(Math.abs(value), "n2")} UAH`;
+    };
+    const formatSignedPercent = (value) => {
+        if (value === null || value === undefined) {
+            return "Not available";
+        }
+
+        const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+        return `${sign}${window.kendo.toString(Math.abs(value), "n1")}%`;
+    };
+    const formatCoverage = (value, total) => {
+        if (!total || total <= 0 || value === null || value === undefined) {
+            return "Not available";
+        }
+
+        return `${window.kendo.toString((value / total) * 100, "n0")}%`;
+    };
+    const formatBoolLabel = (value, truthyText, falsyText) => {
+        if (value === null || value === undefined) {
+            return "Not available";
+        }
+
+        return value ? truthyText : falsyText;
+    };
+    const formatRps = (value) => value === null || value === undefined
+        ? "Not available"
+        : `${window.kendo.toString(value, "n2")} rps`;
+    const asDate = (value) => value ? new Date(value) : null;
+    const formatText = (value, fallback = "Not available") => {
+        if (value === null || value === undefined) {
+            return fallback;
+        }
+
+        const normalized = `${value}`.trim();
+        return normalized.length > 0 ? normalized : fallback;
+    };
     const readResultValue = (response, camelCaseKey, pascalCaseKey, fallbackValue) => {
         if (!response || typeof response !== "object") {
             return fallbackValue;
@@ -49,30 +111,83 @@
 
         return fallbackValue;
     };
+    const requestLayoutResize = () => {
+        if (dashboardSplitterElement.length === 0 || typeof window.kendo?.resize !== "function") {
+            return;
+        }
 
-    const createGridDataSource = (url, extraDataFactory, fields, pageSize, sort) => new window.kendo.data.DataSource({
-        transport: {
-            read: {
-                url,
-                dataType: "json",
-                data: extraDataFactory ?? (() => ({}))
-            }
-        },
-        schema: {
-            data: (response) => readResultValue(response, "data", "Data", []),
-            total: (response) => readResultValue(response, "total", "Total", 0),
-            errors: (response) => readResultValue(response, "errors", "Errors", null),
-            model: {
-                id: "id",
-                fields
-            }
-        },
-        pageSize,
-        sort,
-        serverPaging: true,
-        serverSorting: true,
-        serverFiltering: true
-    });
+        window.requestAnimationFrame(() => {
+            window.kendo.resize(dashboardSplitterElement.children());
+        });
+    };
+    const createBadge = (label, value, tone = "neutral") => `
+        <div class="analytics-badge analytics-badge-${tone}">
+            <span class="analytics-badge-label">${encode(label)}</span>
+            <strong>${encode(value)}</strong>
+        </div>`;
+    const createMetaItem = (label, value) => `
+        <div class="product-meta-item">
+            <span class="product-meta-label">${encode(label)}</span>
+            <strong class="product-meta-value">${encode(value)}</strong>
+        </div>`;
+    const createEmptyState = (title, message, tone = "neutral") => `
+        <div class="analytics-empty-state analytics-empty-state-${tone}">
+            <div class="analytics-empty-eyebrow">${tone === "error" ? "Issue" : "Ready State"}</div>
+            <h3 class="analytics-empty-title">${encode(title)}</h3>
+            <p class="analytics-empty-copy">${encode(message)}</p>
+        </div>`;
+    const createInsightCard = (eyebrow, title, copy, tone = "neutral") => `
+        <article class="analytics-insight-card analytics-insight-card-${tone}">
+            <span class="analytics-insight-eyebrow">${encode(eyebrow)}</span>
+            <h4 class="analytics-insight-title">${encode(title)}</h4>
+            <p class="analytics-insight-copy">${encode(copy)}</p>
+        </article>`;
+    const createComparisonItem = (label, snapshotValue, liveValue, changed) => `
+        <div class="live-compare-item ${changed ? "is-changed" : ""}">
+            <span class="live-compare-label">${encode(label)}</span>
+            <div class="live-compare-values">
+                <span class="live-compare-value">
+                    <strong>Snapshot</strong>
+                    <span>${encode(snapshotValue)}</span>
+                </span>
+                <span class="live-compare-value">
+                    <strong>Live VARUS</strong>
+                    <span>${encode(liveValue)}</span>
+                </span>
+            </div>
+        </div>`;
+
+    const createGridDataSource = (url, extraDataFactory, fields, pageSize, sort, onError) => {
+        const dataSource = new window.kendo.data.DataSource({
+            transport: {
+                read: {
+                    url,
+                    dataType: "json",
+                    data: extraDataFactory ?? (() => ({}))
+                }
+            },
+            schema: {
+                data: (response) => readResultValue(response, "data", "Data", []),
+                total: (response) => readResultValue(response, "total", "Total", 0),
+                errors: (response) => readResultValue(response, "errors", "Errors", null),
+                model: {
+                    id: "id",
+                    fields
+                }
+            },
+            pageSize,
+            sort,
+            serverPaging: true,
+            serverSorting: true,
+            serverFiltering: true
+        });
+
+        if (typeof onError === "function") {
+            dataSource.bind("error", onError);
+        }
+
+        return dataSource;
+    };
 
     const createTreeDataSource = () => new window.kendo.data.TreeListDataSource({
         transport: {
@@ -122,6 +237,13 @@
 
         return snapshotEmptyByScope[selectedSnapshotScope] ?? snapshotEmptyByScope[snapshotScopes.all];
     };
+    const getHistoryEmptyText = () => {
+        if (selectedSnapshotId === null) {
+            return historyEmptyNoSelection;
+        }
+
+        return historyHasError ? historyEmptyError : historyEmptyNoData;
+    };
 
     const describeTreeSelection = (node) => {
         if (!node) {
@@ -142,14 +264,46 @@
         }
     };
 
+    const updateAnalyticsLabels = () => {
+        if (selectedSnapshotId === null) {
+            productCardContextLabel.textContent = "Select a snapshot to inspect a product";
+            historyContextLabel.textContent = "Select a snapshot to load price history";
+            priceChartContextLabel.textContent = "Real chart will appear for the selected product";
+            return;
+        }
+
+        if (!currentProductDetails) {
+            productCardContextLabel.textContent = `Loading product analytics for snapshot #${selectedSnapshotId}`;
+        } else {
+            const productName = formatText(currentProductDetails.name, `Product #${currentProductDetails.id}`);
+            productCardContextLabel.textContent = `${productName} from snapshot #${currentProductDetails.snapshotId}`;
+        }
+
+        if (!currentProductAnalytics && !chartHasError) {
+            historyContextLabel.textContent = `Loading history for snapshot #${selectedSnapshotId}`;
+            priceChartContextLabel.textContent = `Loading price trajectory for snapshot #${selectedSnapshotId}`;
+            return;
+        }
+
+        const productName = currentProductDetails
+            ? formatText(currentProductDetails.name, `Product #${currentProductDetails.id}`)
+            : `Snapshot #${selectedSnapshotId}`;
+        const pointsCount = currentProductAnalytics?.historyPointsCount ?? historyTotalCount ?? 0;
+
+        historyContextLabel.textContent = historyHasError
+            ? `Price history is unavailable for ${productName}`
+            : `${productName} across ${pointsCount} historical records`;
+        priceChartContextLabel.textContent = chartHasError
+            ? `Chart analytics are unavailable for ${productName}`
+            : `Postgres trend chart ready for ${productName}`;
+    };
+
     const refreshContextLabels = () => {
         selectedRunLabel.textContent = describeTreeSelection(selectedTreeNode);
         selectedSnapshotLabel.textContent = selectedSnapshotId === null
-            ? "Selected Snapshot: none"
-            : `Selected Snapshot: #${selectedSnapshotId}`;
-        productContextLabel.textContent = selectedSnapshotId === null
-            ? productEmptyNoSnapshot
-            : `Selected Snapshot: #${selectedSnapshotId}`;
+            ? "Selected snapshot: none"
+            : `Selected snapshot: #${selectedSnapshotId}`;
+        updateAnalyticsLabels();
     };
 
     const syncSnapshotGridSelection = (grid) => {
@@ -178,6 +332,637 @@
         }
 
         grid.select(selectedRow);
+    };
+
+    const setAnalyticsStatus = (message, tone = "error") => {
+        if (!analyticsStatus) {
+            return;
+        }
+
+        analyticsStatus.textContent = message;
+        analyticsStatus.classList.remove("analytics-status-hidden", "analytics-status-error", "analytics-status-info");
+        analyticsStatus.classList.add(`analytics-status-${tone}`);
+    };
+
+    const clearAnalyticsStatus = () => {
+        if (!analyticsStatus) {
+            return;
+        }
+
+        analyticsStatus.textContent = "";
+        analyticsStatus.classList.add("analytics-status-hidden");
+        analyticsStatus.classList.remove("analytics-status-error", "analytics-status-info");
+    };
+
+    const renderProductCardEmpty = () => {
+        productDetailsPanel.innerHTML = createEmptyState(
+            "Product is not selected",
+            "Choose a snapshot in the grid above to open the product card."
+        );
+    };
+
+    const renderProductCardLoading = () => {
+        productDetailsPanel.innerHTML = createEmptyState(
+            "Loading product card",
+            detailsLoadingText
+        );
+    };
+
+    const renderProductCardError = () => {
+        productDetailsPanel.innerHTML = createEmptyState(
+            "Product card unavailable",
+            "The selected snapshot could not be resolved into a product card.",
+            "error"
+        );
+    };
+
+    const renderChartEmpty = () => {
+        destroyPriceChartWidget();
+        priceChartPanel.innerHTML = createEmptyState(
+            "Chart will appear here",
+            "Select a snapshot to render the Postgres price trajectory for the chosen product."
+        );
+    };
+
+    const renderChartLoading = () => {
+        destroyPriceChartWidget();
+        priceChartPanel.innerHTML = createEmptyState(
+            "Loading price chart",
+            detailsLoadingText
+        );
+    };
+
+    const renderChartError = () => {
+        destroyPriceChartWidget();
+        priceChartPanel.innerHTML = createEmptyState(
+            "Chart analytics unavailable",
+            "The price chart could not be built from Postgres history for the selected snapshot.",
+            "error"
+        );
+    };
+
+    const renderChartNoData = () => {
+        destroyPriceChartWidget();
+        priceChartPanel.innerHTML = createEmptyState(
+            "No chart data available",
+            "Historical records exist, but they do not contain usable price values for the selected product."
+        );
+    };
+
+    const activateImageFallback = () => {
+        productDetailsPanel.querySelectorAll("[data-product-image]").forEach((image) => {
+            image.addEventListener("error", () => {
+                const frame = image.closest(".product-media-frame");
+                if (!frame) {
+                    return;
+                }
+
+                frame.innerHTML = `
+                    <div class="product-media-placeholder">
+                        <span class="product-media-placeholder-icon">VP</span>
+                        <span class="product-media-placeholder-text">Image unavailable</span>
+                    </div>`;
+            }, {once: true});
+        });
+    };
+
+    const getAntiForgeryToken = () =>
+        document.querySelector("#ingestForm input[name='__RequestVerificationToken']")?.value ?? "";
+
+    const valuesDiffer = (left, right) => {
+        const normalize = (value) => value === null || value === undefined ? "" : `${value}`.trim().toLowerCase();
+        return normalize(left) !== normalize(right);
+    };
+
+    const decimalsDiffer = (left, right) => {
+        if (left === null || left === undefined) {
+            return right !== null && right !== undefined;
+        }
+
+        if (right === null || right === undefined) {
+            return true;
+        }
+
+        return Number(left) !== Number(right);
+    };
+
+    const buildLiveComparisonRows = (details, liveCard) => [
+        {
+            label: "Name",
+            snapshotValue: formatText(details.name),
+            liveValue: formatText(liveCard.name),
+            changed: valuesDiffer(details.name, liveCard.name)
+        },
+        {
+            label: "SKU",
+            snapshotValue: formatText(details.sku),
+            liveValue: formatText(liveCard.sku),
+            changed: valuesDiffer(details.sku, liveCard.sku)
+        },
+        {
+            label: "Current price",
+            snapshotValue: formatPrice(details.currentPrice),
+            liveValue: formatPrice(liveCard.currentPrice),
+            changed: decimalsDiffer(details.currentPrice, liveCard.currentPrice)
+        },
+        {
+            label: "Old price",
+            snapshotValue: formatPrice(details.oldPrice),
+            liveValue: formatPrice(liveCard.oldPrice),
+            changed: decimalsDiffer(details.oldPrice, liveCard.oldPrice)
+        },
+        {
+            label: "Promo",
+            snapshotValue: formatBoolLabel(details.promoFlag, "Yes", "No"),
+            liveValue: formatBoolLabel(liveCard.promoFlag, "Yes", "No"),
+            changed: details.promoFlag !== liveCard.promoFlag
+        },
+        {
+            label: "In stock",
+            snapshotValue: formatBoolLabel(details.inStock, "Yes", "No"),
+            liveValue: formatBoolLabel(liveCard.inStock, "Yes", "No"),
+            changed: details.inStock !== liveCard.inStock
+        },
+        {
+            label: "Unit",
+            snapshotValue: formatText(details.unit),
+            liveValue: formatText(liveCard.unit),
+            changed: valuesDiffer(details.unit, liveCard.unit)
+        },
+        {
+            label: "Slug",
+            snapshotValue: formatText(details.slug),
+            liveValue: formatText(liveCard.slug),
+            changed: valuesDiffer(details.slug, liveCard.slug)
+        }
+    ];
+
+    const renderLiveRefreshBody = (details) => {
+        if (liveProductRequestState === "loading") {
+            return `
+                <div class="live-refresh-state live-refresh-state-loading">
+                    <strong>Refreshing from VARUS...</strong>
+                    <p>A manual live request is in flight. Stored Postgres data remains unchanged until you decide the next step.</p>
+                </div>`;
+        }
+
+        if (liveProductRequestState === "idle" || !currentLiveProductResult) {
+            return `
+                <div class="live-refresh-state">
+                    <strong>Live check is idle</strong>
+                    <p>Use the button above to fetch the current VARUS product page for this snapshot and compare it with the stored Postgres values.</p>
+                </div>`;
+        }
+
+        const result = currentLiveProductResult;
+        const liveCard = result.liveCard;
+        const tone = result.status === "success"
+            ? "success"
+            : result.status === "partial"
+                ? "accent"
+                : "error";
+        const comparisonRows = liveCard ? buildLiveComparisonRows(details, liveCard) : [];
+        const changedFieldsCount = comparisonRows.filter((row) => row.changed).length;
+        const summary = liveCard
+            ? changedFieldsCount > 0
+                ? `${changedFieldsCount} tracked fields differ from the stored snapshot.`
+                : "Tracked snapshot fields currently match the live VARUS response."
+            : formatText(result.issue?.message, "VARUS did not return a usable product card.");
+        const issueMarkup = result.issue
+            ? `
+                <div class="live-refresh-issue">
+                    <strong>${encode(formatText(result.issue.errorCode, "unknown"))}</strong>
+                    <span>${encode(formatText(result.issue.message, "No extra details from extractor."))}</span>
+                </div>`
+            : "";
+        const comparisonMarkup = comparisonRows.length > 0
+            ? `
+                <div class="live-compare-grid">
+                    ${comparisonRows
+                .map((row) => createComparisonItem(row.label, row.snapshotValue, row.liveValue, row.changed))
+                .join("")}
+                </div>`
+            : "";
+
+        return `
+            <div class="live-refresh-result live-refresh-result-${tone}">
+                <div class="live-refresh-result-header">
+                    <div>
+                        <strong class="live-refresh-result-title">Manual live result: ${encode(formatText(result.status, "unknown"))}</strong>
+                        <p class="live-refresh-result-copy">${encode(summary)}</p>
+                    </div>
+                    <div class="chart-placeholder-metrics">
+                        ${createBadge("HTTP", formatText(result.httpStatus), tone)}
+                        ${createBadge("Latency", `${formatText(result.latencyMs)} ms`, tone)}
+                        ${createBadge("RPS", formatRps(result.approximateRps), "neutral")}
+                        ${createBadge("Checked at", formatDateTime(asDate(result.requestedAtUtc)), "muted")}
+                    </div>
+                </div>
+                ${issueMarkup}
+                ${comparisonMarkup}
+            </div>`;
+    };
+
+    const wireLiveRefreshAction = () => {
+        const button = document.getElementById("refreshLiveProductButton");
+        if (!button) {
+            return;
+        }
+
+        button.addEventListener("click", () => {
+            refreshLiveProduct();
+        }, {once: true});
+    };
+
+    const resetLiveProductState = () => {
+        liveRequestToken += 1;
+        currentLiveProductResult = null;
+        liveProductRequestState = "idle";
+    };
+
+    const renderProductCard = (details) => {
+        if (!details) {
+            renderProductCardError();
+            return;
+        }
+
+        const discountValue = details.discountPercent !== null && details.discountPercent !== undefined
+            ? `${window.kendo.toString(details.discountPercent, "n1")}%`
+            : "No discount";
+        const imageMarkup = details.imageUrl
+            ? `<img data-product-image src="${encode(details.imageUrl)}" alt="${encode(details.name)}"/>`
+            : `
+                <div class="product-media-placeholder">
+                    <span class="product-media-placeholder-icon">VP</span>
+                    <span class="product-media-placeholder-text">Image unavailable</span>
+                </div>`;
+
+        productDetailsPanel.innerHTML = `
+            <article class="product-card-shell">
+                <div class="product-card-hero">
+                    <div class="product-media-frame">
+                        ${imageMarkup}
+                    </div>
+
+                    <div class="product-summary">
+                        <div class="product-summary-kicker">Selected product</div>
+                        <h3 class="product-summary-title">${encode(formatText(details.name, `Product #${details.id}`))}</h3>
+                        <div class="product-summary-badges">
+                            ${createBadge("Current", formatPrice(details.currentPrice), "accent")}
+                            ${createBadge("Old", formatPrice(details.oldPrice), "muted")}
+                            ${createBadge("Discount", discountValue, details.discountPercent ? "success" : "muted")}
+                        </div>
+                        <div class="product-summary-flags">
+                            <span class="product-flag ${details.inStock ? "is-success" : "is-muted"}">
+                                ${details.inStock ? "In stock" : "Out of stock"}
+                            </span>
+                            <span class="product-flag ${details.promoFlag ? "is-success" : "is-muted"}">
+                                ${details.promoFlag ? "Promo snapshot" : "Standard snapshot"}
+                            </span>
+                            <span class="product-flag is-muted">Live Varus not requested</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="product-meta-grid">
+                    ${createMetaItem("Product ID", formatText(details.id))}
+                    ${createMetaItem("External ID", formatText(details.sku))}
+                    ${createMetaItem("Unit", formatText(details.unit))}
+                    ${createMetaItem("Brand", formatText(details.brand))}
+                    ${createMetaItem("Category", formatText(details.category))}
+                    ${createMetaItem("Slug", formatText(details.slug))}
+                    ${createMetaItem("Captured at", formatDateTime(details.capturedAtUtc))}
+                    ${createMetaItem("Updated at", formatDateTime(details.updatedAtUtc))}
+                    ${createMetaItem("Run ID", formatText(details.runId))}
+                    ${createMetaItem("Source", formatText(details.source, "Postgres"))}
+                </div>
+
+                <div class="product-link-panel">
+                    <span class="product-meta-label">VARUS URL</span>
+                    <a href="${encode(details.url)}" target="_blank" rel="noopener noreferrer">${encode(details.url)}</a>
+                </div>
+
+                <section class="product-live-panel">
+                    <div class="product-live-header">
+                        <div>
+                            <span class="product-meta-label">Live VARUS</span>
+                            <h4 class="product-live-title">Manual refresh and comparison</h4>
+                        </div>
+                        <button id="refreshLiveProductButton"
+                                class="live-refresh-button"
+                                type="button"
+                                ${liveProductRequestState === "loading" || !details.url ? "disabled" : ""}>
+                            ${liveProductRequestState === "loading" ? "Refreshing..." : "Refresh from VARUS"}
+                        </button>
+                    </div>
+                    ${renderLiveRefreshBody(details)}
+                </section>
+            </article>`;
+
+        activateImageFallback();
+        wireLiveRefreshAction();
+    };
+
+    const destroyPriceChartWidget = () => {
+        const chart = $("#priceAnalyticsChart").data("kendoChart");
+        if (chart) {
+            chart.destroy();
+        }
+    };
+
+    const resolveAnalyticsTone = (value) => {
+        if (value === null || value === undefined) {
+            return "muted";
+        }
+
+        if (value < 0) {
+            return "success";
+        }
+
+        if (value > 0) {
+            return "accent";
+        }
+
+        return "neutral";
+    };
+
+    const buildTrendSummary = (analytics) => {
+        const parts = [];
+
+        if (analytics.changeFromFirstPercent !== null && analytics.changeFromFirstPercent !== undefined) {
+            const direction = analytics.changeFromFirstPercent < 0 ? "below" : analytics.changeFromFirstPercent > 0 ? "above" : "aligned with";
+            parts.push(`Selected snapshot is ${formatSignedPercent(analytics.changeFromFirstPercent)} ${direction} the first observed price.`);
+        }
+
+        if (analytics.changeFromPreviousPercent !== null && analytics.changeFromPreviousPercent !== undefined) {
+            const direction = analytics.changeFromPreviousPercent < 0 ? "cheaper" : analytics.changeFromPreviousPercent > 0 ? "higher" : "flat";
+            parts.push(`Versus the previous priced snapshot it is ${direction} by ${formatSignedPercent(analytics.changeFromPreviousPercent)}.`);
+        }
+
+        if (analytics.historyPointsCount > 0) {
+            parts.push(`Promo coverage reached ${formatCoverage(analytics.promoMomentsCount, analytics.historyPointsCount)} and in-stock coverage stayed at ${formatCoverage(analytics.inStockMomentsCount, analytics.historyPointsCount)}.`);
+        }
+
+        return parts.join(" ");
+    };
+
+    const initializePriceChart = (analytics) => {
+        const chartHost = $("#priceAnalyticsChart");
+        if (chartHost.length === 0) {
+            return;
+        }
+
+        const chartPoints = (analytics.points ?? []).map((point) => ({
+            snapshotId: point.snapshotId,
+            runId: point.runId,
+            capturedAtUtc: new Date(point.capturedAtUtc),
+            price: point.price,
+            oldPrice: point.oldPrice,
+            selectedPrice: point.snapshotId === analytics.snapshotId ? point.price : null,
+            promoFlag: point.promoFlag,
+            inStock: point.inStock,
+            source: point.source
+        }));
+
+        destroyPriceChartWidget();
+
+        chartHost.kendoChart({
+            dataSource: {
+                data: chartPoints
+            },
+            chartArea: {
+                background: "transparent"
+            },
+            legend: {
+                position: "bottom",
+                labels: {
+                    color: "#4c645a"
+                }
+            },
+            transitions: false,
+            seriesDefaults: {
+                type: "line",
+                style: "smooth"
+            },
+            series: [
+                {
+                    field: "price",
+                    categoryField: "capturedAtUtc",
+                    name: "Price",
+                    color: "#14824c",
+                    width: 3,
+                    markers: {
+                        visible: true,
+                        size: 5,
+                        background: "#14824c",
+                        border: {
+                            color: "#ffffff",
+                            width: 2
+                        }
+                    },
+                    missingValues: "gap"
+                },
+                {
+                    field: "oldPrice",
+                    categoryField: "capturedAtUtc",
+                    name: "Old price",
+                    color: "#9ab1a3",
+                    width: 2,
+                    dashType: "dash",
+                    markers: {
+                        visible: false
+                    },
+                    missingValues: "gap"
+                },
+                {
+                    field: "selectedPrice",
+                    categoryField: "capturedAtUtc",
+                    name: "Selected snapshot",
+                    color: "#d47a22",
+                    width: 1,
+                    markers: {
+                        visible: true,
+                        size: 8,
+                        background: "#d47a22",
+                        border: {
+                            color: "#ffffff",
+                            width: 2
+                        }
+                    },
+                    missingValues: "gap"
+                }
+            ],
+            categoryAxis: {
+                baseUnit: chartPoints.length > 14 ? "fit" : "hours",
+                labels: {
+                    color: "#4c645a",
+                    rotation: "auto",
+                    format: chartPoints.length > 14 ? "dd MMM" : "dd MMM HH:mm"
+                },
+                line: {
+                    color: "#d7e3dd"
+                },
+                majorGridLines: {
+                    visible: false
+                },
+                majorTicks: {
+                    visible: false
+                }
+            },
+            valueAxis: {
+                labels: {
+                    color: "#4c645a",
+                    format: "{0:n2} UAH"
+                },
+                line: {
+                    visible: false
+                },
+                majorGridLines: {
+                    color: "#e3ece7"
+                },
+                minorGridLines: {
+                    visible: false
+                }
+            },
+            tooltip: {
+                visible: true,
+                template: "#= series.name #: #= value === null ? 'Not available' : kendo.toString(value, 'n2') + ' UAH' #<br/>#= kendo.toString(category, 'yyyy-MM-dd HH:mm') #"
+            }
+        });
+    };
+
+    const renderChartPanel = () => {
+        if (selectedSnapshotId === null) {
+            renderChartEmpty();
+            return;
+        }
+
+        if (chartHasError) {
+            renderChartError();
+            return;
+        }
+
+        if (!currentProductAnalytics) {
+            renderChartLoading();
+            return;
+        }
+
+        const analytics = currentProductAnalytics;
+        const hasVisiblePrices = (analytics.points ?? []).some((point) => point.price !== null && point.price !== undefined);
+        if (!hasVisiblePrices) {
+            renderChartNoData();
+            return;
+        }
+
+        const trendTone = resolveAnalyticsTone(analytics.changeFromFirstAmount);
+        const deltaTone = resolveAnalyticsTone(analytics.changeFromPreviousAmount);
+        const trendSummary = buildTrendSummary(analytics);
+
+        priceChartPanel.innerHTML = `
+            <div class="price-analytics-shell">
+                <div class="price-analytics-copy">
+                    <span class="chart-placeholder-kicker">Stage 2 analytics</span>
+                    <h3 class="chart-placeholder-title">${encode(formatText(currentProductDetails?.name, "Selected product"))}</h3>
+                    <p class="chart-placeholder-text">${encode(trendSummary || "The chart is rendered from Postgres history only. Live VARUS refresh remains a separate manual action for the next stage.")}</p>
+                </div>
+
+                <div class="chart-placeholder-metrics">
+                    ${createBadge("Selected", formatPrice(analytics.selectedPrice ?? currentProductDetails?.currentPrice), "accent")}
+                    ${createBadge("Vs previous", `${formatSignedPrice(analytics.changeFromPreviousAmount)} / ${formatSignedPercent(analytics.changeFromPreviousPercent)}`, deltaTone)}
+                    ${createBadge("Vs first", `${formatSignedPrice(analytics.changeFromFirstAmount)} / ${formatSignedPercent(analytics.changeFromFirstPercent)}`, trendTone)}
+                    ${createBadge("Range", formatPrice(analytics.priceSpread), "neutral")}
+                    ${createBadge("Average", formatPrice(analytics.averagePrice), "muted")}
+                    ${createBadge("History points", formatText(analytics.historyPointsCount), "neutral")}
+                </div>
+
+                <div class="analytics-insight-grid">
+                    ${createInsightCard("Price window", `${formatPrice(analytics.minPrice)} to ${formatPrice(analytics.maxPrice)}`, `Observed from ${formatDateTime(analytics.firstCapturedAtUtc)} to ${formatDateTime(analytics.lastCapturedAtUtc)}.`)}
+                    ${createInsightCard("Availability", formatCoverage(analytics.inStockMomentsCount, analytics.historyPointsCount), `${formatText(analytics.inStockMomentsCount)} of ${formatText(analytics.historyPointsCount)} snapshots were in stock.`, "success")}
+                    ${createInsightCard("Promo presence", formatCoverage(analytics.promoMomentsCount, analytics.historyPointsCount), `${formatText(analytics.promoMomentsCount)} snapshots carried a promo flag.`, "neutral")}
+                </div>
+
+                <div class="price-analytics-chart-frame">
+                    <div id="priceAnalyticsChart" class="price-analytics-chart"></div>
+                </div>
+
+                <div class="price-analytics-footer">
+                    <span>Selected snapshot captured at ${encode(formatDateTime(analytics.selectedCapturedAtUtc))}</span>
+                    <span>Latest observed price: ${encode(formatPrice(analytics.latestObservedPrice))}</span>
+                </div>
+            </div>`;
+
+        initializePriceChart(analytics);
+    };
+
+    const refreshLiveProduct = async () => {
+        if (selectedSnapshotId === null || !currentProductDetails) {
+            return;
+        }
+
+        const requestToken = ++liveRequestToken;
+        liveProductRequestState = "loading";
+        currentLiveProductResult = null;
+        renderProductCard(currentProductDetails);
+
+        try {
+            const response = await fetch(root.dataset.liveProductUrl, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "RequestVerificationToken": getAntiForgeryToken()
+                },
+                body: new URLSearchParams({
+                    snapshotId: `${selectedSnapshotId}`
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(await extractErrorMessage(response));
+            }
+
+            const payload = await response.json();
+            if (requestToken !== liveRequestToken) {
+                return;
+            }
+
+            currentLiveProductResult = payload;
+            liveProductRequestState = "ready";
+            renderProductCard(currentProductDetails);
+        } catch (error) {
+            if (requestToken !== liveRequestToken) {
+                return;
+            }
+
+            currentLiveProductResult = {
+                snapshotId: selectedSnapshotId,
+                requestedAtUtc: new Date().toISOString(),
+                requestedUrl: currentProductDetails.url,
+                status: "error",
+                httpStatus: null,
+                latencyMs: 0,
+                approximateRps: null,
+                liveCard: null,
+                issue: {
+                    errorCode: "manual_live_request_failed",
+                    message: error.message || "Unknown error"
+                }
+            };
+            liveProductRequestState = "failed";
+            renderProductCard(currentProductDetails);
+        }
+    };
+
+    const resetAnalyticsPanels = () => {
+        currentProductDetails = null;
+        currentProductAnalytics = null;
+        historyHasError = false;
+        historyTotalCount = 0;
+        chartHasError = false;
+        resetLiveProductState();
+        clearAnalyticsStatus();
+        renderProductCardEmpty();
+        renderChartEmpty();
     };
 
     const treeIcon = (nodeType) => {
@@ -277,6 +1062,7 @@
 
         if (resetSnapshotSelection) {
             selectedSnapshotId = null;
+            resetAnalyticsPanels();
         }
 
         refreshContextLabels();
@@ -286,9 +1072,8 @@
         }
 
         snapshotsGrid.clearSelection();
-        productsGrid.clearSelection();
         reloadGrid(snapshotsGrid);
-        reloadGrid(productsGrid);
+        reloadGrid(productHistoryGrid);
     };
 
     const restoreTreeSelection = (treeList) => {
@@ -332,6 +1117,148 @@
         shouldExpandRoots = true;
         treeList.dataSource.read();
     };
+
+    const extractErrorMessage = async (response) => {
+        try {
+            const payload = await response.json();
+            return payload?.error || response.statusText || "Unknown error";
+        } catch {
+            return response.statusText || "Unknown error";
+        }
+    };
+
+    const loadProductDetails = async () => {
+        const requestToken = ++detailsRequestToken;
+
+        if (selectedSnapshotId === null) {
+            resetAnalyticsPanels();
+            refreshContextLabels();
+            return;
+        }
+
+        currentProductDetails = null;
+        renderProductCardLoading();
+        refreshContextLabels();
+
+        const requestUrl = new URL(root.dataset.productDetailsUrl, window.location.origin);
+        requestUrl.searchParams.set("snapshotId", selectedSnapshotId);
+
+        try {
+            const response = await fetch(requestUrl.toString(), {
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(await extractErrorMessage(response));
+            }
+
+            const payload = await response.json();
+            if (requestToken !== detailsRequestToken) {
+                return;
+            }
+
+            currentProductDetails = payload;
+            if (!payload) {
+                renderProductCardError();
+                setAnalyticsStatus("The selected snapshot has no product details in Postgres.");
+                refreshContextLabels();
+                return;
+            }
+
+            renderProductCard(payload);
+            refreshContextLabels();
+        } catch (error) {
+            if (requestToken !== detailsRequestToken) {
+                return;
+            }
+
+            currentProductDetails = null;
+            renderProductCardError();
+            setAnalyticsStatus(`Product analytics failed to load: ${error.message || "Unknown error"}`);
+            refreshContextLabels();
+        }
+    };
+
+    const loadProductChartAnalytics = async () => {
+        const requestToken = ++analyticsRequestToken;
+
+        if (selectedSnapshotId === null) {
+            resetAnalyticsPanels();
+            refreshContextLabels();
+            return;
+        }
+
+        currentProductAnalytics = null;
+        chartHasError = false;
+        renderChartLoading();
+        refreshContextLabels();
+
+        const requestUrl = new URL(root.dataset.productAnalyticsUrl, window.location.origin);
+        requestUrl.searchParams.set("snapshotId", selectedSnapshotId);
+
+        try {
+            const response = await fetch(requestUrl.toString(), {
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(await extractErrorMessage(response));
+            }
+
+            const payload = await response.json();
+            if (requestToken !== analyticsRequestToken) {
+                return;
+            }
+
+            currentProductAnalytics = payload || {
+                snapshotId: selectedSnapshotId,
+                historyPointsCount: 0,
+                pricePointsCount: 0,
+                promoMomentsCount: 0,
+                inStockMomentsCount: 0,
+                points: []
+            };
+            chartHasError = false;
+            renderChartPanel();
+            refreshContextLabels();
+        } catch (error) {
+            if (requestToken !== analyticsRequestToken) {
+                return;
+            }
+
+            currentProductAnalytics = null;
+            chartHasError = true;
+            renderChartPanel();
+            setAnalyticsStatus(`Chart analytics failed to load: ${error.message || "Unknown error"}`);
+            refreshContextLabels();
+        }
+    };
+
+    if (dashboardSplitterElement.length > 0 && desktopDashboardLayout.matches) {
+        dashboardSplitterElement.kendoSplitter({
+            orientation: "horizontal",
+            panes: [
+                {
+                    size: "32%",
+                    min: "320px",
+                    collapsible: false,
+                    scrollable: false
+                },
+                {
+                    min: "0px",
+                    collapsible: false,
+                    scrollable: false
+                }
+            ],
+            resize: requestLayoutResize,
+            expand: requestLayoutResize,
+            collapse: requestLayoutResize
+        });
+    }
 
     $("#topToolbar").kendoToolBar({
         items: [
@@ -534,27 +1461,46 @@
         change() {
             const row = this.dataItem(this.select());
             selectedSnapshotId = row ? row.id : null;
+            currentProductAnalytics = null;
+            historyHasError = false;
+            historyTotalCount = 0;
+            chartHasError = false;
+            resetLiveProductState();
             syncSnapshotGridSelection(this);
+            clearAnalyticsStatus();
+            renderChartLoading();
             refreshContextLabels();
-            reloadGrid(productsGrid);
+            loadProductDetails();
+            loadProductChartAnalytics();
+            reloadGrid(productHistoryGrid);
         }
     }).data("kendoGrid");
 
-    const productsGrid = $("#productsGrid").kendoGrid({
+    const productHistoryGrid = $("#productHistoryGrid").kendoGrid({
         dataSource: createGridDataSource(
-            root.dataset.productsUrl,
+            root.dataset.productHistoryUrl,
             () => ({snapshotId: selectedSnapshotId}),
             {
                 id: {type: "number"},
-                name: {type: "string"},
-                sku: {type: "string"},
-                url: {type: "string"},
+                runId: {type: "number"},
+                capturedAtUtc: {type: "date"},
                 price: {type: "number"},
-                unit: {type: "string"},
-                updatedAtUtc: {type: "date"}
+                oldPrice: {type: "number"},
+                discountPercent: {type: "number"},
+                promoFlag: {type: "boolean"},
+                inStock: {type: "boolean"},
+                source: {type: "string"}
             },
-            50,
-            [{field: "updatedAtUtc", dir: "asc"}]
+            25,
+            [{field: "capturedAtUtc", dir: "desc"}],
+            (e) => {
+                historyHasError = true;
+                historyTotalCount = 0;
+                productHistoryGrid.dataSource.data([]);
+                updateNoRecordsText(productHistoryGrid, getHistoryEmptyText());
+                setAnalyticsStatus(e?.xhr?.responseJSON?.error || "Price history failed to load.");
+                refreshContextLabels();
+            }
         ),
         sortable: {
             mode: "multiple",
@@ -566,7 +1512,7 @@
         resizable: true,
         scrollable: true,
         noRecords: {
-            template: productEmptyNoSnapshot
+            template: historyEmptyNoSelection
         },
         pageable: {
             refresh: true,
@@ -575,33 +1521,38 @@
         },
         toolbar: ["search"],
         search: {
-            fields: ["id", "name", "sku", "url", "unit"]
+            fields: ["id", "runId", "source"]
         },
         columns: [
-            {field: "id", title: "Id", width: 90},
-            {field: "name", title: "Name", minResizableWidth: 220},
-            {field: "sku", title: "Sku", minResizableWidth: 130},
-            {
-                field: "url",
-                title: "URL",
-                minResizableWidth: 260,
-                template(dataItem) {
-                    if (!dataItem.url) {
-                        return "";
-                    }
-
-                    const safeUrl = encode(dataItem.url);
-                    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`;
-                }
-            },
+            {field: "id", title: "SnapshotId", width: 110},
+            {field: "runId", title: "RunId", width: 100},
+            {field: "capturedAtUtc", title: "CapturedAtUtc", format: "{0:yyyy-MM-dd HH:mm}"},
             {field: "price", title: "Price", format: "{0:n2}", width: 110},
-            {field: "unit", title: "Unit", minResizableWidth: 100},
-            {field: "updatedAtUtc", title: "UpdatedAtUtc", format: "{0:yyyy-MM-dd HH:mm}"}
+            {field: "oldPrice", title: "OldPrice", format: "{0:n2}", width: 110},
+            {field: "discountPercent", title: "Discount", format: "{0:n1}", width: 110},
+            {
+                field: "promoFlag",
+                title: "Promo",
+                width: 90,
+                template: (dataItem) => dataItem.promoFlag ? "Yes" : "No"
+            },
+            {
+                field: "inStock",
+                title: "InStock",
+                width: 100,
+                template: (dataItem) => dataItem.inStock ? "Yes" : "No"
+            },
+            {field: "source", title: "Source", minResizableWidth: 140}
         ],
-        dataBound() {
-            updateNoRecordsText(this, selectedSnapshotId === null ? productEmptyNoSnapshot : productEmptyNoData);
+        dataBound(e) {
+            historyHasError = false;
+            historyTotalCount = e.sender.dataSource.total();
+            updateNoRecordsText(this, getHistoryEmptyText());
+            refreshContextLabels();
         }
     }).data("kendoGrid");
 
+    resetAnalyticsPanels();
     refreshContextLabels();
+    requestLayoutResize();
 })();
