@@ -28,6 +28,7 @@ public sealed class SchemaBootstrapper(VarPriceDbContext dbContext, ILogger<Sche
                 await using var transaction = await connection.BeginTransactionAsync(ct);
                 await MigrateLegacySchemaAsync(connection, transaction, ct);
                 await ExecuteSchemaScriptAsync(connection, transaction, ct);
+                await ApplyRoutineScriptsAsync(connection, transaction, ct);
                 await MigrateLegacyDataAsync(connection, transaction, ct);
                 await DropLegacyTablesAsync(connection, transaction, ct);
                 await transaction.CommitAsync(ct);
@@ -89,9 +90,45 @@ public sealed class SchemaBootstrapper(VarPriceDbContext dbContext, ILogger<Sche
         DbTransaction transaction,
         CancellationToken ct)
     {
-        var schemaPath = ResolveSchemaPath();
+        var schemaPath = SqlAssetLocator.ResolveSchemaPath();
         var sql = await File.ReadAllTextAsync(schemaPath, ct);
         await ExecuteNonQueryAsync(connection, transaction, sql, ct);
+    }
+
+    private async Task ApplyRoutineScriptsAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        CancellationToken ct)
+    {
+        var scripts = await DbRoutineScriptCatalog.LoadAsync(ct);
+        foreach (var script in scripts)
+        {
+            var appliedHash = await GetAppliedRoutineScriptHashAsync(connection, transaction, script.Name, ct);
+            if (string.Equals(appliedHash, script.Hash, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            await ExecuteNonQueryAsync(connection, transaction, script.Sql, ct);
+            await ExecuteNonQueryAsync(
+                connection,
+                transaction,
+                """
+                insert into db_routine_script(script_name, script_hash, applied_at)
+                values(@script_name, @script_hash, now())
+                on conflict (script_name) do update
+                set script_hash = excluded.script_hash,
+                    applied_at = excluded.applied_at;
+                """,
+                [("@script_name", script.Name), ("@script_hash", script.Hash)],
+                ct);
+
+            log.LogInformation(
+                appliedHash is null
+                    ? "Applied routine script {ScriptName}"
+                    : "Reapplied routine script {ScriptName}",
+                script.Name);
+        }
     }
 
     private static async Task MigrateLegacyDataAsync(
@@ -410,6 +447,25 @@ public sealed class SchemaBootstrapper(VarPriceDbContext dbContext, ILogger<Sche
         return scalar is true || (scalar is not null && Convert.ToBoolean(scalar));
     }
 
+    private static async Task<string?> GetAppliedRoutineScriptHashAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        string scriptName,
+        CancellationToken ct)
+    {
+        await using var command = CreateCommand(
+            connection,
+            transaction,
+            """
+            select script_hash
+            from db_routine_script
+            where script_name = @script_name;
+            """,
+            [("@script_name", scriptName)]);
+        var scalar = await command.ExecuteScalarAsync(ct);
+        return scalar is null or DBNull ? null : Convert.ToString(scalar);
+    }
+
     private static async Task ExecuteNonQueryAsync(
         DbConnection connection,
         DbTransaction transaction,
@@ -422,37 +478,39 @@ public sealed class SchemaBootstrapper(VarPriceDbContext dbContext, ILogger<Sche
         await command.ExecuteNonQueryAsync(ct);
     }
 
+    private static async Task ExecuteNonQueryAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        string sql,
+        IReadOnlyList<(string Name, object? Value)> parameters,
+        CancellationToken ct)
+    {
+        await using var command = CreateCommand(connection, transaction, sql, parameters);
+        await command.ExecuteNonQueryAsync(ct);
+    }
+
+    private static DbCommand CreateCommand(
+        DbConnection connection,
+        DbTransaction transaction,
+        string sql,
+        IReadOnlyList<(string Name, object? Value)> parameters)
+    {
+        var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = sql;
+        foreach (var parameter in parameters)
+        {
+            AddParameter(command, parameter.Name, parameter.Value);
+        }
+
+        return command;
+    }
+
     private static void AddParameter(DbCommand command, string name, object? value)
     {
         var parameter = command.CreateParameter();
         parameter.ParameterName = name;
         parameter.Value = value ?? DBNull.Value;
         command.Parameters.Add(parameter);
-    }
-
-    private static string ResolveSchemaPath()
-    {
-        var candidates = new[]
-        {
-            Directory.GetCurrentDirectory(),
-            AppContext.BaseDirectory
-        };
-
-        foreach (var candidate in candidates)
-        {
-            var directory = new DirectoryInfo(candidate);
-            while (directory is not null)
-            {
-                var schemaPath = Path.Combine(directory.FullName, "schema.sql");
-                if (File.Exists(schemaPath))
-                {
-                    return schemaPath;
-                }
-
-                directory = directory.Parent;
-            }
-        }
-
-        throw new FileNotFoundException("Could not locate schema.sql.");
     }
 }

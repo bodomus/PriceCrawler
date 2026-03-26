@@ -42,9 +42,9 @@
     let shouldExpandRoots = true;
     let currentProductDetails = null;
     let currentProductAnalytics = null;
+    let currentProductHistory = [];
     let currentLiveProductResult = null;
-    let detailsRequestToken = 0;
-    let analyticsRequestToken = 0;
+    let analysisRequestToken = 0;
     let liveRequestToken = 0;
     let historyHasError = false;
     let historyTotalCount = 0;
@@ -120,6 +120,24 @@
             window.kendo.resize(dashboardSplitterElement.children());
         });
     };
+    const applyViewportDashboardHeight = () => {
+        if (dashboardSplitterElement.length === 0) {
+            return;
+        }
+
+        if (!desktopDashboardLayout.matches) {
+            dashboardSplitterElement[0].style.removeProperty("height");
+            requestLayoutResize();
+            return;
+        }
+
+        const layoutBounds = dashboardSplitterElement[0].getBoundingClientRect();
+        const viewportPadding = 20;
+        const availableHeight = Math.max(540, Math.floor(window.innerHeight - layoutBounds.top - viewportPadding));
+
+        dashboardSplitterElement[0].style.height = `${availableHeight}px`;
+        requestLayoutResize();
+    };
     const createBadge = (label, value, tone = "neutral") => `
         <div class="analytics-badge analytics-badge-${tone}">
             <span class="analytics-badge-label">${encode(label)}</span>
@@ -188,6 +206,21 @@
 
         return dataSource;
     };
+
+    const createLocalGridDataSource = (fields, pageSize, sort) => new window.kendo.data.DataSource({
+        data: [],
+        schema: {
+            model: {
+                id: "id",
+                fields
+            }
+        },
+        pageSize,
+        sort,
+        serverPaging: false,
+        serverSorting: false,
+        serverFiltering: false
+    });
 
     const createTreeDataSource = () => new window.kendo.data.TreeListDataSource({
         transport: {
@@ -306,6 +339,39 @@
         updateAnalyticsLabels();
     };
 
+    const setSnapshotSelectionStyles = (cells, isCurrentRow) => {
+        cells.each((_, cell) => {
+            if (isCurrentRow) {
+                cell.style.setProperty("background-color", "var(--selection-bg)", "important");
+                cell.style.setProperty("color", "var(--selection-text)", "important");
+                cell.style.setProperty("border-top", "1px solid var(--selection-border)", "important");
+                cell.style.setProperty("border-bottom", "1px solid var(--selection-border)", "important");
+                cell.style.removeProperty("border-left");
+                cell.style.removeProperty("border-right");
+                cell.style.removeProperty("box-shadow");
+                return;
+            }
+
+            cell.style.removeProperty("background-color");
+            cell.style.removeProperty("color");
+            cell.style.removeProperty("border-top");
+            cell.style.removeProperty("border-bottom");
+            cell.style.removeProperty("border-left");
+            cell.style.removeProperty("border-right");
+            cell.style.removeProperty("box-shadow");
+        });
+
+        if (!isCurrentRow || cells.length === 0) {
+            return;
+        }
+
+        const firstCell = cells.get(0);
+        const lastCell = cells.get(cells.length - 1);
+
+        firstCell?.style.setProperty("border-left", "5px solid var(--accent)", "important");
+        firstCell?.style.setProperty("box-shadow", "inset 1px 0 0 var(--selection-border)", "important");
+        lastCell?.style.setProperty("border-right", "1px solid var(--selection-border)", "important");
+    };
     const syncSnapshotGridSelection = (grid) => {
         if (!grid) {
             return;
@@ -320,6 +386,7 @@
 
             $(row).toggleClass("snapshot-current-row", isCurrentRow);
             cells.toggleClass("snapshot-current-cell", isCurrentRow);
+            setSnapshotSelectionStyles(cells, isCurrentRow);
 
             if (isCurrentRow) {
                 selectedRow = $(row);
@@ -956,6 +1023,7 @@
     const resetAnalyticsPanels = () => {
         currentProductDetails = null;
         currentProductAnalytics = null;
+        currentProductHistory = [];
         historyHasError = false;
         historyTotalCount = 0;
         chartHasError = false;
@@ -963,6 +1031,9 @@
         clearAnalyticsStatus();
         renderProductCardEmpty();
         renderChartEmpty();
+        if (typeof productHistoryGrid !== "undefined" && productHistoryGrid?.dataSource) {
+            productHistoryGrid.dataSource.data([]);
+        }
     };
 
     const treeIcon = (nodeType) => {
@@ -1127,9 +1198,8 @@
         }
     };
 
-    const loadProductDetails = async () => {
-        const requestToken = ++detailsRequestToken;
-
+    const loadProductAnalysis = async () => {
+        const requestToken = ++analysisRequestToken;
         if (selectedSnapshotId === null) {
             resetAnalyticsPanels();
             refreshContextLabels();
@@ -1137,65 +1207,17 @@
         }
 
         currentProductDetails = null;
-        renderProductCardLoading();
-        refreshContextLabels();
-
-        const requestUrl = new URL(root.dataset.productDetailsUrl, window.location.origin);
-        requestUrl.searchParams.set("snapshotId", selectedSnapshotId);
-
-        try {
-            const response = await fetch(requestUrl.toString(), {
-                headers: {
-                    "Accept": "application/json"
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(await extractErrorMessage(response));
-            }
-
-            const payload = await response.json();
-            if (requestToken !== detailsRequestToken) {
-                return;
-            }
-
-            currentProductDetails = payload;
-            if (!payload) {
-                renderProductCardError();
-                setAnalyticsStatus("The selected snapshot has no product details in Postgres.");
-                refreshContextLabels();
-                return;
-            }
-
-            renderProductCard(payload);
-            refreshContextLabels();
-        } catch (error) {
-            if (requestToken !== detailsRequestToken) {
-                return;
-            }
-
-            currentProductDetails = null;
-            renderProductCardError();
-            setAnalyticsStatus(`Product analytics failed to load: ${error.message || "Unknown error"}`);
-            refreshContextLabels();
-        }
-    };
-
-    const loadProductChartAnalytics = async () => {
-        const requestToken = ++analyticsRequestToken;
-
-        if (selectedSnapshotId === null) {
-            resetAnalyticsPanels();
-            refreshContextLabels();
-            return;
-        }
-
         currentProductAnalytics = null;
+        currentProductHistory = [];
+        historyHasError = false;
+        historyTotalCount = 0;
         chartHasError = false;
+        renderProductCardLoading();
         renderChartLoading();
+        productHistoryGrid.dataSource.data([]);
         refreshContextLabels();
 
-        const requestUrl = new URL(root.dataset.productAnalyticsUrl, window.location.origin);
+        const requestUrl = new URL(root.dataset.productAnalysisUrl, window.location.origin);
         requestUrl.searchParams.set("snapshotId", selectedSnapshotId);
 
         try {
@@ -1210,11 +1232,12 @@
             }
 
             const payload = await response.json();
-            if (requestToken !== analyticsRequestToken) {
+            if (requestToken !== analysisRequestToken) {
                 return;
             }
 
-            currentProductAnalytics = payload || {
+            currentProductDetails = payload?.productCard ?? null;
+            currentProductAnalytics = payload?.analytics ?? {
                 snapshotId: selectedSnapshotId,
                 historyPointsCount: 0,
                 pricePointsCount: 0,
@@ -1222,18 +1245,39 @@
                 inStockMomentsCount: 0,
                 points: []
             };
+            currentProductHistory = Array.isArray(payload?.history) ? payload.history : [];
+            historyHasError = false;
+            historyTotalCount = currentProductHistory.length;
             chartHasError = false;
-            renderChartPanel();
-            refreshContextLabels();
-        } catch (error) {
-            if (requestToken !== analyticsRequestToken) {
+            productHistoryGrid.dataSource.data(currentProductHistory);
+            productHistoryGrid.dataSource.page(1);
+
+            if (!currentProductDetails) {
+                renderProductCardError();
+                renderChartPanel();
+                setAnalyticsStatus("The selected snapshot has no product details in Postgres.");
+                refreshContextLabels();
                 return;
             }
 
-            currentProductAnalytics = null;
-            chartHasError = true;
+            renderProductCard(currentProductDetails);
             renderChartPanel();
-            setAnalyticsStatus(`Chart analytics failed to load: ${error.message || "Unknown error"}`);
+            refreshContextLabels();
+        } catch (error) {
+            if (requestToken !== analysisRequestToken) {
+                return;
+            }
+
+            currentProductDetails = null;
+            currentProductAnalytics = null;
+            currentProductHistory = [];
+            historyHasError = true;
+            historyTotalCount = 0;
+            chartHasError = true;
+            productHistoryGrid.dataSource.data([]);
+            renderProductCardError();
+            renderChartPanel();
+            setAnalyticsStatus(`Product analytics failed to load: ${error.message || "Unknown error"}`);
             refreshContextLabels();
         }
     };
@@ -1258,6 +1302,13 @@
             expand: requestLayoutResize,
             collapse: requestLayoutResize
         });
+    }
+
+    window.addEventListener("resize", applyViewportDashboardHeight);
+    if (typeof desktopDashboardLayout.addEventListener === "function") {
+        desktopDashboardLayout.addEventListener("change", applyViewportDashboardHeight);
+    } else if (typeof desktopDashboardLayout.addListener === "function") {
+        desktopDashboardLayout.addListener(applyViewportDashboardHeight);
     }
 
     $("#topToolbar").kendoToolBar({
@@ -1303,7 +1354,7 @@
         themeColor: "success",
         fillMode: "solid",
         rounded: "full",
-        size: "large",
+        size: "medium",
         icon: "arrow-rotate-cw",
         click() {
             document.getElementById("ingestForm")?.submit();
@@ -1314,6 +1365,7 @@
 
     $("#runsTreeList").kendoTreeList({
         dataSource: createTreeDataSource(),
+        height: "100%",
         selectable: "row",
         sortable: false,
         resizable: true,
@@ -1468,18 +1520,15 @@
             resetLiveProductState();
             syncSnapshotGridSelection(this);
             clearAnalyticsStatus();
+            productHistoryGrid.dataSource.data([]);
             renderChartLoading();
             refreshContextLabels();
-            loadProductDetails();
-            loadProductChartAnalytics();
-            reloadGrid(productHistoryGrid);
+            loadProductAnalysis();
         }
     }).data("kendoGrid");
 
     const productHistoryGrid = $("#productHistoryGrid").kendoGrid({
-        dataSource: createGridDataSource(
-            root.dataset.productHistoryUrl,
-            () => ({snapshotId: selectedSnapshotId}),
+        dataSource: createLocalGridDataSource(
             {
                 id: {type: "number"},
                 runId: {type: "number"},
@@ -1492,15 +1541,7 @@
                 source: {type: "string"}
             },
             25,
-            [{field: "capturedAtUtc", dir: "desc"}],
-            (e) => {
-                historyHasError = true;
-                historyTotalCount = 0;
-                productHistoryGrid.dataSource.data([]);
-                updateNoRecordsText(productHistoryGrid, getHistoryEmptyText());
-                setAnalyticsStatus(e?.xhr?.responseJSON?.error || "Price history failed to load.");
-                refreshContextLabels();
-            }
+            [{field: "capturedAtUtc", dir: "desc"}]
         ),
         sortable: {
             mode: "multiple",
@@ -1554,5 +1595,5 @@
 
     resetAnalyticsPanels();
     refreshContextLabels();
-    requestLayoutResize();
+    applyViewportDashboardHeight();
 })();

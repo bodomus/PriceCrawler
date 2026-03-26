@@ -35,6 +35,7 @@ builder.Services.AddScoped<ISnapshotsGridQuerySource, InfrastructureRuns.Snapsho
 builder.Services.AddScoped<IProductsGridQuerySource, InfrastructureRuns.ProductsGridQuerySource>();
 builder.Services.AddScoped<IProductDetailsQuerySource, InfrastructureRuns.ProductDetailsQuerySource>();
 builder.Services.AddScoped<IProductPriceHistoryQuerySource, InfrastructureRuns.ProductPriceHistoryQuerySource>();
+builder.Services.AddScoped<IProductAnalysisService, InfrastructureRuns.ProductAnalysisService>();
 
 builder.Services.AddVarPriceApplication(builder.Configuration);
 builder.Services.AddVarPriceInfrastructure(builder.Configuration);

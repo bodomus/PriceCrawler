@@ -13,6 +13,8 @@ using VarPrice.Application.Models;
 using VarPrice.Web.Controllers;
 using VarPrice.Web.ViewModels.Runs;
 
+using ProductAnalysisService = VarPrice.Infrastructure.Queries.Runs.ProductAnalysisService;
+
 namespace VarPrice.Web.Tests;
 
 public sealed class RunsControllerTests
@@ -130,6 +132,36 @@ public sealed class RunsControllerTests
         var failedNode = Assert.Single(nodes.Where(node => node.Id == "run:18:failed"));
         Assert.Equal("Failed snapshots (2)", failedNode.Title);
         Assert.Equal(SnapshotScopes.Failed, failedNode.SnapshotScope);
+    }
+
+    [Fact]
+    public async Task RunsTree_DoesNotRenderFailedBucket_WhenRunHasNoFailedSnapshots()
+    {
+        var treeRows = new[]
+        {
+            new RunTreeQueryRow
+            {
+                Id = 21,
+                StartedAtUtc = new DateTime(2026, 3, 24, 10, 0, 0, DateTimeKind.Utc),
+                FinishedAtUtc = new DateTime(2026, 3, 24, 10, 11, 0, DateTimeKind.Utc),
+                Status = "ok",
+                ItemsCount = 5,
+                SuccessfulSnapshotsCount = 5,
+                FailedSnapshotsCount = 0
+            }
+        };
+
+        var sut = CreateController(
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            treeRows: treeRows);
+
+        var result = await sut.RunsTree(CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var nodes = Assert.IsAssignableFrom<IEnumerable<RunTreeNodeVm>>(json.Value).ToList();
+
+        Assert.DoesNotContain(nodes, node => node.NodeType == "failed");
+        Assert.Contains(nodes, node => node.NodeType == "successful" && node.RunId == 21);
     }
 
     [Fact]
@@ -261,6 +293,74 @@ public sealed class RunsControllerTests
     }
 
     [Fact]
+    public async Task ProductAnalysis_WhenSnapshotSelected_ReturnsUnifiedAnalyticsPayload()
+    {
+        var details = new ProductDetailsQueryRow
+        {
+            Id = 501,
+            SnapshotId = 101,
+            RunId = 7,
+            ExternalId = "SKU-11",
+            Name = "Tomato",
+            Url = "https://varus.ua/tomato",
+            PackValue = 1,
+            PackUnit = "kg",
+            CurrentPrice = 49.9m,
+            OldPrice = 59.9m,
+            DiscountPercent = 16.7m,
+            PromoFlag = true,
+            InStock = true,
+            UpdatedAtUtc = new DateTime(2026, 3, 24, 8, 0, 0, DateTimeKind.Utc),
+            CapturedAtUtc = new DateTime(2026, 3, 24, 9, 0, 0, DateTimeKind.Utc),
+            Source = "varus"
+        };
+        var historyRows = new[]
+        {
+            new ProductPriceHistoryQueryRow
+            {
+                Id = 88,
+                RunId = 14,
+                CapturedAtUtc = new DateTime(2026, 3, 23, 8, 0, 0, DateTimeKind.Utc),
+                Price = 21.5m,
+                OldPrice = null,
+                DiscountPercent = null,
+                PromoFlag = false,
+                InStock = true,
+                Source = "varus"
+            },
+            new ProductPriceHistoryQueryRow
+            {
+                Id = 101,
+                RunId = 21,
+                CapturedAtUtc = new DateTime(2026, 3, 24, 11, 0, 0, DateTimeKind.Utc),
+                Price = 19.9m,
+                OldPrice = 24.5m,
+                DiscountPercent = 19,
+                PromoFlag = true,
+                InStock = true,
+                Source = "varus"
+            }
+        };
+
+        var sut = CreateController(
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            productDetails: details,
+            productHistoryRows: historyRows);
+
+        var result = await sut.ProductAnalysis(101, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var dto = Assert.IsType<ProductAnalysisDto>(json.Value);
+
+        Assert.Equal(101, dto.SnapshotId);
+        Assert.NotNull(dto.ProductCard);
+        Assert.Equal("Tomato", dto.ProductCard!.Name);
+        Assert.Equal(2, dto.History.Count);
+        Assert.Equal(101, dto.Analytics.SnapshotId);
+        Assert.Equal(2, dto.Analytics.HistoryPointsCount);
+    }
+
+    [Fact]
     public async Task ProductHistory_WhenSnapshotSelected_ReturnsHistoryRows()
     {
         var historyRows = new[]
@@ -310,6 +410,15 @@ public sealed class RunsControllerTests
     [Fact]
     public async Task ProductAnalytics_WhenSnapshotSelected_ReturnsChartSummaryAndSeries()
     {
+        var details = new ProductDetailsQueryRow
+        {
+            Id = 501,
+            SnapshotId = 101,
+            RunId = 21,
+            ExternalId = "SKU-11",
+            Name = "Tomato",
+            Url = "https://varus.ua/tomato"
+        };
         var historyRows = new[]
         {
             new ProductPriceHistoryQueryRow
@@ -352,6 +461,7 @@ public sealed class RunsControllerTests
 
         var sut = CreateController(
             new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            productDetails: details,
             productHistoryRows: historyRows);
 
         var result = await sut.ProductAnalytics(101, CancellationToken.None);
@@ -481,7 +591,10 @@ public sealed class RunsControllerTests
             new StubRunsTreeQuerySource(treeRows ?? Array.Empty<RunTreeQueryRow>()),
             new StubSnapshotsGridQuerySource(snapshotRows ?? Array.Empty<SnapshotGridQueryRow>()),
             new EmptyProductsGridQuerySource(),
-            new StubProductDetailsQuerySource(productDetails),
+            new ProductAnalysisService(
+                new StubProductDetailsQuerySource(productDetails),
+                new StubProductPriceHistoryQuerySource(productHistoryRows ??
+                                                       Array.Empty<ProductPriceHistoryQueryRow>())),
             new StubProductPriceHistoryQuerySource(productHistoryRows ?? Array.Empty<ProductPriceHistoryQueryRow>()),
             new StubProductCardExtractor(liveExtractResult),
             new FakeRunCrawlerUseCase(crawlerResponse),

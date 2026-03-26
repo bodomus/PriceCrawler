@@ -16,6 +16,7 @@ If current behavior conflicts with the original text of this task, follow the cu
 - Queue reservation is still done in SQL with `FOR UPDATE SKIP LOCKED`.
 - Retry, backoff, lease expiration, and reaper logic are still core parts of the pipeline.
 - The worker flow is still queue-driven and supports concurrent processing.
+- As of `MPC-11`, the queue lifecycle and the rest of the crawler write-side business operations are executed through DB routines.
 
 ## What changed in MPC-21
 
