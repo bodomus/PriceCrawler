@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
         services.AddScoped<SchemaBootstrapper>();
+        services.AddScoped<PgRoutineExecutor>();
 
         services.AddScoped<ICrawlerRunRepository, PgCrawlerRunRepository>();
         services.AddScoped<IIngestionRunRepository, PgIngestionRunRepository>();

@@ -1,6 +1,7 @@
 # MPC-31 / Stage 2 handover
 
 Historical note: this handover is now superseded by Stage 3 (`MPC-30`) manual live refresh work.
+Write-side persistence was also later moved to PostgreSQL DB routines under `MPC-11`; use current architecture docs as source of truth.
 
 ## Summary
 

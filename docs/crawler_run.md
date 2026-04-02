@@ -100,6 +100,9 @@ If the product is new:
 2. the first `price_snapshot` is inserted if the observed state is valid;
 3. `product.updated_at` is synchronized with the observation timestamp.
 
+The whole write-side action is now executed inside the DB routine `price_observation_store`.
+The application no longer stitches this behavior from multiple inline `insert/update/select` commands.
+
 ## When only `product.updated_at` changes
 
 If a product is processed successfully and its state did not change, a new snapshot is not inserted.
@@ -140,6 +143,25 @@ Write rules:
 - If the issue is critical and no valid state exists, only `crawl_error` is stored.
 - Retry-related transient failures keep their latest context in `price_collect_queue`, while the final
   unrecoverable failure is persisted in `crawl_error`.
+
+`crawl_error` is written through the DB routine `crawl_error_add`.
+
+## DB routines used by the crawler pipeline
+
+- `crawler_run_start`
+- `crawler_run_finish`
+- `ingestion_run_start`
+- `ingestion_run_finish`
+- `price_observation_store`
+- `crawl_error_add`
+- `price_collect_queue_enqueue`
+- `price_collect_queue_reserve_batch`
+- `price_collect_queue_mark_succeeded`
+- `price_collect_queue_mark_retry`
+- `price_collect_queue_mark_dead`
+- `price_collect_queue_reap_expired`
+- `price_collect_queue_has_outstanding`
+- `price_collect_queue_get_run_stats`
 
 ## Runs analytics screen
 

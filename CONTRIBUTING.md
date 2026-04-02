@@ -22,6 +22,11 @@ Automated tests already exist in `VarPrice.Web.Tests`. Before submitting changes
 dotnet test VarPrice.sln
 ```
 
+If you touch write-side DB routines or repository persistence, prefer the focused integration suite first:
+```bash
+dotnet test VarPrice.Web.Tests\VarPrice.Web.Tests.csproj --filter "FullyQualifiedName~WorkerIntegrationTests"
+```
+
 If you touch crawler persistence, also check that docs stay in sync with the normalized `product.id` /
 `price_snapshot` / `crawl_error` model introduced in `MPC-21`.
 
@@ -36,4 +41,5 @@ dotnet build VarPrice.sln
 - Keep changes focused and describe the impact.
 - Update `CHANGELOG.md` for user-visible changes.
 - Update project documentation (`README.md`, `Status.md`, `docs/*`) when schema or workflow changes.
+- If you change write-side persistence, keep `db/routines/*.sql` and `WorkerIntegrationTests` aligned.
 - Ensure formatting follows `.editorconfig`.

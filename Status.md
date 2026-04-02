@@ -10,29 +10,29 @@ Source: `VarPrice.Domain.Constants.QueueItemStatuses`
 ### `pending`
 - Applied right after a URL is inserted into the queue.
 - The item has not been picked up by any worker yet.
-- Set in `PgPriceCollectQueueRepository.EnqueueAsync`.
+- Persisted through `price_collect_queue_enqueue`.
 
 ### `reserved`
 - Applied when a worker reserves a queue item for processing.
 - At the same time `reserved_at`, `lease_until`, and `reserved_by` are filled.
-- Set in `PgPriceCollectQueueRepository.ReserveBatchAsync`.
+- Persisted through `price_collect_queue_reserve_batch`.
 
 ### `succeeded`
 -
 - This is the final successful state for a queue item.
-- Set in `PgPriceCollectQueueRepository.MarkSucceededAsync`.
+- Persisted through `price_collect_queue_mark_succeeded`.
 
 ### `retry`
 - Applied when processing ends with a transient failure and the item should be retried later.
 - At the same time `attempt` is incremented, `last_error_code`, `last_http_status`, and `last_error_message` are saved, and `next_attempt_at` is scheduled.
-- Set in `PgPriceCollectQueueRepository.MarkRetryAsync`.
-- The same status is also restored by `ReapExpiredReservationsAsync` when an item is stuck in `reserved` and its lease expires.
+- Persisted through `price_collect_queue_mark_retry`.
+- The same status is also restored by `price_collect_queue_reap_expired` when an item is stuck in `reserved` and its lease expires.
 
 ### `dead`
 - Applied when the item should not be processed anymore.
 - This happens on a non-transient failure or when `max_attempts` is exhausted.
 - This is the final failed state for a queue item.
-- Set in `PgPriceCollectQueueRepository.MarkDeadAsync`.
+- Persisted through `price_collect_queue_mark_dead`.
 
 ### Queue transitions
 - `pending -> reserved`
@@ -102,11 +102,13 @@ Important:
 
 ### `product.updated_at`
 - Updated when a product is seen successfully without a meaningful state change.
+- This happens inside `price_observation_store`, without a separate inline DML sequence in the app.
 
 ### `crawl_error`
 - Stores structured processing errors with `run_id` and optional links to `product_id` and `queue_id`.
 - For non-critical parsing issues with a valid product state, the error points to the normalized `product.id`.
 - For critical failures without a valid snapshot, only the error row is saved.
+- Persisted through `crawl_error_add`.
 
 ## 6. UI status bar levels
 

@@ -1,5 +1,8 @@
 # MPC-30 / Stage 3 handover
 
+Historical note: the current write-side persistence layer was later consolidated into PostgreSQL DB routines under `MPC-11`.
+For current persistence behavior, prefer `README.md`, `docs/architecture.md`, and `docs/crawler_run.md`.
+
 ## Summary
 
 - The `Runs` dashboard now supports a manual `Refresh from VARUS` action on the selected product card.
