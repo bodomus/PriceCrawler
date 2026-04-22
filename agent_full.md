@@ -1,4 +1,4 @@
-# VARUS Project Study
+ # VARUS Project Study
 
 ## 1. Purpose
 

@@ -14,6 +14,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Versioned `db/routines` catalog with bootstrap support for separate SQL routine scripts.
 - `PgRoutineExecutor` and `DbRoutineCall` helpers for calling PostgreSQL functions/procedures from write-side C# code.
 - Integration coverage for write-side DB routines in `WorkerIntegrationTests`.
+- Local/dev SQL seed script `db/seeds/001__local_debug_month.sql` for destructive reset + generation of realistic month-long debug data.
 
 ### Changed
 - Database schema refactored around internal `product.id` links instead of legacy `product_key`.

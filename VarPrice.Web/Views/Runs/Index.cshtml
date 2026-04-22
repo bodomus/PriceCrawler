@@ -78,8 +78,7 @@
                                 <form id="ingestForm" asp-action="IngestVegetables" asp-controller="Runs" method="post">
                                     @Html.AntiForgeryToken()
                                 </form>
-                                <button id="ingestVegetablesButton" type="button">Collect price snapshot (vegetables)
-                                </button>
+                                <button id="ingestVegetablesButton" type="button">Collect</button>
                             </div>
 
                             @if (Model.LatestRun is not null)

@@ -120,6 +120,24 @@
             window.kendo.resize(dashboardSplitterElement.children());
         });
     };
+    const applyViewportDashboardHeight = () => {
+        if (dashboardSplitterElement.length === 0) {
+            return;
+        }
+
+        if (!desktopDashboardLayout.matches) {
+            dashboardSplitterElement[0].style.removeProperty("height");
+            requestLayoutResize();
+            return;
+        }
+
+        const layoutBounds = dashboardSplitterElement[0].getBoundingClientRect();
+        const viewportPadding = 20;
+        const availableHeight = Math.max(540, Math.floor(window.innerHeight - layoutBounds.top - viewportPadding));
+
+        dashboardSplitterElement[0].style.height = `${availableHeight}px`;
+        requestLayoutResize();
+    };
     const createBadge = (label, value, tone = "neutral") => `
         <div class="analytics-badge analytics-badge-${tone}">
             <span class="analytics-badge-label">${encode(label)}</span>
@@ -321,6 +339,39 @@
         updateAnalyticsLabels();
     };
 
+    const setSnapshotSelectionStyles = (cells, isCurrentRow) => {
+        cells.each((_, cell) => {
+            if (isCurrentRow) {
+                cell.style.setProperty("background-color", "var(--selection-bg)", "important");
+                cell.style.setProperty("color", "var(--selection-text)", "important");
+                cell.style.setProperty("border-top", "1px solid var(--selection-border)", "important");
+                cell.style.setProperty("border-bottom", "1px solid var(--selection-border)", "important");
+                cell.style.removeProperty("border-left");
+                cell.style.removeProperty("border-right");
+                cell.style.removeProperty("box-shadow");
+                return;
+            }
+
+            cell.style.removeProperty("background-color");
+            cell.style.removeProperty("color");
+            cell.style.removeProperty("border-top");
+            cell.style.removeProperty("border-bottom");
+            cell.style.removeProperty("border-left");
+            cell.style.removeProperty("border-right");
+            cell.style.removeProperty("box-shadow");
+        });
+
+        if (!isCurrentRow || cells.length === 0) {
+            return;
+        }
+
+        const firstCell = cells.get(0);
+        const lastCell = cells.get(cells.length - 1);
+
+        firstCell?.style.setProperty("border-left", "5px solid var(--accent)", "important");
+        firstCell?.style.setProperty("box-shadow", "inset 1px 0 0 var(--selection-border)", "important");
+        lastCell?.style.setProperty("border-right", "1px solid var(--selection-border)", "important");
+    };
     const syncSnapshotGridSelection = (grid) => {
         if (!grid) {
             return;
@@ -335,6 +386,7 @@
 
             $(row).toggleClass("snapshot-current-row", isCurrentRow);
             cells.toggleClass("snapshot-current-cell", isCurrentRow);
+            setSnapshotSelectionStyles(cells, isCurrentRow);
 
             if (isCurrentRow) {
                 selectedRow = $(row);
@@ -1252,6 +1304,13 @@
         });
     }
 
+    window.addEventListener("resize", applyViewportDashboardHeight);
+    if (typeof desktopDashboardLayout.addEventListener === "function") {
+        desktopDashboardLayout.addEventListener("change", applyViewportDashboardHeight);
+    } else if (typeof desktopDashboardLayout.addListener === "function") {
+        desktopDashboardLayout.addListener(applyViewportDashboardHeight);
+    }
+
     $("#topToolbar").kendoToolBar({
         items: [
             {
@@ -1295,7 +1354,7 @@
         themeColor: "success",
         fillMode: "solid",
         rounded: "full",
-        size: "large",
+        size: "medium",
         icon: "arrow-rotate-cw",
         click() {
             document.getElementById("ingestForm")?.submit();
@@ -1306,6 +1365,7 @@
 
     $("#runsTreeList").kendoTreeList({
         dataSource: createTreeDataSource(),
+        height: "100%",
         selectable: "row",
         sortable: false,
         resizable: true,
@@ -1535,5 +1595,5 @@
 
     resetAnalyticsPanels();
     refreshContextLabels();
-    requestLayoutResize();
+    applyViewportDashboardHeight();
 })();

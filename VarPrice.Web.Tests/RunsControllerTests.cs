@@ -135,6 +135,36 @@ public sealed class RunsControllerTests
     }
 
     [Fact]
+    public async Task RunsTree_DoesNotRenderFailedBucket_WhenRunHasNoFailedSnapshots()
+    {
+        var treeRows = new[]
+        {
+            new RunTreeQueryRow
+            {
+                Id = 21,
+                StartedAtUtc = new DateTime(2026, 3, 24, 10, 0, 0, DateTimeKind.Utc),
+                FinishedAtUtc = new DateTime(2026, 3, 24, 10, 11, 0, DateTimeKind.Utc),
+                Status = "ok",
+                ItemsCount = 5,
+                SuccessfulSnapshotsCount = 5,
+                FailedSnapshotsCount = 0
+            }
+        };
+
+        var sut = CreateController(
+            new CrawlerRunResult(7, "ok", 12, 0, "processed=12, errors=0"),
+            treeRows: treeRows);
+
+        var result = await sut.RunsTree(CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var nodes = Assert.IsAssignableFrom<IEnumerable<RunTreeNodeVm>>(json.Value).ToList();
+
+        Assert.DoesNotContain(nodes, node => node.NodeType == "failed");
+        Assert.Contains(nodes, node => node.NodeType == "successful" && node.RunId == 21);
+    }
+
+    [Fact]
     public async Task SnapshotsGrid_WhenSuccessfulScopeSelected_ReturnsOnlySuccessfulSnapshots()
     {
         var snapshotRows = new[]

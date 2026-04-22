@@ -102,9 +102,9 @@ public sealed class RunsController(
                         .SelectMany(row =>
                         {
                             var runNodeId = $"run:{row.Id}";
-                            return new[]
+                            var nodes = new List<RunTreeNodeVm>
                             {
-                                new RunTreeNodeVm
+                                new()
                                 {
                                     Id = runNodeId,
                                     ParentId = dateNodeId,
@@ -117,7 +117,7 @@ public sealed class RunsController(
                                     Status = row.Status,
                                     ItemsCount = row.ItemsCount
                                 },
-                                new RunTreeNodeVm
+                                new()
                                 {
                                     Id = $"run:{row.Id}:successful",
                                     ParentId = runNodeId,
@@ -126,8 +126,12 @@ public sealed class RunsController(
                                     RunId = row.Id,
                                     SnapshotScope = SnapshotScopes.Successful,
                                     ItemsCount = row.SuccessfulSnapshotsCount
-                                },
-                                new RunTreeNodeVm
+                                }
+                            };
+
+                            if (row.FailedSnapshotsCount > 0)
+                            {
+                                nodes.Add(new RunTreeNodeVm
                                 {
                                     Id = $"run:{row.Id}:failed",
                                     ParentId = runNodeId,
@@ -136,8 +140,10 @@ public sealed class RunsController(
                                     RunId = row.Id,
                                     SnapshotScope = SnapshotScopes.Failed,
                                     ItemsCount = row.FailedSnapshotsCount
-                                }
-                            };
+                                });
+                            }
+
+                            return nodes;
                         });
 
                     return new[] { dateNode }.Concat(runNodes);
