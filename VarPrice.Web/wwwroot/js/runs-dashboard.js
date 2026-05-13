@@ -13,6 +13,7 @@
     const productDetailsPanel = document.getElementById("productDetailsPanel");
     const priceChartPanel = document.getElementById("priceChartPanel");
     const analyticsStatus = document.getElementById("analyticsStatus");
+    const openSnapshotHistoryButton = document.getElementById("openSnapshotHistoryButton");
     const dashboardSplitterElement = $("#dashboardSplitter");
     const desktopDashboardLayout = window.matchMedia("(min-width: 1181px)");
 
@@ -118,6 +119,16 @@
 
         window.requestAnimationFrame(() => {
             window.kendo.resize(dashboardSplitterElement.children());
+        });
+    };
+    const resizeProductHistoryGrid = () => {
+        const grid = $("#productHistoryGrid").data("kendoGrid");
+        if (!grid || typeof window.kendo?.resize !== "function") {
+            return;
+        }
+
+        window.requestAnimationFrame(() => {
+            window.kendo.resize(grid.wrapper);
         });
     };
     const applyViewportDashboardHeight = () => {
@@ -1362,6 +1373,27 @@
     });
     $("#ingestVegetablesButton").addClass("dashboard-primary-button");
     $("#refreshRunsTreeButton").on("click", refreshTreeList);
+    const snapshotHistoryWindow = $("#snapshotHistoryWindow").kendoWindow({
+        title: "Price History",
+        modal: true,
+        visible: false,
+        actions: ["Close"],
+        width: "min(1100px, 92vw)",
+        height: "min(720px, 82vh)",
+        resizable: true,
+        draggable: true,
+        open() {
+            this.center();
+            resizeProductHistoryGrid();
+        },
+        activate: resizeProductHistoryGrid,
+        resize: resizeProductHistoryGrid,
+        refresh: resizeProductHistoryGrid
+    }).data("kendoWindow");
+
+    openSnapshotHistoryButton?.addEventListener("click", () => {
+        snapshotHistoryWindow.center().open();
+    });
 
     $("#runsTreeList").kendoTreeList({
         dataSource: createTreeDataSource(),
@@ -1543,6 +1575,7 @@
             25,
             [{field: "capturedAtUtc", dir: "desc"}]
         ),
+        height: "100%",
         sortable: {
             mode: "multiple",
             allowUnsort: true,

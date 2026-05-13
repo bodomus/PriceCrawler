@@ -113,11 +113,16 @@
                     </section>
 
                     <section class="dashboard-card" aria-labelledby="snapshots-title">
-                        <div class="dashboard-card-header">
+                        <div class="dashboard-card-header dashboard-card-header-with-actions">
                             <div class="card-headline">
                                 <h2 id="snapshots-title" class="dashboard-card-title">Snapshots</h2>
                                 <span id="selectedSnapshotLabel" class="context-label">Selected snapshot: none</span>
                             </div>
+                            <button id="openSnapshotHistoryButton"
+                                    class="tree-refresh-button snapshot-history-button"
+                                    type="button">
+                                History
+                            </button>
                         </div>
                         <div class="dashboard-card-body">
                             <div id="snapshotsGrid" class="dashboard-grid"></div>
@@ -151,26 +156,26 @@
                             </div>
                         </section>
 
-                        <section class="dashboard-card analytics-card analytics-history-card"
-                                 aria-labelledby="price-history-title">
-                            <div class="dashboard-card-header">
-                                <div class="card-headline">
-                                    <h2 id="price-history-title" class="dashboard-card-title">Price History</h2>
-                                    <span id="historyContextLabel"
-                                          class="context-label">Select a snapshot to load price history</span>
-                                </div>
-                            </div>
-                            <div class="dashboard-card-body">
-                                <div id="analyticsStatus"
-                                     class="analytics-status analytics-status-hidden"
-                                     role="status"
-                                     aria-live="polite"></div>
-                                <div id="productHistoryGrid" class="dashboard-grid"></div>
-                            </div>
-                        </section>
                     </div>
                 </main>
             </section>
+        </div>
+    </div>
+</div>
+
+<div id="snapshotHistoryWindow" class="snapshot-history-window" aria-labelledby="price-history-title">
+    <div class="snapshot-history-modal-body">
+        <div class="snapshot-history-modal-headline">
+            <h2 id="price-history-title" class="dashboard-card-title">Price History</h2>
+            <span id="historyContextLabel"
+                  class="context-label">Select a snapshot to load price history</span>
+        </div>
+        <div id="analyticsStatus"
+             class="analytics-status analytics-status-hidden"
+             role="status"
+             aria-live="polite"></div>
+        <div class="snapshot-history-grid-wrap">
+            <div id="productHistoryGrid" class="dashboard-grid"></div>
         </div>
     </div>
 </div>
