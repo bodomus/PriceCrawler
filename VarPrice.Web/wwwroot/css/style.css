@@ -413,6 +413,10 @@ body.runs-dashboard-page .tree-refresh-button:focus-visible {
     box-shadow: 0 0 0 3px rgba(23, 123, 73, 0.16);
 }
 
+body.runs-dashboard-page .snapshot-history-button {
+    min-width: 92px;
+}
+
 body.runs-dashboard-page .tree-refresh-button-icon {
     display: inline-flex;
     align-items: center;
@@ -625,6 +629,44 @@ body.runs-dashboard-page .dashboard-grid {
     border-radius: 10px;
     overflow: hidden;
     background: #fff;
+}
+
+body.runs-dashboard-page .snapshot-history-window {
+    display: none;
+}
+
+body.runs-dashboard-page #snapshotHistoryWindow {
+    height: 100%;
+    padding: 0;
+    overflow: hidden;
+}
+
+body.runs-dashboard-page .snapshot-history-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    min-height: 0;
+    padding: 16px;
+    box-sizing: border-box;
+    background: #fbfefd;
+}
+
+body.runs-dashboard-page .snapshot-history-modal-headline {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+}
+
+body.runs-dashboard-page .snapshot-history-grid-wrap {
+    flex: 1 1 auto;
+    min-height: 320px;
+    overflow: hidden;
+}
+
+body.runs-dashboard-page .snapshot-history-grid-wrap .dashboard-grid {
+    height: 100%;
 }
 
 body.runs-dashboard-page .dashboard-tree {
@@ -1129,7 +1171,7 @@ body.runs-dashboard-page .analytics-stage {
     display: grid;
     flex: 1 1 auto;
     grid-template-columns: minmax(320px, 1.2fr) minmax(260px, 0.8fr);
-    grid-template-rows: minmax(220px, 1fr) auto;
+    grid-template-rows: minmax(220px, 1fr);
     align-content: stretch;
     gap: 14px;
     min-height: 0;
@@ -1139,10 +1181,6 @@ body.runs-dashboard-page .analytics-card {
     display: flex;
     flex-direction: column;
     min-height: 0;
-}
-
-body.runs-dashboard-page .analytics-history-card {
-    grid-column: 1 / -1;
 }
 
 body.runs-dashboard-page .product-card-body,
