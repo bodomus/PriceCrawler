@@ -130,6 +130,16 @@
         window.requestAnimationFrame(() => {
             window.kendo.resize(grid.wrapper);
         });
+
+    };
+    const refreshProductHistoryGrid = () => {
+        const grid = $("#productHistoryGrid").data("kendoGrid");
+        if (!grid) {
+            return;
+        }
+
+        grid.refresh();
+        resizeProductHistoryGrid();
     };
     const applyViewportDashboardHeight = () => {
         if (dashboardSplitterElement.length === 0) {
@@ -1384,11 +1394,11 @@
         draggable: true,
         open() {
             this.center();
-            resizeProductHistoryGrid();
+            refreshProductHistoryGrid();
         },
-        activate: resizeProductHistoryGrid,
+        activate: refreshProductHistoryGrid,
         resize: resizeProductHistoryGrid,
-        refresh: resizeProductHistoryGrid
+        refresh: refreshProductHistoryGrid
     }).data("kendoWindow");
 
     openSnapshotHistoryButton?.addEventListener("click", () => {
