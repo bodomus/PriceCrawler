@@ -10,6 +10,7 @@ services:
       - "55432:5432"   # <-- важно: другой host-порт
     volumes:
       - var_pg_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
       - "D:/Backups/Varus/Postgres:/backups"
 
   web:
@@ -28,6 +29,16 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
-
+      
+  crawler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=varprice;Username=postgres;Password=postgres
+    command: ["dotnet", "VarPrice.Crawler.dll"]
 volumes:
   var_pg_data:

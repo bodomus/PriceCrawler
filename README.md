@@ -91,6 +91,20 @@
 docker compose up -d postgres
 ```
 
+The Docker PostgreSQL container creates two databases on a clean data volume:
+
+- `varprice` - development database, created by `POSTGRES_DB`
+- `varprice_stage` - stage database, created by `db/init/001__create_stage_database.sql`
+
+PostgreSQL runs files from `/docker-entrypoint-initdb.d` only when the data
+directory is initialized for the first time. If `var_pg_data` already exists,
+the new init script will not be replayed automatically. To verify the current
+databases:
+
+```bash
+docker exec var_postgres psql -U var -d postgres -c "\l varprice*"
+```
+
 ### 2) Запустить Web
 
 ```bash
