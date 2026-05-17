@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -684,13 +683,7 @@ public sealed class WorkerIntegrationTests
             observedAt ?? new DateTimeOffset(2026, 03, 10, 9, 0, 0, TimeSpan.Zero));
 
     private static PgConnectionFactory CreateFactory()
-    {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(
-                new Dictionary<string, string?> { ["ConnectionStrings:Postgres"] = ConnectionString })
-            .Build();
-        return new PgConnectionFactory(config);
-    }
+        => new(new SelectedDatabase(DatabaseTarget.Dev, ConnectionString, "varprice"));
 
     private static PgCrawlerRunRepository CreateCrawlerRunRepository(IPgConnectionFactory factory)
         => new(new PgRoutineExecutor(factory));

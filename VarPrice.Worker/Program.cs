@@ -33,6 +33,11 @@ builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfigurati
 
 using var host = builder.Build();
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("VarPrice.Worker");
+var selectedDatabase = host.Services.GetRequiredService<SelectedDatabase>();
+logger.LogInformation(
+    "Database target selected: {DatabaseTarget}; database={DatabaseName}",
+    selectedDatabase.Target,
+    selectedDatabase.DatabaseName);
 
 using (var scope = host.Services.CreateScope())
 {

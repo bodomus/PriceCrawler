@@ -14,11 +14,13 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddVarPriceInfrastructure(this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Postgres")
-                               ?? throw new InvalidOperationException(
-                                   "Connection string 'Postgres' is not configured.");
-
-        services.AddDbContext<VarPriceDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddSingleton<ITargetDatabaseResolver, TargetDatabaseResolver>();
+        services.AddSingleton(provider => provider.GetRequiredService<ITargetDatabaseResolver>().Resolve());
+        services.AddDbContext<VarPriceDbContext>((provider, options) =>
+        {
+            var database = provider.GetRequiredService<SelectedDatabase>();
+            options.UseNpgsql(database.ConnectionString);
+        });
 
         services.AddHttpClient("varus", c =>
         {

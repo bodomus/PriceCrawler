@@ -21,7 +21,9 @@ services:
     environment:
       ASPNETCORE_URLS: "http://+:8080"
       # внутри docker-сети порт Postgres остаётся 5432
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=varprice;Username=var;Password=myPassword"
+      Database__Target: "Dev"
+      ConnectionStrings__PostgresDev: "Host=postgres;Port=5432;Database=varprice;Username=var;Password=myPassword"
+      ConnectionStrings__PostgresStage: "Host=postgres;Port=5432;Database=varprice_stage;Username=var;Password=myPassword"
       Crawler__SitemapIndexUrl: "https://varus.ua/sitemap-index.xml"
       Crawler__VegetablesUrlContains: "/ovochi"
       Crawler__MaxProductsPerRun: "200"
@@ -38,7 +40,9 @@ services:
     depends_on:
       - postgres
     environment:
-      ConnectionStrings__Default: Host=postgres;Port=5432;Database=varprice;Username=postgres;Password=postgres
+      Database__Target: "Dev"
+      ConnectionStrings__PostgresDev: "Host=postgres;Port=5432;Database=varprice;Username=var;Password=myPassword"
+      ConnectionStrings__PostgresStage: "Host=postgres;Port=5432;Database=varprice_stage;Username=var;Password=myPassword"
     command: ["dotnet", "VarPrice.Crawler.dll"]
 volumes:
   var_pg_data:

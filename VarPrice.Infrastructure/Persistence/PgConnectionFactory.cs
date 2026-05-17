@@ -1,14 +1,13 @@
-using Npgsql;
 using System.Data;
-using Microsoft.Extensions.Configuration;
+
+using Npgsql;
 
 namespace VarPrice.Infrastructure.Persistence;
 
-public sealed class PgConnectionFactory(IConfiguration cfg) : IPgConnectionFactory
+public sealed class PgConnectionFactory(SelectedDatabase database) : IPgConnectionFactory
 {
     public IDbConnection Create()
     {
-        var cs = cfg.GetConnectionString("Postgres")!;
-        return new NpgsqlConnection(cs);
+        return new NpgsqlConnection(database.ConnectionString);
     }
 }

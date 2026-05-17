@@ -105,6 +105,16 @@ databases:
 docker exec var_postgres psql -U var -d postgres -c "\l varprice*"
 ```
 
+The application selects the target database explicitly through
+`Database:Target`:
+
+- `Dev` uses `ConnectionStrings:PostgresDev` and must point to `varprice`
+- `Stage` uses `ConnectionStrings:PostgresStage` and must point to `varprice_stage`
+
+Invalid targets, missing connection strings, or a target/connection-string
+database mismatch fail at startup. The selected target and database name are
+written to the startup logs.
+
 ### 2) Запустить Web
 
 ```bash
