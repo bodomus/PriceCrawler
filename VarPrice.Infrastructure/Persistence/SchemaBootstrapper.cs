@@ -6,10 +6,15 @@ using Microsoft.Extensions.Logging;
 
 namespace VarPrice.Infrastructure.Persistence;
 
-public sealed class SchemaBootstrapper(VarPriceDbContext dbContext, ILogger<SchemaBootstrapper> log)
+public sealed class SchemaBootstrapper(
+    VarPriceDbContext dbContext,
+    StageSafetyGuard stageSafetyGuard,
+    ILogger<SchemaBootstrapper> log)
 {
     public async Task EnsureSchemaAsync(CancellationToken ct = default)
     {
+        stageSafetyGuard.EnsureSchemaBootstrapAllowed();
+
         const int attempts = 30;
         const int delayMs = 1000;
         Exception? last = null;

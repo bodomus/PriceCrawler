@@ -49,8 +49,8 @@ echo PostgreSQL is ready.
 
 echo Starting VarPrice Worker...
 
-cd /d "j:\Projects\c#\(!!!VARUS)\VarPrice.Worker\bin\Debug\net8.0\"
-call "j:\Projects\c#\(!!!VARUS)\VarPrice.Worker\bin\Debug\net8.0\VarPrice.Worker.exe"
+cd /d "j:\Projects\c#\VARUS_STAGE\crawler\Debug\net8.0\"
+call "VarPrice.Worker.exe"
 
 if errorlevel 1 goto WORKER_FAILED
 

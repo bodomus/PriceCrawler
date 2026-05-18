@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -700,7 +701,12 @@ public sealed class WorkerIntegrationTests
     private static async Task PrepareSchemaAsync()
     {
         await using var dbContext = CreateDbContext();
-        var schema = new SchemaBootstrapper(dbContext, NullLogger<SchemaBootstrapper>.Instance);
+        var schema = new SchemaBootstrapper(
+            dbContext,
+            new StageSafetyGuard(
+                new SelectedDatabase(DatabaseTarget.Dev, ConnectionString, "varprice"),
+                new ConfigurationBuilder().Build()),
+            NullLogger<SchemaBootstrapper>.Instance);
         await schema.EnsureSchemaAsync();
 
         await using var conn = new NpgsqlConnection(ConnectionString);

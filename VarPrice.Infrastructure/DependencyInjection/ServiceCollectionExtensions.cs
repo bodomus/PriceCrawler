@@ -16,6 +16,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<ITargetDatabaseResolver, TargetDatabaseResolver>();
         services.AddSingleton(provider => provider.GetRequiredService<ITargetDatabaseResolver>().Resolve());
+        services.AddSingleton<StageSafetyGuard>();
         services.AddDbContext<VarPriceDbContext>((provider, options) =>
         {
             var database = provider.GetRequiredService<SelectedDatabase>();

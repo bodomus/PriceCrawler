@@ -60,8 +60,19 @@ app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
 using (var scope = app.Services.CreateScope())
 {
-    var bootstrap = scope.ServiceProvider.GetRequiredService<SchemaBootstrapper>();
-    await bootstrap.EnsureSchemaAsync();
+    var stageSafetyGuard = scope.ServiceProvider.GetRequiredService<StageSafetyGuard>();
+    if (stageSafetyGuard.ShouldRunStartupSchemaBootstrap())
+    {
+        var bootstrap = scope.ServiceProvider.GetRequiredService<SchemaBootstrapper>();
+        await bootstrap.EnsureSchemaAsync();
+    }
+    else
+    {
+        app.Logger.LogWarning(
+            "Schema bootstrap skipped for database target {DatabaseTarget}; database={DatabaseName}",
+            selectedDatabase.Target,
+            selectedDatabase.DatabaseName);
+    }
 }
 
 app.Logger.LogInformation("Application starting in {EnvironmentName}", app.Environment.EnvironmentName);

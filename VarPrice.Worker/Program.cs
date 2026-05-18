@@ -41,8 +41,19 @@ logger.LogInformation(
 
 using (var scope = host.Services.CreateScope())
 {
-    var bootstrap = scope.ServiceProvider.GetRequiredService<SchemaBootstrapper>();
-    await bootstrap.EnsureSchemaAsync();
+    var stageSafetyGuard = scope.ServiceProvider.GetRequiredService<StageSafetyGuard>();
+    if (stageSafetyGuard.ShouldRunStartupSchemaBootstrap())
+    {
+        var bootstrap = scope.ServiceProvider.GetRequiredService<SchemaBootstrapper>();
+        await bootstrap.EnsureSchemaAsync();
+    }
+    else
+    {
+        logger.LogWarning(
+            "Schema bootstrap skipped for database target {DatabaseTarget}; database={DatabaseName}",
+            selectedDatabase.Target,
+            selectedDatabase.DatabaseName);
+    }
 }
 
 var once = args.Contains("--once");

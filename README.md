@@ -115,6 +115,12 @@ Invalid targets, missing connection strings, or a target/connection-string
 database mismatch fail at startup. The selected target and database name are
 written to the startup logs.
 
+When `Database:Target` is `Stage`, startup schema bootstrap is skipped by
+default. This prevents automatic schema changes and legacy cleanup from running
+against `varprice_stage`. To intentionally apply schema bootstrap to Stage,
+set `Database:AllowStageSchemaBootstrap=true` for that run only after reviewing
+the schema change.
+
 ### 2) Запустить Web
 
 ```bash
@@ -146,6 +152,7 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 - запускать только на локальной/dev БД
 - script не должен использоваться на shared/stage/public окружениях
+- при `Database:Target=Stage` destructive/dev-only operations must be blocked by application guards
 - перед запуском схема и DB routines уже должны быть применены
 
 Запуск:
@@ -208,7 +215,10 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 Основные ключи (`appsettings.json`):
 
-- `ConnectionStrings:Postgres`
+- `Database:Target` (`Dev` или `Stage`)
+- `Database:AllowStageSchemaBootstrap` (default `false`)
+- `ConnectionStrings:PostgresDev`
+- `ConnectionStrings:PostgresStage`
 - `Crawler:SitemapIndexUrl`
 - `Crawler:VegetablesUrlContains`
 - `Crawler:MaxProductsPerRun`
@@ -231,7 +241,10 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 Переопределение через переменные окружения:
 
-- `ConnectionStrings__Postgres`
+- `Database__Target`
+- `Database__AllowStageSchemaBootstrap`
+- `ConnectionStrings__PostgresDev`
+- `ConnectionStrings__PostgresStage`
 - `Crawler__SitemapIndexUrl`
 - `Crawler__VegetablesUrlContains`
 - `Crawler__MaxProductsPerRun`
@@ -252,6 +265,22 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Queue__RetryBaseDelayMs`
 - `Queue__RetryMaxDelayMs`
 - `Queue__ReaperIntervalSeconds`
+
+Пример переключения Web на stage-базу:
+
+```powershell
+$env:Database__Target = "Stage"
+$env:ConnectionStrings__PostgresStage = "Host=localhost;Port=55432;Database=varprice_stage;Username=var;Password=myPassword"
+dotnet run --project VarPrice.Web
+```
+
+Пример переключения Worker на stage-базу:
+
+```powershell
+$env:Database__Target = "Stage"
+$env:ConnectionStrings__PostgresStage = "Host=localhost;Port=55432;Database=varprice_stage;Username=var;Password=myPassword"
+dotnet run --project VarPrice.Worker -- --once --job vegetables
+```
 
 Коды ошибок crawler, сохраняемые в `crawl_error.error_code`:
 
