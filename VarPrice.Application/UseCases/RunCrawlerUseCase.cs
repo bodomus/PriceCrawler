@@ -83,6 +83,19 @@ public sealed class RunCrawlerUseCase(
                 stats.Dead,
                 note);
         }
+        catch (SitemapUnavailableException ex)
+        {
+            const string errorCode = "SitemapUnavailable";
+            var errorInfo = new ErrorInfo(errorCode, ex.Message);
+            await ingestionRunRepository.FinishAsync(ingestionRunId, RunStatus.Error, errorInfo, ct);
+            await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, ex.Message, ct);
+            return new CrawlerRunResult(
+                runId,
+                RunStatus.Error.ToString().ToLowerInvariant(),
+                0,
+                1,
+                ex.Message);
+        }
         catch (Exception ex)
         {
             var errorInfo = new ErrorInfo("crawler_failed", ex.Message);

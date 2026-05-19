@@ -35,6 +35,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPriceSnapshotRepository, PgPriceSnapshotRepository>();
         services.AddScoped<IPriceCollectQueueRepository, PgPriceCollectQueueRepository>();
 
+        services.AddSingleton<ISitemapUrlProvider, SitemapUrlProvider>();
+        services.AddSingleton<ISitemapHttpClient, SitemapHttpClient>();
+        services.AddSingleton<ISitemapResponseValidator, SitemapResponseValidator>();
+        services.AddScoped<SitemapDiscoveryService>();
         services.AddScoped<IProductUrlSource, SitemapReader>();
         services.AddSingleton<VarusRequestCoordinator>();
         services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();

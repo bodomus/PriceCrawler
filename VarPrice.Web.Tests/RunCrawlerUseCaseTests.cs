@@ -59,6 +59,29 @@ public sealed class RunCrawlerUseCaseTests
     }
 
     [Fact]
+    public async Task RunVegetablesAsync_SitemapUnavailable_SetsSpecificErrorInfo()
+    {
+        var crawlerRepo = new FakeCrawlerRunRepository();
+        var ingestionRepo = new FakeIngestionRunRepository();
+        var queueRepo = new FakeQueueRepository();
+        var snapshotRepo = new FakePriceSnapshotRepository();
+        var source = new SitemapUnavailableSource();
+        var extractor =
+            new FakeExtractor(ProductExtractResult.Fail(CrawlerErrorCodes.Unknown, null, "unused", 10, 1.0d, false));
+
+        var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor);
+        var result = await sut.RunVegetablesAsync(CancellationToken.None);
+
+        Assert.Equal("error", result.Status);
+        Assert.Equal(0, result.ProductsProcessed);
+        Assert.Equal(1, result.Errors);
+        Assert.Equal(RunStatus.Error, crawlerRepo.LastStatus);
+        Assert.Equal(RunStatus.Error, ingestionRepo.LastStatus);
+        Assert.NotNull(ingestionRepo.LastError);
+        Assert.Equal("SitemapUnavailable", ingestionRepo.LastError.Code);
+    }
+
+    [Fact]
     public async Task RunVegetablesAsync_CriticalItemFailure_MarksRunAsErrorAndPersistsCrawlError()
     {
         var crawlerRepo = new FakeCrawlerRunRepository();
@@ -178,6 +201,12 @@ public sealed class RunCrawlerUseCaseTests
     {
         public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) =>
             throw new InvalidOperationException("boom");
+    }
+
+    private sealed class SitemapUnavailableSource : IProductUrlSource
+    {
+        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) =>
+            throw new SitemapUnavailableException("SitemapUnavailable: No valid sitemap found.");
     }
 
     private sealed class FakeExtractor(ProductExtractResult result) : IProductCardExtractor
