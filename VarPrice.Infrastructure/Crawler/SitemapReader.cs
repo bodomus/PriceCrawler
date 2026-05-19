@@ -1,7 +1,7 @@
-using System.IO.Compression;
-using System.Text;
 using System.Xml.Linq;
+
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using VarPrice.Application.Abstractions;
@@ -9,28 +9,69 @@ using VarPrice.Application.Models;
 
 namespace VarPrice.Infrastructure.Crawler;
 
-public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
-    IOptions<CrawlerOptions> crawlerOptions,
-    IOptions<UrlFilterOptions> urlFilterOptions,
-    ILogger<SitemapReader> log) : IProductUrlSource
+public sealed class SitemapReader : IProductUrlSource
 {
     private const int DefaultMaxSitemapsToVisit = 10;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IOptions<CrawlerOptions> _crawlerOptions;
+    private readonly IOptions<UrlFilterOptions> _urlFilterOptions;
+    private readonly ISitemapHttpClient _sitemapHttpClient;
+    private readonly ISitemapResponseValidator _sitemapResponseValidator;
+    private readonly SitemapDiscoveryService _sitemapDiscoveryService;
+    private readonly ILogger<SitemapReader> _log;
+
+    public SitemapReader(
+        IHttpClientFactory httpClientFactory,
+        IOptions<CrawlerOptions> crawlerOptions,
+        IOptions<UrlFilterOptions> urlFilterOptions,
+        ILogger<SitemapReader> log)
+        : this(
+            httpClientFactory,
+            crawlerOptions,
+            urlFilterOptions,
+            new SitemapHttpClient(),
+            new SitemapResponseValidator(),
+            CreateDefaultDiscoveryService(),
+            log)
+    {
+    }
+
+    public SitemapReader(
+        IHttpClientFactory httpClientFactory,
+        IOptions<CrawlerOptions> crawlerOptions,
+        IOptions<UrlFilterOptions> urlFilterOptions,
+        ISitemapHttpClient sitemapHttpClient,
+        ISitemapResponseValidator sitemapResponseValidator,
+        SitemapDiscoveryService sitemapDiscoveryService,
+        ILogger<SitemapReader> log)
+    {
+        _httpClientFactory = httpClientFactory;
+        _crawlerOptions = crawlerOptions;
+        _urlFilterOptions = urlFilterOptions;
+        _sitemapHttpClient = sitemapHttpClient;
+        _sitemapResponseValidator = sitemapResponseValidator;
+        _sitemapDiscoveryService = sitemapDiscoveryService;
+        _log = log;
+    }
 
     public async Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct)
     {
-        var http = httpClientFactory.CreateClient("varus");
-        var doc = await LoadXmlAsync(http, sitemapIndexUrl, ct);
-        var maxUrls = crawlerOptions.Value.MaxUrls;
+        var http = _httpClientFactory.CreateClient("varus");
+        var discovery = await _sitemapDiscoveryService.DiscoverAsync(http, sitemapIndexUrl, ct);
+        var doc = discovery.Document;
+        var rootSitemapUrl = discovery.Url;
+        var maxUrls = _crawlerOptions.Value.MaxUrls;
         if (IsUrlSet(doc))
         {
             var locs = GetLocs(doc);
-            log.LogInformation("Sitemap processed: Url={Url}, RootType=urlset, LocCount={LocCount}", sitemapIndexUrl, locs.Count);
+            _log.LogInformation("Sitemap processed: Url={Url}, RootType=urlset, LocCount={LocCount}", rootSitemapUrl,
+                locs.Count);
             var urls = new HashSet<string>(StringComparer.Ordinal);
             foreach (var url in locs)
             {
                 if (urls.Count >= maxUrls)
                 {
-                    log.LogWarning("Reached maxUrls={MaxUrls} while processing {Url}", maxUrls, sitemapIndexUrl);
+                    _log.LogWarning("Reached maxUrls={MaxUrls} while processing {Url}", maxUrls, rootSitemapUrl);
                     break;
                 }
 
@@ -43,64 +84,34 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
         if (IsSitemapIndex(doc))
         {
             var sitemapLocs = GetLocs(doc);
-            log.LogInformation("Sitemap processed: Url={Url}, RootType=sitemapindex, LocCount={LocCount}", sitemapIndexUrl, sitemapLocs.Count);
+            _log.LogInformation("Sitemap processed: Url={Url}, RootType=sitemapindex, LocCount={LocCount}",
+                rootSitemapUrl, sitemapLocs.Count);
             return await CollectUrlsAsync(http, sitemapLocs, ct, maxUrls, DefaultMaxSitemapsToVisit);
         }
 
         var root = doc.Root?.Name.LocalName ?? "<null>";
-        throw new InvalidOperationException($"Unknown sitemap root '{root}' at '{sitemapIndexUrl}'.");
+        throw new InvalidOperationException($"Unknown sitemap root '{root}' at '{rootSitemapUrl}'.");
     }
 
     public async Task<XDocument> LoadXmlAsync(HttpClient http, string url, CancellationToken ct)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-
-        var contentEncoding = string.Join(",", response.Content.Headers.ContentEncoding);
-        await using var rawStream = await response.Content.ReadAsStreamAsync(ct);
-        var content = await ReadContentAsync(rawStream, response.Content.Headers.ContentEncoding, ct);
-        var bodyPreview = GetPreview(content);
-
-        if (!response.IsSuccessStatusCode)
+        var response = await _sitemapHttpClient.GetAsync(http, url, ct);
+        var validation = _sitemapResponseValidator.Validate(response);
+        if (validation.IsValid && validation.Document is not null)
         {
-            log.LogError(
-                "Failed to load sitemap XML. Url={Url}, StatusCode={StatusCode}, ContentEncoding={ContentEncoding}, Preview={Preview}",
-                url,
-                (int)response.StatusCode,
-                contentEncoding,
-                bodyPreview);
-            throw new HttpRequestException(
-                $"Failed to load sitemap XML from '{url}'. Status code: {(int)response.StatusCode} ({response.StatusCode}).",
-                null,
-                response.StatusCode);
+            return validation.Document;
         }
 
-        if (LooksLikeHtml(bodyPreview))
-        {
-            log.LogError(
-                "Expected XML but received HTML. Url={Url}, StatusCode={StatusCode}, ContentEncoding={ContentEncoding}, Preview={Preview}",
-                url,
-                (int)response.StatusCode,
-                contentEncoding,
-                bodyPreview);
-            throw new InvalidOperationException($"Expected XML but received HTML from '{url}'. Preview: {bodyPreview}");
-        }
-
-        try
-        {
-            return XDocument.Parse(content, LoadOptions.None);
-        }
-        catch (Exception ex)
-        {
-            log.LogError(
-                ex,
-                "Failed to parse sitemap XML. Url={Url}, StatusCode={StatusCode}, ContentEncoding={ContentEncoding}, Preview={Preview}",
-                url,
-                (int)response.StatusCode,
-                contentEncoding,
-                bodyPreview);
-            throw;
-        }
+        _log.LogError(
+            "Failed to load sitemap XML. Url={Url}, StatusCode={StatusCode}, FailureKind={FailureKind}, ContentType={ContentType}, ContentEncoding={ContentEncoding}, Preview={Preview}",
+            response.Url,
+            (int)response.StatusCode,
+            validation.FailureKind,
+            response.ContentType,
+            response.ContentEncoding,
+            response.BodyPreview);
+        throw new InvalidOperationException(
+            $"Failed to load sitemap XML from '{url}'. FailureKind={validation.FailureKind}. {validation.Message}");
     }
 
     public static bool IsSitemapIndex(XDocument doc) => doc.Root?.Name.LocalName == "sitemapindex";
@@ -109,7 +120,7 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
 
     public List<string> GetLocs(XDocument doc)
     {
-        var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
+        var excluded = _urlFilterOptions.Value.ExcludedUrlSubstrings;
         if (doc.Root is null)
         {
             return [];
@@ -120,7 +131,7 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
             .Descendants(ns + "loc")
             .Select(x => x.Value.Trim())
             .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Where(a=> !excluded.Any(ex => a.Contains(ex, StringComparison.OrdinalIgnoreCase)))
+            .Where(a => !excluded.Any(ex => a.Contains(ex, StringComparison.OrdinalIgnoreCase)))
             .ToList();
     }
 
@@ -131,7 +142,7 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
         int? maxUrls = null,
         int? maxSitemapsToVisit = null)
     {
-        var maxUrlsLimit = maxUrls ?? crawlerOptions.Value.MaxUrls;
+        var maxUrlsLimit = maxUrls ?? _crawlerOptions.Value.MaxUrls;
         var results = new HashSet<string>(StringComparer.Ordinal);
         var topLevelSitemaps = maxSitemapsToVisit.HasValue
             ? sitemapLocs.Take(maxSitemapsToVisit.Value)
@@ -155,13 +166,14 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
             }
             catch (Exception ex)
             {
-                log.LogWarning(ex, "Failed to write locs to locs.log");
+                _log.LogWarning(ex, "Failed to write locs to locs.log");
             }
 
 
             if (IsSitemapIndex(doc))
             {
-                log.LogInformation("Sitemap processed: Url={Url}, RootType=sitemapindex, LocCount={LocCount}", currentSitemapUrl, locs.Count);
+                _log.LogInformation("Sitemap processed: Url={Url}, RootType=sitemapindex, LocCount={LocCount}",
+                    currentSitemapUrl, locs.Count);
                 for (var i = locs.Count - 1; i >= 0; i--)
                 {
                     toVisit.Push(locs[i]);
@@ -172,12 +184,13 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
 
             if (IsUrlSet(doc))
             {
-                log.LogInformation("Sitemap processed: Url={Url}, RootType=urlset, LocCount={LocCount}", currentSitemapUrl, locs.Count);
+                _log.LogInformation("Sitemap processed: Url={Url}, RootType=urlset, LocCount={LocCount}",
+                    currentSitemapUrl, locs.Count);
                 foreach (var loc in locs)
                 {
                     if (results.Count >= maxUrlsLimit)
                     {
-                        log.LogWarning("Reached maxUrls={MaxUrls}, stopping URL collection.", maxUrlsLimit);
+                        _log.LogWarning("Reached maxUrls={MaxUrls}, stopping URL collection.", maxUrlsLimit);
                         return results.Take(maxUrlsLimit).ToList();
                     }
 
@@ -188,46 +201,21 @@ public sealed class SitemapReader(IHttpClientFactory httpClientFactory,
             }
 
             var root = doc.Root?.Name.LocalName ?? "<null>";
-            log.LogError("Unknown sitemap root. Url={Url}, RootType={RootType}", currentSitemapUrl, root);
+            _log.LogError("Unknown sitemap root. Url={Url}, RootType={RootType}", currentSitemapUrl, root);
             throw new InvalidOperationException($"Unknown sitemap root '{root}' at '{currentSitemapUrl}'.");
         }
 
         return results.ToList();
     }
 
-    private static bool LooksLikeHtml(string xmlOrHtml)
+    private static SitemapDiscoveryService CreateDefaultDiscoveryService()
     {
-        var trimmed = xmlOrHtml.TrimStart();
-        return trimmed.StartsWith("<html", StringComparison.OrdinalIgnoreCase)
-               || trimmed.StartsWith("<!doctype html", StringComparison.OrdinalIgnoreCase);
+        var httpClient = new SitemapHttpClient();
+        var validator = new SitemapResponseValidator();
+        return new SitemapDiscoveryService(
+            new SitemapUrlProvider(NullLogger<SitemapUrlProvider>.Instance),
+            httpClient,
+            validator,
+            NullLogger<SitemapDiscoveryService>.Instance);
     }
-
-    private static async Task<string> ReadContentAsync(Stream stream, ICollection<string> contentEncodings, CancellationToken ct)
-    {
-        await using var decodedStream = WrapDecodingStream(stream, contentEncodings);
-        using var reader = new StreamReader(decodedStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        return await reader.ReadToEndAsync(ct);
-    }
-
-    private static Stream WrapDecodingStream(Stream stream, ICollection<string> contentEncodings)
-    {
-        var current = stream;
-        foreach (var encoding in contentEncodings.Reverse())
-        {
-            if (string.Equals(encoding, "gzip", StringComparison.OrdinalIgnoreCase))
-            {
-                current = new GZipStream(current, CompressionMode.Decompress);
-                continue;
-            }
-
-            if (string.Equals(encoding, "br", StringComparison.OrdinalIgnoreCase))
-            {
-                current = new BrotliStream(current, CompressionMode.Decompress);
-            }
-        }
-
-        return current;
-    }
-
-    private static string GetPreview(string content) => content.Length <= 200 ? content : content[..200];
 }

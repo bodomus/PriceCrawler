@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -64,7 +65,8 @@ public sealed class SitemapReaderTests
             [root] = CreateXmlResponse(SitemapIndexXml(productsA, nestedIndex)),
             [nestedIndex] = CreateXmlResponse(SitemapIndexXml(productsB)),
             [productsA] = CreateXmlResponse(UrlSetXml("https://example.com/products/a")),
-            [productsB] = CreateXmlResponse(UrlSetXml("https://example.com/products/b", "https://example.com/products/c"))
+            [productsB] =
+                CreateXmlResponse(UrlSetXml("https://example.com/products/b", "https://example.com/products/c"))
         });
 
         var sut = CreateSut(client);
@@ -92,7 +94,142 @@ public sealed class SitemapReaderTests
         });
 
         var sut = CreateSut(client);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.GetProductUrlsAsync(url, CancellationToken.None));
+        await Assert.ThrowsAsync<SitemapUnavailableException>(() =>
+            sut.GetProductUrlsAsync(url, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetProductUrlsAsync_WhenConfiguredSitemapInvalid_UsesFallbackCandidate()
+    {
+        const string configuredUrl = "https://example.com/sitemap-index.xml";
+        const string fallbackUrl = "https://example.com/sitemap.xml";
+        using var client = CreateHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://example.com/robots.txt"] = new(HttpStatusCode.OK)
+            {
+                Content = new StringContent("Sitemap: https://example.com/sitemap-index.xml", Encoding.UTF8,
+                    "text/plain")
+            },
+            [configuredUrl] = new(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent("<!doctype html><html><head><title>404 Not Found</title></head></html>",
+                    Encoding.UTF8, "text/html")
+            },
+            [fallbackUrl] = CreateXmlResponse(UrlSetXml("https://example.com/products/fallback"))
+        });
+
+        var sut = CreateSut(client);
+        var result = await sut.GetProductUrlsAsync(configuredUrl, CancellationToken.None);
+
+        Assert.Equal(["https://example.com/products/fallback"], result);
+    }
+
+    [Fact]
+    public async Task SitemapUrlProvider_RobotsSitemapLines_AreAddedAndDeduplicated()
+    {
+        const string configuredUrl = "https://example.com/sitemap-index.xml";
+        using var client = CreateHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://example.com/robots.txt"] = new(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                    User-agent: *
+                    Sitemap: https://example.com/sitemap-index.xml
+                    sitemap: https://example.com/sitemap-products.xml # product sitemap
+                    """,
+                    Encoding.UTF8,
+                    "text/plain")
+            }
+        });
+        var provider = new SitemapUrlProvider(NullLogger<SitemapUrlProvider>.Instance);
+
+        var result = await provider.GetCandidatesAsync(client, configuredUrl, CancellationToken.None);
+
+        Assert.Equal(
+            [
+                "https://example.com/sitemap-index.xml",
+                "https://example.com/sitemap-products.xml",
+                "https://example.com/sitemap.xml",
+                "https://example.com/sitemap_index.xml"
+            ],
+            result);
+    }
+
+    [Fact]
+    public async Task SitemapUrlProvider_WhenRobotsHasNoSitemap_UsesFallbackCandidates()
+    {
+        const string configuredUrl = "https://example.com/custom.xml";
+        using var client = CreateHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://example.com/robots.txt"] = new(HttpStatusCode.OK)
+            {
+                Content = new StringContent("User-agent: *", Encoding.UTF8, "text/plain")
+            }
+        });
+        var provider = new SitemapUrlProvider(NullLogger<SitemapUrlProvider>.Instance);
+
+        var result = await provider.GetCandidatesAsync(client, configuredUrl, CancellationToken.None);
+
+        Assert.Equal(
+            [
+                "https://example.com/custom.xml",
+                "https://example.com/sitemap.xml",
+                "https://example.com/sitemap_index.xml",
+                "https://example.com/sitemap-index.xml"
+            ],
+            result);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound, "text/html", "<!doctype html><html><title>404 Not Found</title>",
+        SitemapLoadFailureKind.NotFound)]
+    [InlineData(HttpStatusCode.Forbidden, "text/html", "forbidden", SitemapLoadFailureKind.Forbidden)]
+    [InlineData(HttpStatusCode.OK, "text/html", "<html><title>404 Not Found</title>",
+        SitemapLoadFailureKind.HtmlInsteadOfXml)]
+    [InlineData(HttpStatusCode.OK, "text/plain", "<urlset></urlset>", SitemapLoadFailureKind.InvalidContentType)]
+    [InlineData(HttpStatusCode.OK, "application/xml", "<urlset>", SitemapLoadFailureKind.InvalidXml)]
+    [InlineData(HttpStatusCode.OK, "application/xml", "", SitemapLoadFailureKind.EmptyBody)]
+    [InlineData(HttpStatusCode.InternalServerError, "text/html", "server error", SitemapLoadFailureKind.ServerError)]
+    [InlineData((HttpStatusCode)429, "text/html", "rate limited", SitemapLoadFailureKind.RateLimited)]
+    public void SitemapResponseValidator_InvalidResponses_ReturnExpectedFailureKind(
+        HttpStatusCode statusCode,
+        string contentType,
+        string body,
+        SitemapLoadFailureKind expected)
+    {
+        var validator = new SitemapResponseValidator();
+        var response = new SitemapHttpResponse(
+            "https://example.com/sitemap.xml",
+            statusCode,
+            contentType,
+            string.Empty,
+            body,
+            body);
+
+        var result = validator.Validate(response);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(expected, result.FailureKind);
+    }
+
+    [Theory]
+    [MemberData(nameof(ValidSitemapXml))]
+    public void SitemapResponseValidator_ValidSitemapRoots_AreAccepted(string xml)
+    {
+        var validator = new SitemapResponseValidator();
+        var response = new SitemapHttpResponse(
+            "https://example.com/sitemap.xml",
+            HttpStatusCode.OK,
+            "application/xml",
+            string.Empty,
+            xml,
+            xml);
+
+        var result = validator.Validate(response);
+
+        Assert.True(result.IsValid);
+        Assert.Equal(SitemapLoadFailureKind.None, result.FailureKind);
     }
 
     [Fact]
@@ -138,13 +275,21 @@ public sealed class SitemapReaderTests
 
     private static SitemapReader CreateSut(HttpClient client, params string[] excludedUrlSubstrings)
     {
-         var crawlerOptions = Options.Create(new CrawlerOptions());
+        var crawlerOptions = Options.Create(new CrawlerOptions());
         var options = Options.Create(new UrlFilterOptions
         {
             ExcludedUrlSubstrings = excludedUrlSubstrings
         });
-        return new SitemapReader(new FakeHttpClientFactory(client), crawlerOptions, options, NullLogger<SitemapReader>.Instance);
+        return new SitemapReader(new FakeHttpClientFactory(client), crawlerOptions, options,
+            NullLogger<SitemapReader>.Instance);
     }
+
+    public static TheoryData<string> ValidSitemapXml()
+        => new()
+        {
+            SitemapIndexXml("https://example.com/sitemap-products.xml"),
+            UrlSetXml("https://example.com/products/example")
+        };
 
     private static HttpResponseMessage CreateXmlResponse(string xml, string? contentEncoding = null)
     {
@@ -214,9 +359,11 @@ public sealed class SitemapReaderTests
         public HttpClient CreateClient(string name) => client;
     }
 
-    private sealed class FakeHttpMessageHandler(IReadOnlyDictionary<string, HttpResponseMessage> responses) : HttpMessageHandler
+    private sealed class FakeHttpMessageHandler(IReadOnlyDictionary<string, HttpResponseMessage> responses)
+        : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
         {
             var key = request.RequestUri?.AbsoluteUri ?? string.Empty;
             if (!responses.TryGetValue(key, out var response))
