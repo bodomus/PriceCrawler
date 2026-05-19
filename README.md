@@ -85,6 +85,9 @@
 
 ## Быстрый запуск
 
+Подробная инструкция по двум PostgreSQL БД, выбору `Dev` / `Stage` и stage safety
+policy находится в [docs/varprice-stage.md](docs/varprice-stage.md).
+
 ### 1) Поднять инфраструктуру (опционально)
 
 ```bash
@@ -120,6 +123,9 @@ default. This prevents automatic schema changes and legacy cleanup from running
 against `varprice_stage`. To intentionally apply schema bootstrap to Stage,
 set `Database:AllowStageSchemaBootstrap=true` for that run only after reviewing
 the schema change.
+
+Any operation that can change schema, clean data, seed, reset, backfill, or run a
+batch mutation must pass through the safety policy before touching the database.
 
 ### 2) Запустить Web
 
@@ -379,6 +385,13 @@ dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersi
 
 ```bash
 dotnet test VarPrice.sln
+```
+
+Focused checks for the two-database setup:
+
+```bash
+dotnet test VarPrice.Web.Tests/VarPrice.Web.Tests.csproj --filter TargetDatabaseResolverTests
+dotnet test VarPrice.Web.Tests/VarPrice.Web.Tests.csproj --filter StageSafetyGuardTests
 ```
 
 
