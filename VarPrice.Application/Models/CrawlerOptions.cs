@@ -10,6 +10,7 @@ public sealed class CrawlerOptions
     public string VegetablesUrlContains { get; set; } = string.Empty;
     public int MaxProductsPerRun { get; set; } = 200;
     public int MaxUrls { get; set; } = 20_000;
+    public int MaxCategoryPagesPerSeed { get; set; } = 3;
     public int MaxConcurrency { get; set; } = 4;
     public double RequestsPerSecond { get; set; } = 2.0d;
     public int RequestTimeoutSeconds { get; set; } = 15;

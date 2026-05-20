@@ -136,6 +136,121 @@ public sealed class ProductUrlDiscoveryTests
     }
 
     [Fact]
+    public async Task CategorySeedSource_FollowsNextPagesUntilNoNewProducts()
+    {
+        using var temp = new TempDirectory();
+        var seedPath = temp.WriteSeedFile(SeedJson("Fresh", "https://varus.ua/ovochi-svizhi"));
+        using var client = CreateTrackedHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://varus.ua/ovochi-svizhi"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-1">Page 1</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=2">Next</a>
+                """),
+            ["https://varus.ua/ovochi-svizhi?page=2"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-2">Page 2</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=3">Next</a>
+                """),
+            ["https://varus.ua/ovochi-svizhi?page=3"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-2">Duplicate</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=4">Next</a>
+                """)
+        }, out var handler);
+
+        await using var source = CreateCategorySource(seedPath, client, maxPagesPerSeed: 5);
+        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(
+            [
+                "https://varus.ua/product-page-1",
+                "https://varus.ua/product-page-2"
+            ],
+            result.Select(x => x.AbsoluteUri).OrderBy(x => x, StringComparer.Ordinal));
+        Assert.Equal(3, handler.RequestUris.Count);
+    }
+
+    [Fact]
+    public async Task CategorySeedSource_StopsOnMaxCategoryPagesPerSeed()
+    {
+        using var temp = new TempDirectory();
+        var seedPath = temp.WriteSeedFile(SeedJson("Fresh", "https://varus.ua/ovochi-svizhi"));
+        using var client = CreateTrackedHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://varus.ua/ovochi-svizhi"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-1">Page 1</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=2">Next</a>
+                """),
+            ["https://varus.ua/ovochi-svizhi?page=2"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-2">Page 2</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=3">Next</a>
+                """),
+            ["https://varus.ua/ovochi-svizhi?page=3"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-3">Page 3</a></div>
+                """)
+        }, out var handler);
+
+        await using var source = CreateCategorySource(seedPath, client, maxPagesPerSeed: 2);
+        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(
+            [
+                "https://varus.ua/product-page-1",
+                "https://varus.ua/product-page-2"
+            ],
+            result.Select(x => x.AbsoluteUri).OrderBy(x => x, StringComparer.Ordinal));
+        Assert.Equal(2, handler.RequestUris.Count);
+    }
+
+    [Fact]
+    public async Task CategorySeedSource_StopsOnNoNextPage()
+    {
+        using var temp = new TempDirectory();
+        var seedPath = temp.WriteSeedFile(SeedJson("Fresh", "https://varus.ua/ovochi-svizhi"));
+        using var client = CreateTrackedHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://varus.ua/ovochi-svizhi"] = Html(
+                """
+                <div class="product-card"><a href="/single-page-product">Single page</a></div>
+                """)
+        }, out var handler);
+
+        await using var source = CreateCategorySource(seedPath, client, maxPagesPerSeed: 5);
+        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(["https://varus.ua/single-page-product"], result.Select(x => x.AbsoluteUri));
+        Assert.Single(handler.RequestUris);
+    }
+
+    [Fact]
+    public async Task CategorySeedSource_DeduplicatesUrlsAcrossPages()
+    {
+        using var temp = new TempDirectory();
+        var seedPath = temp.WriteSeedFile(SeedJson("Fresh", "https://varus.ua/ovochi-svizhi"));
+        using var client = CreateHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://varus.ua/ovochi-svizhi"] = Html(
+                """
+                <div class="product-card"><a href="/same-product?utm=1">Same 1</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=2">Next</a>
+                """),
+            ["https://varus.ua/ovochi-svizhi?page=2"] = Html(
+                """
+                <div class="product-card"><a href="/same-product">Same 2</a></div>
+                """)
+        });
+
+        await using var source = CreateCategorySource(seedPath, client, maxPagesPerSeed: 5);
+        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(["https://varus.ua/same-product"], result.Select(x => x.AbsoluteUri));
+    }
+
+    [Fact]
     public void CategoryHtmlParser_DeduplicatesAndNormalizesProductLinks()
     {
         var result = CategoryProductUrlDiscoverySource.ExtractProductUrls(
@@ -159,7 +274,8 @@ public sealed class ProductUrlDiscoveryTests
 
         var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
 
-        Assert.Equal(["https://varus.ua/from-sitemap"], result);
+        Assert.Equal(ProductUrlDiscoverySourceKind.Sitemap, result.SourceKind);
+        Assert.Equal(["https://varus.ua/from-sitemap"], result.Urls);
         Assert.Equal(1, sitemap.Calls);
         Assert.Equal(0, category.Calls);
     }
@@ -173,7 +289,8 @@ public sealed class ProductUrlDiscoveryTests
 
         var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
 
-        Assert.Equal(["https://varus.ua/from-category"], result);
+        Assert.Equal(ProductUrlDiscoverySourceKind.CategorySeed, result.SourceKind);
+        Assert.Equal(["https://varus.ua/from-category"], result.Urls);
         Assert.Equal(1, category.Calls);
     }
 
@@ -186,7 +303,8 @@ public sealed class ProductUrlDiscoveryTests
 
         var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
 
-        Assert.Equal(["https://varus.ua/from-category"], result);
+        Assert.Equal(ProductUrlDiscoverySourceKind.CategorySeed, result.SourceKind);
+        Assert.Equal(["https://varus.ua/from-category"], result.Urls);
         Assert.Equal(1, category.Calls);
     }
 
@@ -204,12 +322,16 @@ public sealed class ProductUrlDiscoveryTests
         ICategoryProductUrlDiscoverySource category)
         => new(sitemap, category, NullLogger<ProductUrlDiscoveryService>.Instance);
 
-    private static CategoryProductUrlDiscoverySourceHarness CreateCategorySource(string seedPath, HttpClient client)
+    private static CategoryProductUrlDiscoverySourceHarness CreateCategorySource(
+        string seedPath,
+        HttpClient client,
+        int maxPagesPerSeed = 3)
     {
         var crawlerOptions = Options.Create(new CrawlerOptions
         {
             MaxProductsPerRun = 100,
             MaxUrls = 100,
+            MaxCategoryPagesPerSeed = maxPagesPerSeed,
             RequestsPerSecond = 100d
         });
         var coordinator = new VarusRequestCoordinator(crawlerOptions, NullLogger<VarusRequestCoordinator>.Instance);
@@ -231,11 +353,30 @@ public sealed class ProductUrlDiscoveryTests
     private static HttpClient CreateHttpClient(IReadOnlyDictionary<string, HttpResponseMessage> responses)
         => new(new FakeHttpMessageHandler(responses));
 
+    private static HttpClient CreateTrackedHttpClient(
+        IReadOnlyDictionary<string, HttpResponseMessage> responses,
+        out FakeHttpMessageHandler handler)
+    {
+        handler = new FakeHttpMessageHandler(responses);
+        return new HttpClient(handler);
+    }
+
     private static HttpResponseMessage Html(string html)
         => new(HttpStatusCode.OK)
         {
             Content = new StringContent(html, Encoding.UTF8, "text/html")
         };
+
+    private static string SeedJson(string name, string url) =>
+        $$"""
+          {
+            "Crawler": {
+              "CategorySeedUrls": [
+                { "name": "{{name}}", "url": "{{url}}" }
+              ]
+            }
+          }
+          """;
 
     private sealed class CategoryProductUrlDiscoverySourceHarness(
         CategoryProductUrlDiscoverySource source,
@@ -275,7 +416,7 @@ public sealed class ProductUrlDiscoveryTests
                 throw _exception;
             }
 
-            return Task.FromResult(_urls ?? []);
+            return Task.FromResult<IReadOnlyCollection<Uri>>(_urls ?? []);
         }
     }
 
@@ -287,10 +428,13 @@ public sealed class ProductUrlDiscoveryTests
     private sealed class FakeHttpMessageHandler(IReadOnlyDictionary<string, HttpResponseMessage> responses)
         : HttpMessageHandler
     {
+        public List<string> RequestUris { get; } = [];
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             var key = request.RequestUri?.AbsoluteUri ?? string.Empty;
+            RequestUris.Add(key);
             if (responses.TryGetValue(key, out var response))
             {
                 response.RequestMessage = request;

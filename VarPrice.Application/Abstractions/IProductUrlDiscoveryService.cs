@@ -1,6 +1,8 @@
+using VarPrice.Application.Models;
+
 namespace VarPrice.Application.Abstractions;
 
 public interface IProductUrlDiscoveryService
 {
-    Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct);
+    Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct);
 }

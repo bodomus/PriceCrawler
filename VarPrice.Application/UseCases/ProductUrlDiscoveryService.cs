@@ -10,14 +10,16 @@ public sealed class ProductUrlDiscoveryService(
     ICategoryProductUrlDiscoverySource categorySource,
     ILogger<ProductUrlDiscoveryService> logger) : IProductUrlDiscoveryService
 {
-    public async Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct)
+    public async Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct)
     {
         try
         {
             var sitemapUrls = await sitemapSource.DiscoverProductUrlsAsync(ct);
             if (sitemapUrls.Count > 0)
             {
-                return sitemapUrls.Select(x => x.AbsoluteUri).ToList();
+                return new ProductUrlDiscoveryResult(
+                    ProductUrlDiscoverySourceKind.Sitemap,
+                    sitemapUrls.Select(x => x.AbsoluteUri).ToList());
             }
 
             logger.LogWarning(
@@ -37,7 +39,9 @@ public sealed class ProductUrlDiscoveryService(
             logger.LogInformation(
                 "Product URL discovery completed using category seed fallback. ProductUrlCount={ProductUrlCount}",
                 categoryUrls.Count);
-            return categoryUrls.Select(x => x.AbsoluteUri).ToList();
+            return new ProductUrlDiscoveryResult(
+                ProductUrlDiscoverySourceKind.CategorySeed,
+                categoryUrls.Select(x => x.AbsoluteUri).ToList());
         }
 
         const string message =

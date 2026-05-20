@@ -755,13 +755,13 @@ public sealed class WorkerIntegrationTests
 
     private sealed class StaticSource(IReadOnlyList<string> urls) : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct) =>
-            Task.FromResult(urls);
+        public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct) =>
+            Task.FromResult(new ProductUrlDiscoveryResult(ProductUrlDiscoverySourceKind.Sitemap, urls));
     }
 
     private sealed class ThrowingSource : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct)
+        public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct)
             => throw new InvalidOperationException("fatal source error");
     }
 

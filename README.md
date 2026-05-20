@@ -190,6 +190,7 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Crawler:VegetablesUrlContains`
 - `Crawler:MaxProductsPerRun`
 - `Crawler:MaxUrls`
+- `Crawler:MaxCategoryPagesPerSeed` (default `3`)
 - `Crawler:MaxConcurrency` (default `4`)
 - `Crawler:RequestsPerSecond` (default `2.0`)
 - `Crawler:RequestTimeoutSeconds` (default `15`)
@@ -214,6 +215,7 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Crawler__VegetablesUrlContains`
 - `Crawler__MaxProductsPerRun`
 - `Crawler__MaxUrls`
+- `Crawler__MaxCategoryPagesPerSeed`
 - `Crawler__MaxConcurrency`
 - `Crawler__RequestsPerSecond`
 - `Crawler__RequestTimeoutSeconds`

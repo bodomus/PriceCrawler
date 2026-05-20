@@ -22,7 +22,6 @@ public sealed class CategoryProductUrlDiscoverySource(
     ILogger<CategoryProductUrlDiscoverySource> logger) : ICategoryProductUrlDiscoverySource
 {
     private static readonly Uri VarusBaseUri = new("https://varus.ua/");
-    private const int HtmlPreviewLimit = 512;
 
     public async Task<IReadOnlyCollection<Uri>> DiscoverProductUrlsAsync(CancellationToken ct)
     {
@@ -34,26 +33,58 @@ public sealed class CategoryProductUrlDiscoverySource(
         }
 
         var rawProductUrls = new List<string>();
+        var discoveredUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var maxPagesPerSeed = Math.Max(1, crawlerOptions.Value.MaxCategoryPagesPerSeed);
         foreach (var seed in seeds)
         {
             ct.ThrowIfCancellationRequested();
 
-            logger.LogInformation("Loading category page. Name={Name}; Url={Url}", seed.Name, seed.Url);
-            var html = await LoadCategoryHtmlAsync(seed, ct);
-            if (string.IsNullOrWhiteSpace(html))
+            var pageNumber = 1;
+            var pageUrl = seed.Url;
+            var visitedPageUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            while (true)
             {
-                continue;
+                ct.ThrowIfCancellationRequested();
+                visitedPageUrls.Add(pageUrl.AbsoluteUri);
+
+                logger.LogInformation(
+                    "Loading category page. Name={Name}; SeedUrl={SeedUrl}; PageUrl={PageUrl}; PageNumber={PageNumber}",
+                    seed.Name,
+                    seed.Url,
+                    pageUrl,
+                    pageNumber);
+
+                var html = await LoadCategoryHtmlAsync(seed, pageUrl, ct);
+                if (string.IsNullOrWhiteSpace(html))
+                {
+                    LogCategoryPageProcessed(seed, pageUrl, pageNumber, 0, 0, "PageUnavailable");
+                    break;
+                }
+
+                var extracted = ExtractProductUrls(html, pageUrl);
+                var newUrls = 0;
+                foreach (var productUrl in extracted)
+                {
+                    if (discoveredUrls.Add(productUrl.AbsoluteUri))
+                    {
+                        rawProductUrls.Add(productUrl.AbsoluteUri);
+                        newUrls++;
+                    }
+                }
+
+                var nextPageUrl = ExtractNextPageUrl(html, pageUrl, visitedPageUrls);
+                var stopReason = ResolveStopReason(newUrls, nextPageUrl, pageNumber, maxPagesPerSeed);
+                LogCategoryPageProcessed(seed, pageUrl, pageNumber, extracted.Count, newUrls, stopReason);
+
+                if (stopReason is not null)
+                {
+                    break;
+                }
+
+                pageUrl = nextPageUrl!;
+                pageNumber++;
             }
-
-            var extracted = ExtractProductUrls(html, seed.Url);
-            rawProductUrls.AddRange(extracted.Select(x => x.AbsoluteUri));
-
-            logger.LogInformation(
-                "Category page processed. Name={Name}; Url={Url}; ExtractedUrls={ExtractedUrls}; AcceptedUrls={AcceptedUrls}",
-                seed.Name,
-                seed.Url,
-                extracted.Count,
-                rawProductUrls.Count);
         }
 
         var filtered = ProductUrlFiltering.Apply(
@@ -69,6 +100,46 @@ public sealed class CategoryProductUrlDiscoverySource(
             filtered.Count);
 
         return filtered;
+    }
+
+    public static Uri? ExtractNextPageUrl(string html, Uri currentPageUrl, ISet<string>? visitedPageUrls = null)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return null;
+        }
+
+        var parser = new HtmlParser();
+        var document = parser.ParseDocument(html);
+        IEnumerable<IElement> candidates = document.QuerySelectorAll(
+            "a[rel='next' i][href], a.next[href], .next a[href], .pagination-next[href], .pagination-next a[href], [aria-label*='next' i][href], [aria-label*='наступ' i][href]");
+
+        if (!candidates.Any())
+        {
+            candidates = document.QuerySelectorAll("a[href]")
+                .Where(anchor => IsNextPageText(anchor.TextContent));
+        }
+
+        foreach (var candidate in candidates)
+        {
+            var href = candidate.GetAttribute("href");
+            if (string.IsNullOrWhiteSpace(href) ||
+                !Uri.TryCreate(currentPageUrl, href.Trim(), out var nextPageUrl) ||
+                !IsVarusHttpsUrl(nextPageUrl))
+            {
+                continue;
+            }
+
+            var normalized = NormalizePageUrl(nextPageUrl);
+            if (visitedPageUrls is not null && visitedPageUrls.Contains(normalized.AbsoluteUri))
+            {
+                continue;
+            }
+
+            return normalized;
+        }
+
+        return null;
     }
 
     public static IReadOnlyCollection<Uri> ExtractProductUrls(string html, Uri categoryUrl)
@@ -178,19 +249,20 @@ public sealed class CategoryProductUrlDiscoverySource(
         return results;
     }
 
-    private async Task<string?> LoadCategoryHtmlAsync(CategorySeedUrl seed, CancellationToken ct)
+    private async Task<string?> LoadCategoryHtmlAsync(CategorySeedUrl seed, Uri pageUrl, CancellationToken ct)
     {
         await requestCoordinator.AcquireRequestSlotAsync(ct);
         var http = httpClientFactory.CreateClient("varus");
-        using var request = new HttpRequestMessage(HttpMethod.Get, seed.Url);
+        using var request = new HttpRequestMessage(HttpMethod.Get, pageUrl);
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {
             logger.LogWarning(
-                "Category page skipped. Name={Name}; Url={Url}; FailureKind={FailureKind}; HttpStatus={HttpStatus}",
+                "Category page skipped. Name={Name}; SeedUrl={SeedUrl}; PageUrl={PageUrl}; FailureKind={FailureKind}; HttpStatus={HttpStatus}",
                 seed.Name,
                 seed.Url,
+                pageUrl,
                 ClassifyStatus(response.StatusCode),
                 (int)response.StatusCode);
             return null;
@@ -200,9 +272,10 @@ public sealed class CategoryProductUrlDiscoverySource(
         if (!contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning(
-                "Category page skipped. Name={Name}; Url={Url}; FailureKind=CategoryPageInvalidContentType; ContentType={ContentType}",
+                "Category page skipped. Name={Name}; SeedUrl={SeedUrl}; PageUrl={PageUrl}; FailureKind=CategoryPageInvalidContentType; ContentType={ContentType}",
                 seed.Name,
                 seed.Url,
+                pageUrl,
                 contentType);
             return null;
         }
@@ -211,13 +284,52 @@ public sealed class CategoryProductUrlDiscoverySource(
         if (string.IsNullOrWhiteSpace(html))
         {
             logger.LogWarning(
-                "Category page skipped. Name={Name}; Url={Url}; FailureKind=CategoryPageEmptyBody",
+                "Category page skipped. Name={Name}; SeedUrl={SeedUrl}; PageUrl={PageUrl}; FailureKind=CategoryPageEmptyBody",
                 seed.Name,
-                seed.Url);
+                seed.Url,
+                pageUrl);
             return null;
         }
 
         return html;
+    }
+
+    private void LogCategoryPageProcessed(
+        CategorySeedUrl seed,
+        Uri pageUrl,
+        int pageNumber,
+        int productUrlsFound,
+        int newProductUrls,
+        string? stopReason)
+    {
+        logger.LogInformation(
+            "Category seed page processed. SeedUrl={SeedUrl}; PageUrl={PageUrl}; PageNumber={PageNumber}; ProductUrlsFound={ProductUrlsFound}; NewProductUrls={NewProductUrls}; StopReason={StopReason}",
+            seed.Url,
+            pageUrl,
+            pageNumber,
+            productUrlsFound,
+            newProductUrls,
+            stopReason ?? string.Empty);
+    }
+
+    private static string? ResolveStopReason(int newUrls, Uri? nextPageUrl, int pageNumber, int maxPagesPerSeed)
+    {
+        if (newUrls == 0)
+        {
+            return "NoNewProductUrls";
+        }
+
+        if (nextPageUrl is null)
+        {
+            return "NoNextPage";
+        }
+
+        if (pageNumber >= maxPagesPerSeed)
+        {
+            return "MaxCategoryPagesPerSeed";
+        }
+
+        return null;
     }
 
     private static string? ValidateSeed(string name, string url, out Uri? uri)
@@ -292,6 +404,29 @@ public sealed class CategoryProductUrlDiscoverySource(
         }
 
         return true;
+    }
+
+    private static bool IsNextPageText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var value = text.Trim();
+        return value is ">" or "›" or "»" ||
+               value.Contains("next", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("наступ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Uri NormalizePageUrl(Uri uri)
+    {
+        var builder = new UriBuilder(uri)
+        {
+            Fragment = string.Empty
+        };
+
+        return builder.Uri;
     }
 
     private static string ClassifyStatus(HttpStatusCode statusCode) =>

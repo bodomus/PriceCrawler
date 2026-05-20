@@ -81,9 +81,7 @@ public static class ServiceCollectionExtensions
         var pathSetting = configuration.GetSection("Crawler").GetValue<string>("CategorySeedUrlsFilePath");
         var resolvedPath = string.IsNullOrWhiteSpace(pathSetting)
             ? string.Empty
-            : Path.IsPathRooted(pathSetting)
-                ? pathSetting
-                : Path.GetFullPath(Path.Combine(contentRootPath, pathSetting));
+            : ResolveConfiguredPath(pathSetting, contentRootPath);
 
         services.AddSingleton<IOptions<CategorySeedUrlFileOptions>>(Options.Create(new CategorySeedUrlFileOptions
         {
@@ -91,5 +89,28 @@ public static class ServiceCollectionExtensions
             ResolvedPath = resolvedPath
         }));
         return services;
+    }
+
+    private static string ResolveConfiguredPath(string pathSetting, string contentRootPath)
+    {
+        if (Path.IsPathRooted(pathSetting))
+        {
+            return pathSetting;
+        }
+
+        var contentRootPathCandidate = Path.GetFullPath(Path.Combine(contentRootPath, pathSetting));
+        if (File.Exists(contentRootPathCandidate))
+        {
+            return contentRootPathCandidate;
+        }
+
+        var parentDirectory = Directory.GetParent(contentRootPath)?.FullName;
+        if (string.IsNullOrWhiteSpace(parentDirectory))
+        {
+            return contentRootPathCandidate;
+        }
+
+        var parentPathCandidate = Path.GetFullPath(Path.Combine(parentDirectory, pathSetting));
+        return File.Exists(parentPathCandidate) ? parentPathCandidate : contentRootPathCandidate;
     }
 }

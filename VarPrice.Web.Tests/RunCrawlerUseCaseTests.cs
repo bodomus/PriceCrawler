@@ -32,10 +32,31 @@ public sealed class RunCrawlerUseCaseTests
         Assert.Equal(1, result.ProductsProcessed);
         Assert.Equal(0, result.Errors);
         Assert.Equal(RunStatus.Ok, crawlerRepo.LastStatus);
+        Assert.Equal("sitemap", crawlerRepo.LastSource);
         Assert.Equal(RunStatus.Ok, ingestionRepo.LastStatus);
         Assert.Null(ingestionRepo.LastError);
         Assert.Single(snapshotRepo.Observations);
         Assert.Empty(snapshotRepo.Errors);
+    }
+
+    [Fact]
+    public async Task RunVegetablesAsync_CategorySeedDiscovery_WritesCategorySeedSource()
+    {
+        var crawlerRepo = new FakeCrawlerRunRepository();
+        var ingestionRepo = new FakeIngestionRunRepository();
+        var queueRepo = new FakeQueueRepository();
+        var snapshotRepo = new FakePriceSnapshotRepository();
+        var source = new FakeDiscoveryService(
+            ["https://example/ovochi/1"],
+            ProductUrlDiscoverySourceKind.CategorySeed);
+        var extractor = new FakeExtractor(ProductExtractResult.Success(
+            new ProductCard("1", "name", "url", "item", 10m, 12m, true, true, null, null), 200, 10, 1.0d));
+
+        var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor);
+        var result = await sut.RunVegetablesAsync(CancellationToken.None);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Equal("category-seed", crawlerRepo.LastSource);
     }
 
     [Fact]
@@ -189,21 +210,23 @@ public sealed class RunCrawlerUseCaseTests
             NullLogger<RunCrawlerUseCase>.Instance);
     }
 
-    private sealed class FakeDiscoveryService(IReadOnlyList<string> urls) : IProductUrlDiscoveryService
+    private sealed class FakeDiscoveryService(
+        IReadOnlyList<string> urls,
+        ProductUrlDiscoverySourceKind sourceKind = ProductUrlDiscoverySourceKind.Sitemap) : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct) =>
-            Task.FromResult(urls);
+        public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct) =>
+            Task.FromResult(new ProductUrlDiscoveryResult(sourceKind, urls));
     }
 
     private sealed class ThrowingDiscoveryService : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct) =>
+        public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct) =>
             throw new InvalidOperationException("boom");
     }
 
     private sealed class ProductUrlDiscoveryUnavailableService : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct) =>
+        public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct) =>
             throw new ProductUrlDiscoveryUnavailableException("No product URLs found.");
     }
 
@@ -215,7 +238,13 @@ public sealed class RunCrawlerUseCaseTests
     private sealed class FakeCrawlerRunRepository : ICrawlerRunRepository
     {
         public RunStatus LastStatus { get; private set; } = RunStatus.Running;
-        public Task<long> StartAsync(string source, CancellationToken ct) => Task.FromResult(1L);
+        public string LastSource { get; private set; } = string.Empty;
+
+        public Task<long> StartAsync(string source, CancellationToken ct)
+        {
+            LastSource = source;
+            return Task.FromResult(1L);
+        }
 
         public Task FinishAsync(long runId, RunStatus status, string? note, CancellationToken ct)
         {
