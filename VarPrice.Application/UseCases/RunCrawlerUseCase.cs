@@ -16,8 +16,7 @@ namespace VarPrice.Application.UseCases;
 public sealed class RunCrawlerUseCase(
     IOptions<CrawlerOptions> options,
     IOptions<QueueOptions> queueOptions,
-    IOptions<UrlFilterOptions> urlFilterOptions,
-    IProductUrlSource sitemapReader,
+    IProductUrlDiscoveryService productUrlDiscoveryService,
     IProductCardExtractor extractor,
     ICrawlerRunRepository crawlerRunRepository,
     IIngestionRunRepository ingestionRunRepository,
@@ -34,24 +33,7 @@ public sealed class RunCrawlerUseCase(
 
         try
         {
-            var urls = await sitemapReader.GetProductUrlsAsync(opt.SitemapIndexUrl, ct);
-            if (!string.IsNullOrWhiteSpace(opt.VegetablesUrlContains))
-            {
-                urls = urls.Where(x => x.Contains(opt.VegetablesUrlContains, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
-
-            var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
-            if (excluded.Length > 0)
-            {
-                urls = urls
-                    .Where(u => !excluded.Any(ex => u.Contains(ex, StringComparison.OrdinalIgnoreCase)))
-                    .ToList();
-            }
-
-            var maxProductsPerRun = Math.Max(1, opt.MaxProductsPerRun);
-            var maxUrls = Math.Max(1, opt.MaxUrls);
-            urls = urls.Take(Math.Min(maxProductsPerRun, maxUrls)).ToList();
+            var urls = await productUrlDiscoveryService.DiscoverProductUrlsAsync(ct);
 
             var queueItems = urls
                 .Select(url => new QueueEnqueueItem(url, BuildIdempotencyKey(runId, url)))
@@ -83,10 +65,9 @@ public sealed class RunCrawlerUseCase(
                 stats.Dead,
                 note);
         }
-        catch (SitemapUnavailableException ex)
+        catch (ProductUrlDiscoveryUnavailableException ex)
         {
-            const string errorCode = "SitemapUnavailable";
-            var errorInfo = new ErrorInfo(errorCode, ex.Message);
+            var errorInfo = new ErrorInfo(CrawlerErrorCodes.ProductUrlDiscoveryUnavailable, ex.Message);
             await ingestionRunRepository.FinishAsync(ingestionRunId, RunStatus.Error, errorInfo, ct);
             await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, ex.Message, ct);
             return new CrawlerRunResult(

@@ -1,0 +1,733 @@
+HTTP/1.1 404 Not Found
+Date: Tue, 19 May 2026 05:57:31 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+vary: Accept-Encoding
+x-powered-by: PHP/8.3.31
+Set-Cookie: PHPSESSID=8c2fe7c382a3108d7486885775ada904; expires=Tue, 19 May 2026 06:57:31 GMT; Max-Age=3600; path=/; domain=varus.ua; secure; HttpOnly; SameSite=Lax
+pragma: cache
+expires: Wed, 20 May 2026 05:57:31 GMT
+Cache-Control: max-age=0, must-revalidate, no-cache, no-store
+x-magento-tags: cat_c,cat_c_13762,cat_c_59856,cat_c_59179,cat_c_58662,cat_c_58819,cat_c_59859,cat_c_59543,cat_c_59597,cat_c_53253,cat_c_53028,cat_c_53051,cat_c_53297,cat_c_53029,cat_c_53048,cat_c_53036,cat_c_52876,cat_c_53273,cat_c_52971,cat_c_52905,cat_c_52956,cat_c_52922,cat_c_52962,cat_c_58295,cat_c_53249,cat_c_52866,cat_c_57351,cat_c_52981,cat_c_53168,cat_c_53244,cat_c_53085,cat_c_53067,store,cms_b,cms_p_1,FPC
+x-content-type-options: nosniff
+x-xss-protection: 1; mode=block
+x-frame-options: SAMEORIGIN
+strict-transport-security: max-age=31536000; includeSubDomains
+cf-cache-status: DYNAMIC
+Server: cloudflare
+CF-RAY: 9fe0dd589f5fc2dc-VIE
+
+<!doctype html>
+<html lang="ru">
+    <head >
+        <script>
+    var LOCALE = 'ru\u002DRU';
+    var BASE_URL = 'https\u003A\u002F\u002Fvarus.ua\u002F';
+    var require = {
+        'baseUrl': 'https\u003A\u002F\u002Fazgwcsav2varusprod01.blob.core.windows.net\u002Fazgwc\u002Dblob\u002Dstatic\u002Dvarus\u002Dprod\u002D01\u002Fback\u002Fstatic\u002Fversion1779136040\u002Ffrontend\u002FMagento\u002Fluma\u002Fru_RU'
+    };</script>        <meta charset="utf-8"/>
+<meta name="title" content="404 Not Found"/>
+<meta name="description" content="Page description"/>
+<meta name="keywords" content="Page keywords"/>
+<meta name="robots" content="INDEX,FOLLOW"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="format-detection" content="telephone=no"/>
+<title>404 Not Found</title>
+<link  rel="stylesheet" type="text/css"  media="all" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/mage/calendar.css" />
+<link  rel="stylesheet" type="text/css"  media="all" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/css/styles-m.css" />
+<link  rel="stylesheet" type="text/css"  media="all" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/jquery/uppy/dist/uppy-custom.css" />
+<link  rel="stylesheet" type="text/css"  media="all" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/Amasty_Customform/css/form-builder.css" />
+<link  rel="stylesheet" type="text/css"  media="all" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/Amasty_Customform/css/form-render.css" />
+<link  rel="stylesheet" type="text/css"  media="all" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/Magefan_Blog/css/blog-m.css" />
+<link  rel="stylesheet" type="text/css"  media="all" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/Magefan_Blog/css/blog-new.css" />
+<link  rel="stylesheet" type="text/css"  media="all" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/Magefan_Blog/css/blog-custom.css" />
+<link  rel="stylesheet" type="text/css"  media="screen and (min-width: 768px)" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/css/styles-l.css" />
+<link  rel="stylesheet" type="text/css"  media="print" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/css/print.css" />
+<link  rel="icon" type="image/x-icon" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/Magento_Theme/favicon.ico" />
+<link  rel="shortcut icon" type="image/x-icon" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/Magento_Theme/favicon.ico" />
+<script  type="text/javascript"  src="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/requirejs/require.js"></script>
+<script  type="text/javascript"  src="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/mage/requirejs/mixins.js"></script>
+<script  type="text/javascript"  src="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/requirejs-config.js"></script>
+<link rel="preload" as="font" crossorigin="anonymous" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/fonts/opensans/light/opensans-300.woff2" />
+<link rel="preload" as="font" crossorigin="anonymous" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/fonts/opensans/regular/opensans-400.woff2" />
+<link rel="preload" as="font" crossorigin="anonymous" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/fonts/opensans/semibold/opensans-600.woff2" />
+<link rel="preload" as="font" crossorigin="anonymous" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/fonts/opensans/bold/opensans-700.woff2" />
+<link rel="preload" as="font" crossorigin="anonymous" href="https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/fonts/Luma-Icons.woff2" />
+            <script type="text/x-magento-init">
+        {
+            "*": {
+                "Magento_PageCache/js/form-key-provider": {
+                    "isPaginationCacheEnabled":
+                        0                }
+            }
+        }
+    </script>
+    </head>
+    <body data-container="body"
+          data-mage-init='{"loaderAjax": {}, "loader": { "icon": "https://azgwcsav2varusprod01.blob.core.windows.net/azgwc-blob-static-varus-prod-01/back/static/version1779136040/frontend/Magento/luma/ru_RU/images/loader-2.gif"}}'
+        id="html-body" class="cms-no-route cms-noroute-index page-layout-2columns-right">
+        
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_PageBuilder/js/widget-initializer": {
+                "config": {"[data-content-type=\"slider\"][data-appearance=\"default\"]":{"Magento_PageBuilder\/js\/content-type\/slider\/appearance\/default\/widget":false},"[data-content-type=\"map\"]":{"Magento_PageBuilder\/js\/content-type\/map\/appearance\/default\/widget":false},"[data-content-type=\"row\"]":{"Magento_PageBuilder\/js\/content-type\/row\/appearance\/default\/widget":false},"[data-content-type=\"tabs\"]":{"Magento_PageBuilder\/js\/content-type\/tabs\/appearance\/default\/widget":false},"[data-content-type=\"slide\"]":{"Magento_PageBuilder\/js\/content-type\/slide\/appearance\/default\/widget":{"buttonSelector":".pagebuilder-slide-button","showOverlay":"hover","dataRole":"slide"}},"[data-content-type=\"banner\"]":{"Magento_PageBuilder\/js\/content-type\/banner\/appearance\/default\/widget":{"buttonSelector":".pagebuilder-banner-button","showOverlay":"hover","dataRole":"banner"}},"[data-content-type=\"buttons\"]":{"Magento_PageBuilder\/js\/content-type\/buttons\/appearance\/inline\/widget":false},"[data-content-type=\"products\"][data-appearance=\"carousel\"]":{"Magento_PageBuilder\/js\/content-type\/products\/appearance\/carousel\/widget":false}},
+                "breakpoints": {"desktop":{"label":"Desktop","stage":true,"default":true,"class":"desktop-switcher","icon":"Magento_PageBuilder::css\/images\/switcher\/switcher-desktop.svg","conditions":{"min-width":"1024px"},"options":{"products":{"default":{"slidesToShow":"5"}}}},"tablet":{"conditions":{"max-width":"1024px","min-width":"768px"},"options":{"products":{"default":{"slidesToShow":"4"},"continuous":{"slidesToShow":"3"}}}},"mobile":{"label":"Mobile","stage":true,"class":"mobile-switcher","icon":"Magento_PageBuilder::css\/images\/switcher\/switcher-mobile.svg","media":"only screen and (max-width: 768px)","conditions":{"max-width":"768px","min-width":"640px"},"options":{"products":{"default":{"slidesToShow":"3"}}}},"mobile-small":{"conditions":{"max-width":"640px"},"options":{"products":{"default":{"slidesToShow":"2"},"continuous":{"slidesToShow":"1"}}}}}            }
+        }
+    }
+</script>
+
+<div class="cookie-status-message" id="cookie-status">
+    The store will not work correctly when cookies are disabled.</div>
+<script type="text&#x2F;javascript">document.querySelector("#cookie-status").style.display = "none";</script>
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "cookieStatus": {}
+        }
+    }
+</script>
+
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "mage/cookies": {
+                "expires": null,
+                "path": "\u002F",
+                "domain": ".varus.ua",
+                "secure": true,
+                "lifetime": "3600"
+            }
+        }
+    }
+</script>
+    <noscript>
+        <div class="message global noscript">
+            <div class="content">
+                <p>
+                    <strong>JavaScript seems to be disabled in your browser.</strong>
+                    <span>
+                        For the best experience on our site, be sure to turn on Javascript in your browser.                    </span>
+                </p>
+            </div>
+        </div>
+    </noscript>
+
+<script>
+    window.cookiesConfig = window.cookiesConfig || {};
+    window.cookiesConfig.secure = true;
+</script><script>    require.config({
+        map: {
+            '*': {
+                wysiwygAdapter: 'mage/adminhtml/wysiwyg/tiny_mce/tinymceAdapter'
+            }
+        }
+    });</script><script>    require.config({
+        paths: {
+            googleMaps: 'https\u003A\u002F\u002Fmaps.googleapis.com\u002Fmaps\u002Fapi\u002Fjs\u003Fv\u003D3.53\u0026key\u003D'
+        },
+        config: {
+            'Magento_PageBuilder/js/utils/map': {
+                style: '',
+            },
+            'Magento_PageBuilder/js/content-type/map/preview': {
+                apiKey: '',
+                apiKeyErrorMessage: 'You\u0020must\u0020provide\u0020a\u0020valid\u0020\u003Ca\u0020href\u003D\u0027https\u003A\u002F\u002Fvarus.ua\u002Fadminhtml\u002Fsystem_config\u002Fedit\u002Fsection\u002Fcms\u002F\u0023cms_pagebuilder\u0027\u0020target\u003D\u0027_blank\u0027\u003EGoogle\u0020Maps\u0020API\u0020key\u003C\u002Fa\u003E\u0020to\u0020use\u0020a\u0020map.'
+            },
+            'Magento_PageBuilder/js/form/element/map': {
+                apiKey: '',
+                apiKeyErrorMessage: 'You\u0020must\u0020provide\u0020a\u0020valid\u0020\u003Ca\u0020href\u003D\u0027https\u003A\u002F\u002Fvarus.ua\u002Fadminhtml\u002Fsystem_config\u002Fedit\u002Fsection\u002Fcms\u002F\u0023cms_pagebuilder\u0027\u0020target\u003D\u0027_blank\u0027\u003EGoogle\u0020Maps\u0020API\u0020key\u003C\u002Fa\u003E\u0020to\u0020use\u0020a\u0020map.'
+            },
+        }
+    });</script><script>
+    require.config({
+        shim: {
+            'Magento_PageBuilder/js/utils/map': {
+                deps: ['googleMaps']
+            }
+        }
+    });</script>
+<div class="top-banner">
+    <form method="POST" target="">
+        <button class="button-prg" name="prglink"
+                 type="submit"  value="https://varus.ua/"
+                >
+            <picture>
+                <source media="(max-width:768px)" srcset="https://magento-admin.varus.ua/media/eltrino_banners/_375_250__466.png" alt="Все на тиждень — в одному замовленні! (головний)">
+                <source media="(min-width:768px)" srcset="https://magento-admin.varus.ua/media/eltrino_banners/_1190_380__458.png" alt="Все на тиждень — в одному замовленні! (головний)" />
+                <img src="" alt="Все на тиждень — в одному замовленні! (головний)" />
+            </picture>
+        </button>
+    </form>
+</div>
+<div class="page-wrapper"><header class="page-header"><div class="panel wrapper"><div class="panel header"><a class="action skip contentarea"
+   href="#contentarea">
+    <span>
+        Skip to Content    </span>
+</a>
+        <div class="switcher language switcher-language" data-ui-id="language-switcher" id="switcher-language">
+        <strong class="label switcher-label"><span>Язык</span></strong>
+        <div class="actions dropdown options switcher-options">
+            <div class="action toggle switcher-trigger"
+                 id="switcher-language-trigger"
+                 data-mage-init='{"dropdown":{}}'
+                 data-toggle="dropdown"
+                 data-trigger-keypress-button="true">
+                <strong class="view-ru">
+                    <span>RU</span>
+                </strong>
+            </div>
+            <ul class="dropdown switcher-dropdown"
+                data-target="dropdown">
+                                                                                                <li class="view-ua switcher-option">
+                            <a href="https://varus.ua/stores/store/redirect/___store/ua/___from_store/ru/uenc/aHR0cHM6Ly92YXJ1cy51YS9zaXRlbWFwLWluZGV4LnhtbD9fX19zdG9yZT11YQ~~/">
+                                UA                            </a>
+                        </li>
+                                                </ul>
+        </div>
+    </div>
+<ul class="header links">    <li class="greet welcome" data-bind="scope: 'customer'">
+        <!-- ko if: customer().fullname  -->
+        <span class="logged-in"
+              data-bind="text: new String('Добро пожаловать, %1!').
+              replace('%1', customer().fullname)">
+        </span>
+        <!-- /ko -->
+        <!-- ko ifnot: customer().fullname  -->
+        <span class="not-logged-in"
+              data-bind="text: 'Приветствие по умолчанию!'"></span>
+                <!-- /ko -->
+    </li>
+        <script type="text/x-magento-init">
+        {
+            "*": {
+                "Magento_Ui/js/core/app": {
+                    "components": {
+                        "customer": {
+                            "component": "Magento_Customer/js/view/customer"
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+<li class="link authorization-link" data-label="или">
+    <a href="https://varus.ua/customer/account/login/referer/aHR0cHM6Ly92YXJ1cy51YS9jbXMvbm9yb3V0ZS9pbmRleC8~/"        >Войти</a>
+</li>
+<li class="nav item"><a href="https://varus.ua/knowledge-base/">FAQ</a></li><li><a href="https://varus.ua/customer/account/create/" id="idPkRuazOO" >Создать учетную запись</a></li></ul></div></div><div class="header content"><span data-action="toggle-nav" class="action nav-toggle"><span>Toggle Nav</span></span>
+<a
+    class="logo"
+    href="https://varus.ua/"
+    title=""
+    aria-label="store logo">
+    <img src="https://magento-admin.varus.ua/media/logo/stores/1/152_24_3_1__2.svg"
+         title=""
+         alt=""
+            width="170"                />
+</a>
+
+<div data-block="minicart" class="minicart-wrapper">
+    <a class="action showcart" href="https://varus.ua/checkout/cart/"
+       data-bind="scope: 'minicart_content'">
+        <span class="text">Моя корзина</span>
+        <span class="counter qty empty"
+              data-bind="css: { empty: !!getCartParam('summary_count') == false && !isLoading() },
+               blockLoader: isLoading">
+            <span class="counter-number">
+                <!-- ko if: getCartParam('summary_count') -->
+                <!-- ko text: getCartParam('summary_count').toLocaleString(window.LOCALE) --><!-- /ko -->
+                <!-- /ko -->
+            </span>
+            <span class="counter-label">
+            <!-- ko if: getCartParam('summary_count') -->
+                <!-- ko text: getCartParam('summary_count').toLocaleString(window.LOCALE) --><!-- /ko -->
+                <!-- ko i18n: 'items' --><!-- /ko -->
+            <!-- /ko -->
+            </span>
+        </span>
+    </a>
+            <div class="block block-minicart"
+             data-role="dropdownDialog"
+             data-mage-init='{"dropdownDialog":{
+                "appendTo":"[data-block=minicart]",
+                "triggerTarget":".showcart",
+                "timeout": "2000",
+                "closeOnMouseLeave": false,
+                "closeOnEscape": true,
+                "triggerClass":"active",
+                "parentClass":"active",
+                "buttons":[]}}'>
+            <div id="minicart-content-wrapper" data-bind="scope: 'minicart_content'">
+                <!-- ko template: getTemplate() --><!-- /ko -->
+            </div>
+                    </div>
+        <script>window.checkout = {"shoppingCartUrl":"https:\/\/varus.ua\/checkout\/cart\/","checkoutUrl":"https:\/\/varus.ua\/checkout\/","updateItemQtyUrl":"https:\/\/varus.ua\/checkout\/sidebar\/updateItemQty\/","removeItemUrl":"https:\/\/varus.ua\/checkout\/sidebar\/removeItem\/","imageTemplate":"Magento_Catalog\/product\/image_with_borders","baseUrl":"https:\/\/varus.ua\/","minicartMaxItemsVisible":5,"websiteId":"1","maxItemsToDisplay":10,"storeId":"1","storeGroupId":"1","customerLoginUrl":"https:\/\/varus.ua\/customer\/account\/login\/referer\/aHR0cHM6Ly92YXJ1cy51YS9jbXMvbm9yb3V0ZS9pbmRleC8~\/","isRedirectRequired":false,"autocomplete":"off","captcha":{"user_login":{"isCaseSensitive":false,"imageHeight":50,"imageSrc":"","refreshUrl":"https:\/\/varus.ua\/captcha\/refresh\/","isRequired":false,"timestamp":1779170251}}}</script>    <script type="text/x-magento-init">
+    {
+        "[data-block='minicart']": {
+            "Magento_Ui/js/core/app": {"components":{"minicart_content":{"children":{"subtotal.container":{"children":{"subtotal":{"children":{"subtotal.totals":{"config":{"display_cart_subtotal_incl_tax":0,"display_cart_subtotal_excl_tax":1,"template":"Magento_Tax\/checkout\/minicart\/subtotal\/totals"},"children":{"subtotal.totals.msrp":{"component":"Magento_Msrp\/js\/view\/checkout\/minicart\/subtotal\/totals","config":{"displayArea":"minicart-subtotal-hidden","template":"Magento_Msrp\/checkout\/minicart\/subtotal\/totals"}}},"component":"Magento_Tax\/js\/view\/checkout\/minicart\/subtotal\/totals"}},"component":"uiComponent","config":{"template":"Magento_Checkout\/minicart\/subtotal"}}},"component":"uiComponent","config":{"displayArea":"subtotalContainer"}},"item.renderer":{"component":"Magento_Checkout\/js\/view\/cart-item-renderer","config":{"displayArea":"defaultRenderer","template":"Magento_Checkout\/minicart\/item\/default"},"children":{"item.image":{"component":"Magento_Catalog\/js\/view\/image","config":{"template":"Magento_Catalog\/product\/image","displayArea":"itemImage"}},"checkout.cart.item.price.sidebar":{"component":"uiComponent","config":{"template":"Magento_Checkout\/minicart\/item\/price","displayArea":"priceSidebar"}}}},"extra_info":{"component":"uiComponent","config":{"displayArea":"extraInfo"}},"promotion":{"component":"uiComponent","config":{"displayArea":"promotion"}}},"config":{"itemRenderer":{"default":"defaultRenderer","simple":"defaultRenderer","virtual":"defaultRenderer"},"template":"Magento_Checkout\/minicart\/content"},"component":"Magento_Checkout\/js\/view\/minicart"}},"types":[]}        },
+        "*": {
+            "Magento_Ui/js/block-loader": "https\u003A\u002F\u002Fazgwcsav2varusprod01.blob.core.windows.net\u002Fazgwc\u002Dblob\u002Dstatic\u002Dvarus\u002Dprod\u002D01\u002Fback\u002Fstatic\u002Fversion1779136040\u002Ffrontend\u002FMagento\u002Fluma\u002Fru_RU\u002Fimages\u002Floader\u002D1.gif"
+        }
+    }
+    </script>
+</div>
+<div class="block block-search">
+    <div class="block block-title"><strong>Поиск</strong></div>
+    <div class="block block-content">
+        <form class="form minisearch" id="search_mini_form"
+              action="https://varus.ua/catalogsearch/result/" method="get">
+                        <div class="field search">
+                <label class="label" for="search" data-role="minisearch-label">
+                    <span>Поиск</span>
+                </label>
+                <div class="control">
+                    <input id="search"
+                           data-mage-init='{
+                            "quickSearch": {
+                                "formSelector": "#search_mini_form",
+                                "url": "https://varus.ua/search/ajax/suggest/",
+                                "destinationSelector": "#search_autocomplete",
+                                "minSearchLength": "3"
+                            }
+                        }'
+                           type="text"
+                           name="q"
+                           value=""
+                           placeholder="&#x0418;&#x0449;&#x0438;&#x0442;&#x0435;&#x20;&#x0437;&#x0434;&#x0435;&#x0441;&#x044C;..."
+                           class="input-text"
+                           maxlength="128"
+                           role="combobox"
+                           aria-haspopup="false"
+                           aria-autocomplete="both"
+                           autocomplete="off"
+                           aria-expanded="false"/>
+                    <div id="search_autocomplete" class="search-autocomplete"></div>
+                    <div class="nested">
+    <a class="action advanced" href="https://varus.ua/catalogsearch/advanced/" data-action="advanced-search">
+        Расширенный поиск    </a>
+</div>
+                </div>
+            </div>
+            <div class="actions">
+                <button type="submit"
+                        title="Поиск"
+                        class="action search"
+                        aria-label="Search"
+                >
+                    <span>Поиск</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<ul class="compare wrapper"><li class="item link compare" data-bind="scope: 'compareProducts'" data-role="compare-products-link">
+    <a class="action compare no-display" title="&#x0421;&#x0440;&#x0430;&#x0432;&#x043D;&#x0435;&#x043D;&#x0438;&#x0435;&#x20;&#x043F;&#x0440;&#x043E;&#x0434;&#x0443;&#x043A;&#x0442;&#x043E;&#x0432;"
+       data-bind="attr: {'href': compareProducts().listUrl}, css: {'no-display': !compareProducts().count}"
+    >
+        Сравнение продуктов        <span class="counter qty" data-bind="text: compareProducts().countCaption"></span>
+    </a>
+</li>
+<script type="text/x-magento-init">
+{"[data-role=compare-products-link]": {"Magento_Ui/js/core/app": {"components":{"compareProducts":{"component":"Magento_Catalog\/js\/view\/compare-products"}}}}}
+</script>
+</ul></div></header>    <div class="sections nav-sections">
+                <div class="section-items nav-sections-items"
+             data-mage-init='{"tabs":{"openedState":"active"}}'>
+                                            <div class="section-item-title nav-sections-item-title"
+                     data-role="collapsible">
+                    <a class="nav-sections-item-switch"
+                       data-toggle="switch" href="#store.menu">
+                        Меню                    </a>
+                </div>
+                <div class="section-item-content nav-sections-item-content"
+                     id="store.menu"
+                     data-role="content">
+                    
+<nav class="navigation" data-action="navigation">
+    <ul data-mage-init='{"menu":{"responsive":true, "expanded":true, "position":{"my":"left top","at":"left bottom"}}}'>
+        <li  class="level0 nav-1 category-item first level-top"><a href="https://varus.ua/rasprodazha"  class="level-top" ><span>Спецпредложения</span></a></li><li  class="level0 nav-2 category-item level-top"><a href="https://varus.ua/price-of-the-week"  class="level-top" ><span>Цена недели</span></a></li><li  class="level0 nav-3 category-item level-top"><a href="https://varus.ua/tilki-onlajn"  class="level-top" ><span>Только онлайн</span></a></li><li  class="level0 nav-4 category-item level-top"><a href="https://varus.ua/catalog/category/view/s/zakazyvaj-novoju-poshtoju/id/58662/"  class="level-top" ><span>Заказывай Новою поштою</span></a></li><li  class="level0 nav-5 category-item level-top"><a href="https://varus.ua/natsionalnij-keshbek"  class="level-top" ><span>Национальный кешбек</span></a></li><li  class="level0 nav-6 category-item level-top"><a href="https://varus.ua/winter-support"  class="level-top" ><span>Зимова підтримка</span></a></li><li  class="level0 nav-7 category-item level-top parent"><a href="https://varus.ua/healthy"  class="level-top" ><span>Здоровое питание и Эко товары</span></a><ul class="level0 submenu"><li  class="level1 nav-7-1 category-item first"><a href="https://varus.ua/organic-food" ><span>Органические продукты</span></a></li><li  class="level1 nav-7-2 category-item"><a href="https://varus.ua/vegan-food" ><span>Веганские продукты</span></a></li><li  class="level1 nav-7-3 category-item"><a href="https://varus.ua/glutenfree-food" ><span>Безглютеновые продукты</span></a></li><li  class="level1 nav-7-4 category-item"><a href="https://varus.ua/lactfree-food" ><span>Безлактозные продукты</span></a></li><li  class="level1 nav-7-5 category-item"><a href="https://varus.ua/nosugar-food" ><span>Продукты без добавления сахара</span></a></li><li  class="level1 nav-7-6 category-item"><a href="https://varus.ua/sport-food" ><span>Продукты для спортсменов</span></a></li><li  class="level1 nav-7-7 category-item"><a href="https://varus.ua/nocoff-food" ><span>Кофе без кофеина</span></a></li><li  class="level1 nav-7-8 category-item last"><a href="https://varus.ua/eco-products" ><span>Экологическая бытовая химия</span></a></li></ul></li><li  class="level0 nav-8 category-item level-top parent"><a href="https://varus.ua/own-trademarks"  class="level-top" ><span>Собственные марки</span></a><ul class="level0 submenu"><li  class="level1 nav-8-1 category-item first"><a href="https://varus.ua/own-food" ><span>Продукты</span></a></li><li  class="level1 nav-8-2 category-item"><a href="https://varus.ua/own-drinks" ><span>Вода, соки и напитки</span></a></li><li  class="level1 nav-8-3 category-item"><a href="https://varus.ua/own-hotdrinks" ><span>Чай, кофе и горячие напитки</span></a></li><li  class="level1 nav-8-4 category-item"><a href="https://varus.ua/own-alco" ><span>Алкоголь</span></a></li><li  class="level1 nav-8-5 category-item"><a href="https://varus.ua/own-care" ><span>Гигиена и уход</span></a></li><li  class="level1 nav-8-6 category-item"><a href="https://varus.ua/own-clean" ><span>Бытовая химия</span></a></li><li  class="level1 nav-8-7 category-item"><a href="https://varus.ua/own-house" ><span>Товары для дома</span></a></li><li  class="level1 nav-8-8 category-item"><a href="https://varus.ua/own-pets" ><span>Товары для животных</span></a></li><li  class="level1 nav-8-9 category-item last"><a href="https://varus.ua/own-children" ><span>Товары для детей</span></a></li></ul></li><li  class="level0 nav-9 category-item level-top parent"><a href="https://varus.ua/frukti-ovochi-gorihi"  class="level-top" ><span>Фрукты, овощи, орехи</span></a><ul class="level0 submenu"><li  class="level1 nav-9-1 category-item first"><a href="https://varus.ua/ovochi-svizhi" ><span>Овощи свежие</span></a></li><li  class="level1 nav-9-2 category-item parent"><a href="https://varus.ua/frukti-svizhi" ><span>Фрукты свежие</span></a><ul class="level1 submenu"><li  class="level2 nav-9-2-1 category-item first"><a href="https://varus.ua/banani" ><span>Бананы</span></a></li><li  class="level2 nav-9-2-2 category-item"><a href="https://varus.ua/yabluka" ><span>Яблоки</span></a></li><li  class="level2 nav-9-2-3 category-item"><a href="https://varus.ua/grushi" ><span>Груши</span></a></li><li  class="level2 nav-9-2-4 category-item"><a href="https://varus.ua/vinograd" ><span>Виноград</span></a></li><li  class="level2 nav-9-2-5 category-item"><a href="https://varus.ua/ananasi" ><span>Ананасы</span></a></li><li  class="level2 nav-9-2-6 category-item"><a href="https://varus.ua/mango" ><span>Манго</span></a></li><li  class="level2 nav-9-2-7 category-item"><a href="https://varus.ua/kivi" ><span>Киви</span></a></li><li  class="level2 nav-9-2-8 category-item"><a href="https://varus.ua/citrusovi" ><span>Цитрусовые фрукты</span></a></li><li  class="level2 nav-9-2-9 category-item"><a href="https://varus.ua/tropichni-frukti" ><span>Тропические фрукты</span></a></li><li  class="level2 nav-9-2-10 category-item"><a href="https://varus.ua/persiki-slivi-abrikosi" ><span>Персики, сливы, абрикосы</span></a></li><li  class="level2 nav-9-2-11 category-item last"><a href="https://varus.ua/kavuni-ta-dini" ><span>Арбузы и дыни</span></a></li></ul></li><li  class="level1 nav-9-3 category-item"><a href="https://varus.ua/zelen-svizha" ><span>Зелень свежая</span></a></li><li  class="level1 nav-9-4 category-item"><a href="https://varus.ua/yagodi-svizhi" ><span>Ягоды свежие</span></a></li><li  class="level1 nav-9-5 category-item"><a href="https://varus.ua/gribi" ><span>Грибы</span></a></li><li  class="level1 nav-9-6 category-item"><a href="https://varus.ua/suhofrukti" ><span>Сухофрукты и цукаты</span></a></li><li  class="level1 nav-9-7 category-item last"><a href="https://varus.ua/gorihi-ta-nasinnya" ><span>Орехи и семена</span></a></li></ul></li><li  class="level0 nav-10 category-item level-top parent"><a href="https://varus.ua/myasni-virobi-ta-yaycya"  class="level-top" ><span>Мясо и полуфабрикаты</span></a><ul class="level0 submenu"><li  class="level1 nav-10-1 category-item first"><a href="https://varus.ua/kuryatina" ><span>Курятина</span></a></li><li  class="level1 nav-10-2 category-item"><a href="https://varus.ua/indichatina" ><span>Индюшатина</span></a></li><li  class="level1 nav-10-3 category-item"><a href="https://varus.ua/yalovichina" ><span>Говядина</span></a></li><li  class="level1 nav-10-4 category-item"><a href="https://varus.ua/svinina" ><span>Свинина</span></a></li><li  class="level1 nav-10-5 category-item"><a href="https://varus.ua/myaso-kachki" ><span>Мясо утки</span></a></li><li  class="level1 nav-10-6 category-item"><a href="https://varus.ua/catalog/category/view/s/prochee-mjaso/id/59995/" ><span>Прочее мясо</span></a></li><li  class="level1 nav-10-7 category-item"><a href="https://varus.ua/shashlik-marinovaniy" ><span>Маринованный шашлык</span></a></li><li  class="level1 nav-10-8 category-item"><a href="https://varus.ua/stejki" ><span>Стейки</span></a></li><li  class="level1 nav-10-9 category-item"><a href="https://varus.ua/farsh" ><span>Фарш</span></a></li><li  class="level1 nav-10-10 category-item"><a href="https://varus.ua/napivfabrikati-myasni" ><span>Мясные полуфабрикаты</span></a></li><li  class="level1 nav-10-11 category-item last"><a href="https://varus.ua/subprodukti" ><span>Субпродукты</span></a></li></ul></li><li  class="level0 nav-11 category-item level-top parent"><a href="https://varus.ua/riba"  class="level-top" ><span>Рыба и морепродукты</span></a><ul class="level0 submenu"><li  class="level1 nav-11-1 category-item first"><a href="https://varus.ua/krevetki" ><span>Креветки</span></a></li><li  class="level1 nav-11-2 category-item"><a href="https://varus.ua/riba-zamorozhena" ><span>Замороженная рыба</span></a></li><li  class="level1 nav-11-3 category-item"><a href="https://varus.ua/krabovi-palochki" ><span>Крабовые палочки</span></a></li><li  class="level1 nav-11-4 category-item"><a href="https://varus.ua/ikra-ribi" ><span>Икра</span></a></li><li  class="level1 nav-11-5 category-item"><a href="https://varus.ua/moluski" ><span>Морепродукты</span></a></li><li  class="level1 nav-11-6 category-item"><a href="https://varus.ua/riba-oholodzhena" ><span>Охлажденная рыба</span></a></li><li  class="level1 nav-11-7 category-item"><a href="https://varus.ua/riba-kopchena-vyalina-solena" ><span>Слабосоленая рыба</span></a></li><li  class="level1 nav-11-8 category-item parent"><a href="https://varus.ua/riba-ta-moreprodukti" ><span>Копченая и вяленая рыба</span></a><ul class="level1 submenu"><li  class="level2 nav-11-8-1 category-item first"><a href="https://varus.ua/riba-holodnogo-kopchennya" ><span>Рыба холодного копчения</span></a></li><li  class="level2 nav-11-8-2 category-item"><a href="https://varus.ua/riba-garyachogo-kopchennya" ><span>Рыба горячего копчения</span></a></li><li  class="level2 nav-11-8-3 category-item last"><a href="https://varus.ua/vyalena-riba" ><span>Вяленая рыба</span></a></li></ul></li><li  class="level1 nav-11-9 category-item"><a href="https://varus.ua/pasti-z-moreproduktiv" ><span>Пасты из рыбы и икры</span></a></li><li  class="level1 nav-11-10 category-item"><a href="https://varus.ua/raki" ><span>Раки</span></a></li><li  class="level1 nav-11-11 category-item"><a href="https://varus.ua/ribni-napivfabrikati" ><span>Рыбный фарш и полуфабрикаты</span></a></li><li  class="level1 nav-11-12 category-item"><a href="https://varus.ua/morska-kapusta-ta-vodorosli" ><span>Морская капуста и водоросли</span></a></li><li  class="level1 nav-11-13 category-item last"><a href="https://varus.ua/riba-zhiva" ><span>Живая рыба</span></a></li></ul></li><li  class="level0 nav-12 category-item level-top parent"><a href="https://varus.ua/alkogol"  class="level-top" ><span>Алкоголь</span></a><ul class="level0 submenu"><li  class="level1 nav-12-1 category-item first"><a href="https://varus.ua/pivo" ><span>Пиво</span></a></li><li  class="level1 nav-12-2 category-item"><a href="https://varus.ua/vino" ><span>Вино</span></a></li><li  class="level1 nav-12-3 category-item"><a href="https://varus.ua/igristi-vina" ><span>Игристые вина и шампанское</span></a></li><li  class="level1 nav-12-4 category-item parent"><a href="https://varus.ua/micni-napoi" ><span>Крепкий алкоголь</span></a><ul class="level1 submenu"><li  class="level2 nav-12-4-1 category-item first"><a href="https://varus.ua/viski" ><span>Виски</span></a></li><li  class="level2 nav-12-4-2 category-item"><a href="https://varus.ua/konyak" ><span>Коньяк и бренди</span></a></li><li  class="level2 nav-12-4-3 category-item"><a href="https://varus.ua/dzhin" ><span>Джин</span></a></li><li  class="level2 nav-12-4-4 category-item"><a href="https://varus.ua/gorilka" ><span>Водка</span></a></li><li  class="level2 nav-12-4-5 category-item"><a href="https://varus.ua/rom" ><span>Ром</span></a></li><li  class="level2 nav-12-4-6 category-item"><a href="https://varus.ua/tekila" ><span>Текила</span></a></li><li  class="level2 nav-12-4-7 category-item"><a href="https://varus.ua/nastoyanki" ><span>Настойки и биттеры</span></a></li><li  class="level2 nav-12-4-8 category-item last"><a href="https://varus.ua/likeri" ><span>Ликеры</span></a></li></ul></li><li  class="level1 nav-12-5 category-item"><a href="https://varus.ua/vermuti" ><span>Вермуты</span></a></li><li  class="level1 nav-12-6 category-item"><a href="https://varus.ua/sidri" ><span>Сидры</span></a></li><li  class="level1 nav-12-7 category-item last"><a href="https://varus.ua/alkogolni-energetiki" ><span>Слабоалкогольные напитки</span></a></li></ul></li><li  class="level0 nav-13 category-item level-top parent"><a href="https://varus.ua/kolbasy-sosiski-delikatesy"  class="level-top" ><span>Колбасы, сосиски, деликатесы</span></a><ul class="level0 submenu"><li  class="level1 nav-13-1 category-item first"><a href="https://varus.ua/kovbasi" ><span>Колбасы</span></a></li><li  class="level1 nav-13-2 category-item"><a href="https://varus.ua/sosiski-ta-sardelki" ><span>Сосиски и сардельки</span></a></li><li  class="level1 nav-13-3 category-item"><a href="https://varus.ua/hamon-ta-proshutto" ><span>Хамон и прошуто</span></a></li><li  class="level1 nav-13-4 category-item"><a href="https://varus.ua/balik" ><span>Балык</span></a></li><li  class="level1 nav-13-5 category-item"><a href="https://varus.ua/shinka" ><span>Ветчина</span></a></li><li  class="level1 nav-13-6 category-item"><a href="https://varus.ua/grudinka" ><span>Грудинка</span></a></li><li  class="level1 nav-13-7 category-item"><a href="https://varus.ua/salo" ><span>Сало</span></a></li><li  class="level1 nav-13-8 category-item"><a href="https://varus.ua/narizki-ta-delikatesi" ><span>Мясные деликатесы</span></a></li><li  class="level1 nav-13-9 category-item last"><a href="https://varus.ua/soevi-produkti" ><span>Соевые продукты</span></a></li></ul></li><li  class="level0 nav-14 category-item level-top parent"><a href="https://varus.ua/siri"  class="level-top" ><span>Сыры</span></a><ul class="level0 submenu"><li  class="level1 nav-14-1 category-item first"><a href="https://varus.ua/tverdi-ta-napivtverdi-siri" ><span>Твердые и полутвердые сыры</span></a></li><li  class="level1 nav-14-2 category-item"><a href="https://varus.ua/plavleni-ta-kopcheni-siri" ><span>Плавленые и копченые сыры</span></a></li><li  class="level1 nav-14-3 category-item"><a href="https://varus.ua/kremovi-ta-myaki-siri" ><span>Кремовые и мягкие сыры</span></a></li><li  class="level1 nav-14-4 category-item"><a href="https://varus.ua/rozsilni-siri" ><span>Рассольные сыры</span></a></li><li  class="level1 nav-14-5 category-item"><a href="https://varus.ua/siri-iz-plisnyavoyu" ><span>Сыры с плесенью</span></a></li><li  class="level1 nav-14-6 category-item"><a href="https://varus.ua/tofu-ta-roslinni-siri" ><span>Тофу и растительные сыры</span></a></li><li  class="level1 nav-14-7 category-item"><a href="https://varus.ua/sirni-nabori" ><span>Сырные наборы</span></a></li><li  class="level1 nav-14-8 category-item"><a href="https://varus.ua/siri-dlya-pici" ><span>Сыры для пиццы</span></a></li><li  class="level1 nav-14-9 category-item"><a href="https://varus.ua/siri-dlya-sushi" ><span>Сыры для суши</span></a></li><li  class="level1 nav-14-10 category-item last"><a href="https://varus.ua/sousi-do-siriv" ><span>Соусы к сырам</span></a></li></ul></li><li  class="level0 nav-15 category-item level-top parent"><a href="https://varus.ua/molochni-produkti"  class="level-top" ><span>Молочные продукты и яйца</span></a><ul class="level0 submenu"><li  class="level1 nav-15-1 category-item first"><a href="https://varus.ua/yaycya" ><span>Яйца</span></a></li><li  class="level1 nav-15-2 category-item"><a href="https://varus.ua/moloko" ><span>Молоко</span></a></li><li  class="level1 nav-15-3 category-item"><a href="https://varus.ua/napoi-roslinni" ><span>Растительное молоко</span></a></li><li  class="level1 nav-15-4 category-item"><a href="https://varus.ua/smetana" ><span>Сметана</span></a></li><li  class="level1 nav-15-5 category-item"><a href="https://varus.ua/maslo" ><span>Сливочное масло</span></a></li><li  class="level1 nav-15-6 category-item"><a href="https://varus.ua/margarin" ><span>Маргарин</span></a></li><li  class="level1 nav-15-7 category-item"><a href="https://varus.ua/yogurti" ><span>Йогурты</span></a></li><li  class="level1 nav-15-8 category-item"><a href="https://varus.ua/kislomolochni-siri" ><span>Кисломолочные сыры</span></a></li><li  class="level1 nav-15-9 category-item parent"><a href="https://varus.ua/kislomolochni-produkti" ><span>Кисломолочные напитки</span></a><ul class="level1 submenu"><li  class="level2 nav-15-9-1 category-item first"><a href="https://varus.ua/kefir" ><span>Кефир</span></a></li><li  class="level2 nav-15-9-2 category-item"><a href="https://varus.ua/ryazhanka" ><span>Ряженка</span></a></li><li  class="level2 nav-15-9-3 category-item"><a href="https://varus.ua/napoi-kislomolochni" ><span>Айран</span></a></li><li  class="level2 nav-15-9-4 category-item last"><a href="https://varus.ua/zakvaski" ><span>Закваски и сыворотки</span></a></li></ul></li><li  class="level1 nav-15-10 category-item"><a href="https://varus.ua/vershki" ><span>Сливки</span></a></li><li  class="level1 nav-15-11 category-item"><a href="https://varus.ua/deserti-molochni" ><span>Молочные десерты</span></a></li><li  class="level1 nav-15-12 category-item"><a href="https://varus.ua/zguschene-moloko" ><span>Сгущенное молоко</span></a></li><li  class="level1 nav-15-13 category-item last"><a href="https://varus.ua/sirki" ><span>Сырки глазированные</span></a></li></ul></li><li  class="level0 nav-16 category-item level-top parent"><a href="https://varus.ua/bakaliya"  class="level-top" ><span>Бакалея</span></a><ul class="level0 submenu"><li  class="level1 nav-16-1 category-item first parent"><a href="https://varus.ua/sousi" ><span>Соусы и маринады</span></a><ul class="level1 submenu"><li  class="level2 nav-16-1-1 category-item first"><a href="https://varus.ua/girchicya" ><span>Горчица</span></a></li><li  class="level2 nav-16-1-2 category-item"><a href="https://varus.ua/ketchupi" ><span>Кетчупы</span></a></li><li  class="level2 nav-16-1-3 category-item"><a href="https://varus.ua/mayonezi" ><span>Майонезы</span></a></li><li  class="level2 nav-16-1-4 category-item"><a href="https://varus.ua/pasta-tomatna" ><span>Томатная паста</span></a></li><li  class="level2 nav-16-1-5 category-item"><a href="https://varus.ua/sousi-specialni" ><span>Специальные соусы</span></a></li><li  class="level2 nav-16-1-6 category-item"><a href="https://varus.ua/sousi-soevi" ><span>Соевые соусы</span></a></li><li  class="level2 nav-16-1-7 category-item"><a href="https://varus.ua/hrin" ><span>Хрен</span></a></li><li  class="level2 nav-16-1-8 category-item last"><a href="https://varus.ua/marinadi-ta-zapravki" ><span>Маринады и заправки</span></a></li></ul></li><li  class="level1 nav-16-2 category-item"><a href="https://varus.ua/pripravi-ta-specii" ><span>Специи и приправы</span></a></li><li  class="level1 nav-16-3 category-item"><a href="https://varus.ua/sil" ><span>Соль</span></a></li><li  class="level1 nav-16-4 category-item"><a href="https://varus.ua/cukor" ><span>Сахар</span></a></li><li  class="level1 nav-16-5 category-item"><a href="https://varus.ua/maslo-roslinne" ><span>Растительное масло</span></a></li><li  class="level1 nav-16-6 category-item"><a href="https://varus.ua/ocet" ><span>Уксус</span></a></li><li  class="level1 nav-16-7 category-item parent"><a href="https://varus.ua/krupi" ><span>Крупы</span></a><ul class="level1 submenu"><li  class="level2 nav-16-7-1 category-item first"><a href="https://varus.ua/bobovi-krupi" ><span>Бобовые крупы</span></a></li><li  class="level2 nav-16-7-2 category-item"><a href="https://varus.ua/grechka" ><span>Гречка</span></a></li><li  class="level2 nav-16-7-3 category-item"><a href="https://varus.ua/kukurudzyana-krupa" ><span>Кукурузная крупа</span></a></li><li  class="level2 nav-16-7-4 category-item"><a href="https://varus.ua/manna-krupa" ><span>Манная крупа</span></a></li><li  class="level2 nav-16-7-5 category-item"><a href="https://varus.ua/pshenichna-krupa" ><span>Крупа пшеничная</span></a></li><li  class="level2 nav-16-7-6 category-item"><a href="https://varus.ua/pshono" ><span>Пшено</span></a></li><li  class="level2 nav-16-7-7 category-item"><a href="https://varus.ua/yachna-krupa" ><span>Ячневая и перловая крупа</span></a></li><li  class="level2 nav-16-7-8 category-item"><a href="https://varus.ua/ris" ><span>Рис</span></a></li><li  class="level2 nav-16-7-9 category-item last"><a href="https://varus.ua/vivsyana-krupa" ><span>Овсяная крупа</span></a></li></ul></li><li  class="level1 nav-16-8 category-item"><a href="https://varus.ua/makaronni-virobi" ><span>Макаронные изделия</span></a></li><li  class="level1 nav-16-9 category-item parent"><a href="https://varus.ua/stravi-shvidkogo-prigotuvannya" ><span>Еда быстрого приготовления</span></a><ul class="level1 submenu"><li  class="level2 nav-16-9-1 category-item first"><a href="https://varus.ua/bulyoni-ta-supi" ><span>Бульоны и супы</span></a></li><li  class="level2 nav-16-9-2 category-item"><a href="https://varus.ua/vermishel-shvidkogo-prigotuvannya" ><span>Вермишель быстрого приготовления</span></a></li><li  class="level2 nav-16-9-3 category-item"><a href="https://varus.ua/kashi-shvitkogo-prigotuvannya" ><span>Каши быстрого приготовления</span></a></li><li  class="level2 nav-16-9-4 category-item"><a href="https://varus.ua/pyure-shvidkogo-prigotuvannya" ><span>Пюре быстрого приготовления</span></a></li><li  class="level2 nav-16-9-5 category-item last"><a href="https://varus.ua/suhi-snidanki" ><span>Сухие завтраки</span></a></li></ul></li><li  class="level1 nav-16-10 category-item parent"><a href="https://varus.ua/produkti-dlya-vipichki" ><span>Продукты для выпечки</span></a><ul class="level1 submenu"><li  class="level2 nav-16-10-1 category-item first"><a href="https://varus.ua/boroshno" ><span>Мука</span></a></li><li  class="level2 nav-16-10-2 category-item"><a href="https://varus.ua/drizhdzhi" ><span>Дрожжи</span></a></li><li  class="level2 nav-16-10-3 category-item"><a href="https://varus.ua/zhele" ><span>Желе, пудинги, кисель</span></a></li><li  class="level2 nav-16-10-4 category-item"><a href="https://varus.ua/kokosova-struzhka" ><span>Кокосовая стружка</span></a></li><li  class="level2 nav-16-10-5 category-item"><a href="https://varus.ua/kremi-ta-glazuri" ><span>Кремы и глазури</span></a></li><li  class="level2 nav-16-10-6 category-item"><a href="https://varus.ua/mak" ><span>Мак</span></a></li><li  class="level2 nav-16-10-7 category-item"><a href="https://varus.ua/paniruvannya" ><span>Панировки</span></a></li><li  class="level2 nav-16-10-8 category-item"><a href="https://varus.ua/prisipki-ta-prikrasi" ><span>Присыпки и украшения</span></a></li><li  class="level2 nav-16-10-9 category-item last"><a href="https://varus.ua/harchovi-koncentrati" ><span>Ингредиенты и добавки для выпечки</span></a></li></ul></li><li  class="level1 nav-16-11 category-item"><a href="https://varus.ua/varennya" ><span>Варенье и джемы</span></a></li><li  class="level1 nav-16-12 category-item"><a href="https://varus.ua/med" ><span>Мед</span></a></li><li  class="level1 nav-16-13 category-item"><a href="https://varus.ua/siropi-ta-topingi" ><span>Сиропы и топпинги</span></a></li><li  class="level1 nav-16-14 category-item"><a href="https://varus.ua/produkti-dlya-sushi" ><span>Продукты для суши</span></a></li><li  class="level1 nav-16-15 category-item last"><a href="https://varus.ua/kinoa-chia-amarant" ><span>Суперфуды</span></a></li></ul></li><li  class="level0 nav-17 category-item level-top parent"><a href="https://varus.ua/hlibobulochni-virobi"  class="level-top" ><span>Хлебобулочные изделия</span></a><ul class="level0 submenu"><li  class="level1 nav-17-1 category-item first"><a href="https://varus.ua/hlib" ><span>Хлеб</span></a></li><li  class="level1 nav-17-2 category-item"><a href="https://varus.ua/hlibci" ><span>Хлебцы</span></a></li><li  class="level1 nav-17-3 category-item"><a href="https://varus.ua/sushki-ta-suhari" ><span>Сушки и сухари</span></a></li><li  class="level1 nav-17-4 category-item"><a href="https://varus.ua/bulochni-virobi" ><span>Булочные изделия</span></a></li><li  class="level1 nav-17-5 category-item"><a href="https://varus.ua/pirogi" ><span>Пироги</span></a></li><li  class="level1 nav-17-6 category-item"><a href="https://varus.ua/muchnye-kulinarnye-izdeliya" ><span>Мучные кулинарные изделия</span></a></li><li  class="level1 nav-17-7 category-item last"><a href="https://varus.ua/korzhi-ta-zagotovki" ><span>Лепешки и заготовки</span></a></li></ul></li><li  class="level0 nav-18 category-item level-top parent"><a href="https://varus.ua/konditerski-virobi-ta-solodoschi"  class="level-top" ><span>Кондитерские изделия и сладости</span></a><ul class="level0 submenu"><li  class="level1 nav-18-1 category-item first parent"><a href="https://varus.ua/konditerska-vipichka" ><span>Кондитерская выпечка</span></a><ul class="level1 submenu"><li  class="level2 nav-18-1-1 category-item first"><a href="https://varus.ua/torti" ><span>Торты</span></a></li><li  class="level2 nav-18-1-2 category-item"><a href="https://varus.ua/pechivo" ><span>Печенье</span></a></li><li  class="level2 nav-18-1-3 category-item"><a href="https://varus.ua/pryaniki" ><span>Пряники</span></a></li><li  class="level2 nav-18-1-4 category-item"><a href="https://varus.ua/vafli" ><span>Вафли</span></a></li><li  class="level2 nav-18-1-5 category-item"><a href="https://varus.ua/keksi-ta-mafini" ><span>Кексы и маффины</span></a></li><li  class="level2 nav-18-1-6 category-item"><a href="https://varus.ua/krekeri" ><span>Крекеры</span></a></li><li  class="level2 nav-18-1-7 category-item"><a href="https://varus.ua/kruasani" ><span>Круассаны</span></a></li><li  class="level2 nav-18-1-8 category-item"><a href="https://varus.ua/ponchiki" ><span>Пончики</span></a></li><li  class="level2 nav-18-1-9 category-item"><a href="https://varus.ua/tistechtka" ><span>Пирожные</span></a></li><li  class="level2 nav-18-1-10 category-item"><a href="https://varus.ua/ruleti-konditerski" ><span>Кондитерские рулеты</span></a></li><li  class="level2 nav-18-1-11 category-item last"><a href="https://varus.ua/pasha" ><span>Паска</span></a></li></ul></li><li  class="level1 nav-18-2 category-item"><a href="https://varus.ua/shokolad" ><span>Шоколад</span></a></li><li  class="level1 nav-18-3 category-item"><a href="https://varus.ua/cukerki" ><span>Конфеты</span></a></li><li  class="level1 nav-18-4 category-item"><a href="https://varus.ua/zhuvalni-gumki" ><span>Жевательные резинки</span></a></li><li  class="level1 nav-18-5 category-item"><a href="https://varus.ua/batonchiki" ><span>Батончики</span></a></li><li  class="level1 nav-18-6 category-item"><a href="https://varus.ua/pasti-shokoladno-gorihovi" ><span>Пасты</span></a></li><li  class="level1 nav-18-7 category-item"><a href="https://varus.ua/zefir" ><span>Зефир</span></a></li><li  class="level1 nav-18-8 category-item"><a href="https://varus.ua/marmelad" ><span>Мармелад</span></a></li><li  class="level1 nav-18-9 category-item"><a href="https://varus.ua/deserti" ><span>Десерты</span></a></li><li  class="level1 nav-18-10 category-item last"><a href="https://varus.ua/shidni-solodoschi" ><span>Восточные сладости</span></a></li></ul></li><li  class="level0 nav-19 category-item level-top parent"><a href="https://varus.ua/napoi"  class="level-top" ><span>Чай, кофе, горячие напитки</span></a><ul class="level0 submenu"><li  class="level1 nav-19-1 category-item first"><a href="https://varus.ua/chay" ><span>Чай</span></a></li><li  class="level1 nav-19-2 category-item"><a href="https://varus.ua/kava-zernova" ><span>Кофе</span></a></li><li  class="level1 nav-19-3 category-item"><a href="https://varus.ua/kakao" ><span>Какао</span></a></li><li  class="level1 nav-19-4 category-item"><a href="https://varus.ua/goryachiy-shokolad" ><span>Горячий шоколад</span></a></li><li  class="level1 nav-19-5 category-item last"><a href="https://varus.ua/kofemashiny" ><span>Кофемашины</span></a></li></ul></li><li  class="level0 nav-20 category-item level-top parent"><a href="https://varus.ua/bezalkogolni-napoi"  class="level-top" ><span>Вода, соки, напитки</span></a><ul class="level0 submenu"><li  class="level1 nav-20-1 category-item first"><a href="https://varus.ua/mineralna-voda" ><span>Минеральная вода</span></a></li><li  class="level1 nav-20-2 category-item"><a href="https://varus.ua/solodki-napoi" ><span>Сладкая вода</span></a></li><li  class="level1 nav-20-3 category-item"><a href="https://varus.ua/kombucha" ><span>Комбуча</span></a></li><li  class="level1 nav-20-4 category-item"><a href="https://varus.ua/soki" ><span>Соки и нектары</span></a></li><li  class="level1 nav-20-5 category-item"><a href="https://varus.ua/holodnij-chaj-ta-kava" ><span>Холодный чай и кофе</span></a></li><li  class="level1 nav-20-6 category-item"><a href="https://varus.ua/energetiki" ><span>Энергетические напитки</span></a></li><li  class="level1 nav-20-7 category-item last"><a href="https://varus.ua/kvas" ><span>Квас</span></a></li></ul></li><li  class="level0 nav-21 category-item level-top parent"><a href="https://varus.ua/sneki"  class="level-top" ><span>Снеки</span></a><ul class="level0 submenu"><li  class="level1 nav-21-1 category-item first"><a href="https://varus.ua/chipsi" ><span>Чипсы</span></a></li><li  class="level1 nav-21-2 category-item"><a href="https://varus.ua/suhariki" ><span>Сухарики</span></a></li><li  class="level1 nav-21-3 category-item"><a href="https://varus.ua/popkorn" ><span>Попкорн</span></a></li><li  class="level1 nav-21-4 category-item"><a href="https://varus.ua/gorishki" ><span>Орешки</span></a></li><li  class="level1 nav-21-5 category-item"><a href="https://varus.ua/sneki-ribni" ><span>Рыбные снеки</span></a></li><li  class="level1 nav-21-6 category-item"><a href="https://varus.ua/sneki-m-yasni" ><span>Мясные снеки</span></a></li><li  class="level1 nav-21-7 category-item"><a href="https://varus.ua/sneki-kukurudzyani" ><span>Кукурузные снеки</span></a></li><li  class="level1 nav-21-8 category-item last"><a href="https://varus.ua/sneki-z-nasinnya" ><span>Жареные семечки</span></a></li></ul></li><li  class="level0 nav-22 category-item level-top parent"><a href="https://varus.ua/zamorozheni-produkti"  class="level-top" ><span>Замороженные продукты</span></a><ul class="level0 submenu"><li  class="level1 nav-22-1 category-item first"><a href="https://varus.ua/morozivo" ><span>Мороженое</span></a></li><li  class="level1 nav-22-2 category-item"><a href="https://varus.ua/kulinarni-napivfabrikati" ><span>Замороженные полуфабрикаты</span></a></li><li  class="level1 nav-22-3 category-item"><a href="https://varus.ua/zamorozheni-ovochi" ><span>Замороженные овощи</span></a></li><li  class="level1 nav-22-4 category-item"><a href="https://varus.ua/zamorozheni-frukti-ta-yagodi" ><span>Замороженные ягоды</span></a></li><li  class="level1 nav-22-5 category-item"><a href="https://varus.ua/zamorozheni-gribi" ><span>Замороженные грибы</span></a></li><li  class="level1 nav-22-6 category-item"><a href="https://varus.ua/zamorozhena-pica" ><span>Замороженная пицца</span></a></li><li  class="level1 nav-22-7 category-item last"><a href="https://varus.ua/zamorozhene-tisto" ><span>Замороженное тесто</span></a></li></ul></li><li  class="level0 nav-23 category-item level-top parent"><a href="https://varus.ua/catalog/category/view/s/konservacija-i-solenie/id/58295/"  class="level-top" ><span>Консервация и соление</span></a><ul class="level0 submenu"><li  class="level1 nav-23-1 category-item first"><a href="https://varus.ua/konservaciya-ovocheva" ><span>Овощная консервация и соленья</span></a></li><li  class="level1 nav-23-2 category-item"><a href="https://varus.ua/konservi-ribni" ><span>Рыбные консервы</span></a></li><li  class="level1 nav-23-3 category-item"><a href="https://varus.ua/konservi-myasni" ><span>Мясные консервы</span></a></li><li  class="level1 nav-23-4 category-item"><a href="https://varus.ua/konservaciya-fruktova" ><span>Фруктовая консервация</span></a></li><li  class="level1 nav-23-5 category-item"><a href="https://varus.ua/gribi-konservovani" ><span>Консервированные грибы </span></a></li><li  class="level1 nav-23-6 category-item"><a href="https://varus.ua/olivki-konservovani" ><span>Оливки и маслины</span></a></li><li  class="level1 nav-23-7 category-item"><a href="https://varus.ua/zakuski-buterbrodni" ><span>Бутербродные закуски и намазки </span></a></li><li  class="level1 nav-23-8 category-item"><a href="https://varus.ua/pashteti" ><span>Паштеты</span></a></li><li  class="level1 nav-23-9 category-item"><a href="https://varus.ua/hummus" ><span>Хумус</span></a></li><li  class="level1 nav-23-10 category-item last"><a href="https://varus.ua/kashi-konservovani" ><span>Консервированные супы и каши</span></a></li></ul></li><li  class="level0 nav-24 category-item level-top parent"><a href="https://varus.ua/tyutyunovi-virobi"  class="level-top" ><span>Табачные изделия</span></a><ul class="level0 submenu"><li  class="level1 nav-24-1 category-item first"><a href="https://varus.ua/cigarki" ><span>Сигареты</span></a></li><li  class="level1 nav-24-2 category-item"><a href="https://varus.ua/elektronni-sigareti" ><span>Электронные сигареты</span></a></li><li  class="level1 nav-24-3 category-item"><a href="https://varus.ua/stiki" ><span>Стики</span></a></li><li  class="level1 nav-24-4 category-item"><a href="https://varus.ua/nikotinovi-peki" ><span> Никотиновые подушечки</span></a></li><li  class="level1 nav-24-5 category-item last"><a href="https://varus.ua/zapalnichki" ><span>Зажигалки</span></a></li></ul></li><li  class="level0 nav-25 category-item level-top parent"><a href="https://varus.ua/varuscafe"  class="level-top" ><span>VARUS CAFE</span></a><ul class="level0 submenu"><li  class="level1 nav-25-1 category-item first"><a href="https://varus.ua/varuscafe/pica" ><span>Пицца</span></a></li><li  class="level1 nav-25-2 category-item"><a href="https://varus.ua/varuscafe/wok" ><span>WOK</span></a></li><li  class="level1 nav-25-3 category-item"><a href="https://varus.ua/varuscafe/salati-ta-zakuski" ><span>Салаты</span></a></li><li  class="level1 nav-25-4 category-item"><a href="https://varus.ua/varuscafe/pershi-stravi" ><span>Первые блюда</span></a></li><li  class="level1 nav-25-5 category-item"><a href="https://varus.ua/varuscafe/drugi-stravi" ><span>Вторые блюда</span></a></li><li  class="level1 nav-25-6 category-item"><a href="https://varus.ua/varuscafe/ribni-stravi" ><span>Рыбные блюда</span></a></li><li  class="level1 nav-25-7 category-item"><a href="https://varus.ua/varuscafe/pancakes" ><span>Блинчики, сырники, запеканки</span></a></li><li  class="level1 nav-25-8 category-item"><a href="https://varus.ua/varuscafe/buterbrodi" ><span>Сендвичи</span></a></li><li  class="level1 nav-25-9 category-item last"><a href="https://varus.ua/varuscafe/gotovi-napoi" ><span>Напитки</span></a></li></ul></li><li  class="level0 nav-26 category-item level-top parent"><a href="https://varus.ua/vlasna-vipichka"  class="level-top" ><span>Собственная выпечка и десерты VARUS</span></a><ul class="level0 submenu"><li  class="level1 nav-26-1 category-item first"><a href="https://varus.ua/hlib-ta-bageti" ><span>Хлеб и багеты</span></a></li><li  class="level1 nav-26-2 category-item"><a href="https://varus.ua/bulochki-ta-zdobni-virobi" ><span>Булочки и сдобные изделия</span></a></li><li  class="level1 nav-26-3 category-item"><a href="https://varus.ua/listkovi-virobi-ta-kruasani" ><span>Слоеные изделия и круассаны</span></a></li><li  class="level1 nav-26-4 category-item"><a href="https://varus.ua/pirogi-ta-pechivo" ><span>Пироги и печенье</span></a></li><li  class="level1 nav-26-5 category-item"><a href="https://varus.ua/vlasni-konditerski-virobi" ><span>Торты и десерты</span></a></li><li  class="level1 nav-26-6 category-item"><a href="https://varus.ua/ponchiki-ta-mafini" ><span>Пончики и маффины</span></a></li><li  class="level1 nav-26-7 category-item last"><a href="https://varus.ua/tisto" ><span>Тесто</span></a></li></ul></li><li  class="level0 nav-27 category-item level-top parent"><a href="https://varus.ua/kosmetika-ta-doglyad"  class="level-top" ><span>Гигиена и уход</span></a><ul class="level0 submenu"><li  class="level1 nav-27-1 category-item first parent"><a href="https://varus.ua/osobista-gigiyena" ><span>Личная гигиена</span></a><ul class="level1 submenu"><li  class="level2 nav-27-1-1 category-item first"><a href="https://varus.ua/tualetniy-papir" ><span>Туалетная бумага</span></a></li><li  class="level2 nav-27-1-2 category-item"><a href="https://varus.ua/prokladki" ><span>Прокладки</span></a></li><li  class="level2 nav-27-1-3 category-item"><a href="https://varus.ua/tamponi" ><span>Тампоны</span></a></li><li  class="level2 nav-27-1-4 category-item"><a href="https://varus.ua/zasobi-dlya-intimnoyi-gigiyeni" ><span>Средства для интимной гигиены</span></a></li><li  class="level2 nav-27-1-5 category-item"><a href="https://varus.ua/paperovi-rushniki" ><span>Бумажные полотенца</span></a></li><li  class="level2 nav-27-1-6 category-item"><a href="https://varus.ua/vologi-servetki" ><span>Влажные салфетки</span></a></li><li  class="level2 nav-27-1-7 category-item"><a href="https://varus.ua/kosmetichni-servetki" ><span>Косметические салфетки</span></a></li><li  class="level2 nav-27-1-8 category-item"><a href="https://varus.ua/nosovi-hustochki" ><span>Носовые платки</span></a></li><li  class="level2 nav-27-1-9 category-item"><a href="https://varus.ua/vatni-diski" ><span>Ватные диски</span></a></li><li  class="level2 nav-27-1-10 category-item last"><a href="https://varus.ua/vatni-palichki" ><span>Ватные палочки</span></a></li></ul></li><li  class="level1 nav-27-2 category-item parent"><a href="https://varus.ua/doglyad-za-tilom" ><span>Уход за телом</span></a><ul class="level1 submenu"><li  class="level2 nav-27-2-1 category-item first"><a href="https://varus.ua/milo" ><span>Мыло</span></a></li><li  class="level2 nav-27-2-2 category-item"><a href="https://varus.ua/geli-dlya-dushu" ><span>Гели для душа</span></a></li><li  class="level2 nav-27-2-3 category-item"><a href="https://varus.ua/dezodoranti" ><span>Дезодоранты</span></a></li><li  class="level2 nav-27-2-4 category-item"><a href="https://varus.ua/kremi" ><span>Кремы для тела</span></a></li><li  class="level2 nav-27-2-5 category-item"><a href="https://varus.ua/losjoni-dlya-tila" ><span>Лосьоны для тела</span></a></li><li  class="level2 nav-27-2-6 category-item"><a href="https://varus.ua/spreyi-dlya-tila" ><span>Спреи для тела</span></a></li><li  class="level2 nav-27-2-7 category-item"><a href="https://varus.ua/skrabi-i-pilingi" ><span>Скрабы и пилинги для тела</span></a></li><li  class="level2 nav-27-2-8 category-item"><a href="https://varus.ua/pina-ta-sil-dlya-vanni" ><span>Бомбочки, пена и соль для ванны</span></a></li><li  class="level2 nav-27-2-9 category-item"><a href="https://varus.ua/nabori-dlya-doglyadu-za-tilom" ><span>Наборы для ухода за телом</span></a></li><li  class="level2 nav-27-2-10 category-item"><a href="https://varus.ua/efirna-oliya" ><span>Эфирные масла</span></a></li><li  class="level2 nav-27-2-11 category-item last"><a href="https://varus.ua/zasobi-dlya-manikyuru" ><span>Средства для маникюра</span></a></li></ul></li><li  class="level1 nav-27-3 category-item parent"><a href="https://varus.ua/doglyad-za-rotovoyu-porozhninoyu" ><span>Уход за полостью рта</span></a><ul class="level1 submenu"><li  class="level2 nav-27-3-1 category-item first"><a href="https://varus.ua/zubni-pasti" ><span>Зубные пасты</span></a></li><li  class="level2 nav-27-3-2 category-item"><a href="https://varus.ua/zubni-schitki" ><span>Зубные щетки</span></a></li><li  class="level2 nav-27-3-3 category-item"><a href="https://varus.ua/opoliskuvachi-rotovoi-porozhnini" ><span>Ополаскиватели полости рта</span></a></li><li  class="level2 nav-27-3-4 category-item"><a href="https://varus.ua/zubochistki-ta-nitki" ><span>Зубные нити и зубочистки</span></a></li><li  class="level2 nav-27-3-5 category-item last"><a href="https://varus.ua/osvizhuvachi" ><span>Освежители полости рта</span></a></li></ul></li><li  class="level1 nav-27-4 category-item parent"><a href="https://varus.ua/doglyad-za-volossyam" ><span>Уход за волосами</span></a><ul class="level1 submenu"><li  class="level2 nav-27-4-1 category-item first"><a href="https://varus.ua/shampuni" ><span>Шампуни</span></a></li><li  class="level2 nav-27-4-2 category-item"><a href="https://varus.ua/balzami-dlya-volossya" ><span>Бальзамы для волос</span></a></li><li  class="level2 nav-27-4-3 category-item"><a href="https://varus.ua/kondicioneri-dlya-volossya" ><span>Кондиционеры для волос</span></a></li><li  class="level2 nav-27-4-4 category-item"><a href="https://varus.ua/maski-dlya-volossya" ><span>Маски для волос</span></a></li><li  class="level2 nav-27-4-5 category-item"><a href="https://varus.ua/fileri-dlya-volossya" ><span>Филлеры для волос</span></a></li><li  class="level2 nav-27-4-6 category-item"><a href="https://varus.ua/termozahist-dlya-volossya" ><span>Термозащита для волос</span></a></li><li  class="level2 nav-27-4-7 category-item"><a href="https://varus.ua/spreyi-dlya-volossya" ><span>Спреи для волос</span></a></li><li  class="level2 nav-27-4-8 category-item"><a href="https://varus.ua/skrabi-dlya-shkiri-golovi" ><span>Скрабы для кожи головы</span></a></li><li  class="level2 nav-27-4-9 category-item"><a href="https://varus.ua/sirovatki-dlya-volossya" ><span>Сыворотки для волос</span></a></li><li  class="level2 nav-27-4-10 category-item"><a href="https://varus.ua/oliya-dlya-volossya" ><span>Масла для волос</span></a></li><li  class="level2 nav-27-4-11 category-item"><a href="https://varus.ua/kremi-dlya-volossya" ><span>Кремы для волос</span></a></li><li  class="level2 nav-27-4-12 category-item"><a href="https://varus.ua/nabori-dlya-doglyadu-za-volossyam" ><span>Наборы для ухода за волосами</span></a></li><li  class="level2 nav-27-4-13 category-item last"><a href="https://varus.ua/aksesuari-dlya-volossya" ><span>Аксессуары для волос</span></a></li></ul></li><li  class="level1 nav-27-5 category-item parent"><a href="https://varus.ua/zasobi-dlya-ukladannya-volossya" ><span>Средства для укладки волос</span></a><ul class="level1 submenu"><li  class="level2 nav-27-5-1 category-item first"><a href="https://varus.ua/lak-dlya-volossya" ><span>Лаки для волос</span></a></li><li  class="level2 nav-27-5-2 category-item"><a href="https://varus.ua/geli-dlya-volossya" ><span>Гели для волос</span></a></li><li  class="level2 nav-27-5-3 category-item"><a href="https://varus.ua/musi-dlya-volossya" ><span>Муссы для волос</span></a></li><li  class="level2 nav-27-5-4 category-item last"><a href="https://varus.ua/pinki-dlya-volossya" ><span>Пенки для волос</span></a></li></ul></li><li  class="level1 nav-27-6 category-item parent"><a href="https://varus.ua/zasobi-dlya-farbuvannya-volossya" ><span>Средства для окрашивания волос</span></a><ul class="level1 submenu"><li  class="level2 nav-27-6-1 category-item first"><a href="https://varus.ua/osvitlyuvachi-dlya-volossya" ><span>Осветлители для волос</span></a></li><li  class="level2 nav-27-6-2 category-item"><a href="https://varus.ua/toniruyuschie-sredstva-dlya-volos" ><span>Тонирующие средства для волос</span></a></li><li  class="level2 nav-27-6-3 category-item"><a href="https://varus.ua/farba-dlya-volossya" ><span>Краски для волос</span></a></li><li  class="level2 nav-27-6-4 category-item last"><a href="https://varus.ua/farbi-dlya-briv-ta-vij" ><span>Краски для бровей и ресниц</span></a></li></ul></li><li  class="level1 nav-27-7 category-item parent"><a href="https://varus.ua/doglyad-za-oblichchyam" ><span>Уход за лицом</span></a><ul class="level1 submenu"><li  class="level2 nav-27-7-1 category-item first"><a href="https://varus.ua/kremi-dlya-oblichchya" ><span>Кремы для лица</span></a></li><li  class="level2 nav-27-7-2 category-item"><a href="https://varus.ua/zasobi-dlya-vmivannya" ><span>Средства для умывания</span></a></li><li  class="level2 nav-27-7-3 category-item"><a href="https://varus.ua/zasobi-dlya-pilingu-oblichchya" ><span>Средства для пилинга лица</span></a></li><li  class="level2 nav-27-7-4 category-item"><a href="https://varus.ua/sirovatki-dlya-oblichchya" ><span>Сыворотки для лица</span></a></li><li  class="level2 nav-27-7-5 category-item"><a href="https://varus.ua/doglyad-za-shkiroyu-navkolo-ochej" ><span>Уход за кожей вокруг глаз</span></a></li><li  class="level2 nav-27-7-6 category-item"><a href="https://varus.ua/zasobi-dlya-demakiyazhu" ><span>Средства для демакияжа</span></a></li><li  class="level2 nav-27-7-7 category-item"><a href="https://varus.ua/zasobi-doglyadu-za-gubami" ><span>Средства по уходу за губами</span></a></li><li  class="level2 nav-27-7-8 category-item"><a href="https://varus.ua/maski-dlya-oblichchya" ><span>Маски для лица</span></a></li><li  class="level2 nav-27-7-9 category-item last"><a href="https://varus.ua/tonik-dlya-oblichchya" ><span>Тоники для лица</span></a></li></ul></li><li  class="level1 nav-27-8 category-item parent"><a href="https://varus.ua/tovari-dlya-golinnya" ><span>Средства для бритья</span></a><ul class="level1 submenu"><li  class="level2 nav-27-8-1 category-item first"><a href="https://varus.ua/zasobi-dlya-golinnya" ><span>Косметика для бритья</span></a></li><li  class="level2 nav-27-8-2 category-item"><a href="https://varus.ua/zasobi-pislya-golinnya" ><span>Косметика после бритья</span></a></li><li  class="level2 nav-27-8-3 category-item"><a href="https://varus.ua/zminni-kaseti-dlya-britvi" ><span>Сменные кассеты для бритья</span></a></li><li  class="level2 nav-27-8-4 category-item"><a href="https://varus.ua/nabori-dlya-golinnya" ><span>Наборы для бритья</span></a></li><li  class="level2 nav-27-8-5 category-item last"><a href="https://varus.ua/stanki-dlya-golinnya" ><span>Станки для бритья</span></a></li></ul></li><li  class="level1 nav-27-9 category-item"><a href="https://varus.ua/harchovi-dobavki" ><span>БАДы (пищевые добавки)</span></a></li><li  class="level1 nav-27-10 category-item parent"><a href="https://varus.ua/tovari-dlya-zdorovya" ><span>Товары для здоровья</span></a><ul class="level1 submenu"><li  class="level2 nav-27-10-1 category-item first"><a href="https://varus.ua/antiseptiki" ><span>Антисептики</span></a></li><li  class="level2 nav-27-10-2 category-item"><a href="https://varus.ua/prezervativi" ><span>Презервативы</span></a></li><li  class="level2 nav-27-10-3 category-item last"><a href="https://varus.ua/medichni-zasobi" ><span>Домашняя аптечка</span></a></li></ul></li><li  class="level1 nav-27-11 category-item"><a href="https://varus.ua/zasobi-proti-komah" ><span>Средства против насекомых</span></a></li><li  class="level1 nav-27-12 category-item last"><a href="https://varus.ua/soncezahisni-zasobi" ><span>Солнцезащитные средства</span></a></li></ul></li><li  class="level0 nav-28 category-item level-top parent"><a href="https://varus.ua/pobutova-himiya"  class="level-top" ><span>Бытовая химия</span></a><ul class="level0 submenu"><li  class="level1 nav-28-1 category-item first parent"><a href="https://varus.ua/zasobi-dlya-prannya" ><span>Средства для стирки</span></a><ul class="level1 submenu"><li  class="level2 nav-28-1-1 category-item first"><a href="https://varus.ua/ridki-zasobi-dlya-prannya" ><span>Гели для стирки</span></a></li><li  class="level2 nav-28-1-2 category-item"><a href="https://varus.ua/poroshki-dlya-prannya" ><span>Порошки для стирки</span></a></li><li  class="level2 nav-28-1-3 category-item"><a href="https://varus.ua/kondicioneri-dlya-bilizni" ><span>Кондиционеры и ополаскиватели для белья</span></a></li><li  class="level2 nav-28-1-4 category-item"><a href="https://varus.ua/kapsuli-dlya-prannya" ><span>Капсулы для стирки</span></a></li><li  class="level2 nav-28-1-5 category-item"><a href="https://varus.ua/plyamovividniki" ><span>Пятновыводители и отбеливатели</span></a></li><li  class="level2 nav-28-1-6 category-item last"><a href="https://varus.ua/servetki-dlya-prannya" ><span>Салфетки для стирки</span></a></li></ul></li><li  class="level1 nav-28-2 category-item"><a href="https://varus.ua/milo-gospodarske" ><span>Хозяйственное мыло</span></a></li><li  class="level1 nav-28-3 category-item"><a href="https://varus.ua/zasobi-dlya-posudomijnih-mashin" ><span>Средства для посудомоечных машин</span></a></li><li  class="level1 nav-28-4 category-item parent"><a href="https://varus.ua/doglyad-za-vzuttyam" ><span>Уход за обувью</span></a><ul class="level1 submenu"><li  class="level2 nav-28-4-1 category-item first"><a href="https://varus.ua/zasobi-vidnovlennya-ta-zahistu" ><span>Средства восстановления и защиты обуви</span></a></li><li  class="level2 nav-28-4-2 category-item"><a href="https://varus.ua/gubki-ta-schitki-dlya-vzuttya" ><span>Губки и щетки для обуви</span></a></li><li  class="level2 nav-28-4-3 category-item"><a href="https://varus.ua/farba-dlya-vzuttya" ><span>Краска для обуви</span></a></li><li  class="level2 nav-28-4-4 category-item"><a href="https://varus.ua/kremi-dlya-vzuttya" ><span>Кремы для обуви</span></a></li><li  class="level2 nav-28-4-5 category-item"><a href="https://varus.ua/dezodoranti-dlya-vzuttya" ><span>Дезодоранты для обуви</span></a></li><li  class="level2 nav-28-4-6 category-item last"><a href="https://varus.ua/aksesuari-dlya-vzuttya" ><span>Аксессуары для обуви</span></a></li></ul></li><li  class="level1 nav-28-5 category-item"><a href="https://varus.ua/zasobi-dlya-doglyadu-za-unitazom" ><span>Средства для ухода за унитазом</span></a></li><li  class="level1 nav-28-6 category-item parent"><a href="https://varus.ua/zasobi-dlya-pribirannya" ><span>Средства для уборки</span></a><ul class="level1 submenu"><li  class="level2 nav-28-6-1 category-item first"><a href="https://varus.ua/zasobi-dlya-kuhni" ><span>Средства для кухни</span></a></li><li  class="level2 nav-28-6-2 category-item"><a href="https://varus.ua/zasobi-dlya-vannih-kimnat" ><span>Средства для ванных комнат</span></a></li><li  class="level2 nav-28-6-3 category-item"><a href="https://varus.ua/universalni-miyuchi-zasobi" ><span>Универсальные моющие средства</span></a></li><li  class="level2 nav-28-6-4 category-item"><a href="https://varus.ua/zasobi-dlya-mittya-pidlogi" ><span>Средства для мытья полов</span></a></li><li  class="level2 nav-28-6-5 category-item"><a href="https://varus.ua/zasobi-dlya-prochishennya-trub" ><span>Средства для прочистки труб</span></a></li><li  class="level2 nav-28-6-6 category-item"><a href="https://varus.ua/zasobi-dlya-mittya-vikon" ><span>Средства для мытья окон</span></a></li><li  class="level2 nav-28-6-7 category-item"><a href="https://varus.ua/zasobi-dlya-doglyadu-za-meblyami" ><span>Средства для ухода за мебелью</span></a></li><li  class="level2 nav-28-6-8 category-item"><a href="https://varus.ua/zasobi-dlya-chishennya-kilimiv" ><span>Средства для чистки ковров</span></a></li><li  class="level2 nav-28-6-9 category-item last"><a href="https://varus.ua/zasobi-po-doglyadu-za-pobutovoyu-tehnikoyu" ><span>Средства по уходу за бытовой техникой</span></a></li></ul></li><li  class="level1 nav-28-7 category-item"><a href="https://varus.ua/zasobi-dlya-mittya-posudu" ><span>Средства для мытья посуды</span></a></li><li  class="level1 nav-28-8 category-item last"><a href="https://varus.ua/osvizhuvachi-povitrya" ><span>Освежители воздуха</span></a></li></ul></li><li  class="level0 nav-29 category-item level-top parent"><a href="https://varus.ua/tovari-dlya-tvarin"  class="level-top" ><span>Товары для животных</span></a><ul class="level0 submenu"><li  class="level1 nav-29-1 category-item first parent"><a href="https://varus.ua/tovari-dlya-kotiv" ><span>Товары для котов</span></a><ul class="level1 submenu"><li  class="level2 nav-29-1-1 category-item first"><a href="https://varus.ua/korm-dlya-tvarin" ><span>Корм для котов</span></a></li><li  class="level2 nav-29-1-2 category-item"><a href="https://varus.ua/lasoshi-dlya-kotiv" ><span>Лакомство для котов</span></a></li><li  class="level2 nav-29-1-3 category-item"><a href="https://varus.ua/napovnyuvachi-dlya-tualetiv" ><span>Наполнители туалетов для котов</span></a></li><li  class="level2 nav-29-1-4 category-item"><a href="https://varus.ua/igrashki-dlya-kotiv" ><span>Игрушки для котов</span></a></li><li  class="level2 nav-29-1-5 category-item last"><a href="https://varus.ua/aksesuari-dlya-kotiv" ><span>Аксессуары для котов</span></a></li></ul></li><li  class="level1 nav-29-2 category-item parent"><a href="https://varus.ua/tovari-dlya-sobak" ><span>Товары для собак</span></a><ul class="level1 submenu"><li  class="level2 nav-29-2-1 category-item first"><a href="https://varus.ua/korm-dlya-sobak" ><span>Корм для собак</span></a></li><li  class="level2 nav-29-2-2 category-item"><a href="https://varus.ua/lasoshi-dlya-sobak" ><span>Лакомство для собак</span></a></li><li  class="level2 nav-29-2-3 category-item"><a href="https://varus.ua/igrashki-dlya-sobak" ><span>Игрушки для собак</span></a></li><li  class="level2 nav-29-2-4 category-item last"><a href="https://varus.ua/aksesuari-dlya-sobak" ><span>Аксессуары для собак</span></a></li></ul></li><li  class="level1 nav-29-3 category-item parent"><a href="https://varus.ua/tovari-dlya-ptahiv" ><span>Товары для птиц</span></a><ul class="level1 submenu"><li  class="level2 nav-29-3-1 category-item first"><a href="https://varus.ua/korm-dlya-ptahiv" ><span>Корм для птиц</span></a></li><li  class="level2 nav-29-3-2 category-item"><a href="https://varus.ua/lasoshi-dlya-ptahiv" ><span>Лакомство для птиц</span></a></li><li  class="level2 nav-29-3-3 category-item"><a href="https://varus.ua/igrashki-dlya-ptahiv" ><span>Игрушки для птиц</span></a></li><li  class="level2 nav-29-3-4 category-item last"><a href="https://varus.ua/aksesuari-dlya-ptahiv" ><span>Аксессуары для птиц</span></a></li></ul></li><li  class="level1 nav-29-4 category-item parent"><a href="https://varus.ua/tovari-dlya-grizuniv" ><span>Товары для грызунов</span></a><ul class="level1 submenu"><li  class="level2 nav-29-4-1 category-item first"><a href="https://varus.ua/korm-dlya-grizuniv" ><span>Корм для грызунов</span></a></li><li  class="level2 nav-29-4-2 category-item last"><a href="https://varus.ua/lasoshi-dlya-grizuniv" ><span>Лакомство для грызунов</span></a></li></ul></li><li  class="level1 nav-29-5 category-item last parent"><a href="https://varus.ua/akvariumistika" ><span>Аквариумистика</span></a><ul class="level1 submenu"><li  class="level2 nav-29-5-1 category-item first last"><a href="https://varus.ua/korm-dlya-rib" ><span>Корм для рыб</span></a></li></ul></li></ul></li><li  class="level0 nav-30 category-item level-top parent"><a href="https://varus.ua/tovari-dlya-domu-ta-sadu"  class="level-top" ><span>Товары для дома</span></a><ul class="level0 submenu"><li  class="level1 nav-30-1 category-item first parent"><a href="https://varus.ua/gospodarski-tovari" ><span>Хозяйственные товары</span></a><ul class="level1 submenu"><li  class="level2 nav-30-1-1 category-item first"><a href="https://varus.ua/gubki-ta-ganchirki" ><span>Губки и тряпки</span></a></li><li  class="level2 nav-30-1-2 category-item"><a href="https://varus.ua/gubki-dlya-vannoi" ><span>Губки для ванной</span></a></li><li  class="level2 nav-30-1-3 category-item"><a href="https://varus.ua/paketi-dlya-smittya" ><span>Пакеты для мусора</span></a></li><li  class="level2 nav-30-1-4 category-item"><a href="https://varus.ua/shvabri" ><span>Швабры</span></a></li><li  class="level2 nav-30-1-5 category-item"><a href="https://varus.ua/aksesuri-ta-priladdya-dlya-vannoi" ><span>Аксессуары и принадлежности для ванной</span></a></li><li  class="level2 nav-30-1-6 category-item"><a href="https://varus.ua/tovary-dlya-prannya-ta-sushki" ><span>Товары для стирки и сушки</span></a></li><li  class="level2 nav-30-1-7 category-item"><a href="https://varus.ua/rukavici-gospodarchi" ><span>Перчатки хозяйственные</span></a></li><li  class="level2 nav-30-1-8 category-item"><a href="https://varus.ua/svichki" ><span>Свечи</span></a></li><li  class="level2 nav-30-1-9 category-item"><a href="https://varus.ua/vidra-tazi-koshiki" ><span>Ведра, тазы, корзины</span></a></li><li  class="level2 nav-30-1-10 category-item"><a href="https://varus.ua/mitli-viniki-ta-sovki" ><span>Метлы, веники и совки</span></a></li><li  class="level2 nav-30-1-11 category-item"><a href="https://varus.ua/sirnyki" ><span>Спички</span></a></li><li  class="level2 nav-30-1-12 category-item"><a href="https://varus.ua/schitki" ><span>Щетки</span></a></li><li  class="level2 nav-30-1-13 category-item last"><a href="https://varus.ua/kley" ><span>Клей</span></a></li></ul></li><li  class="level1 nav-30-2 category-item parent"><a href="https://varus.ua/tovari-dlya-kuhni" ><span>Товары для кухни</span></a><ul class="level1 submenu"><li  class="level2 nav-30-2-1 category-item first"><a href="https://varus.ua/kuhonni-priladdya" ><span>Кухонные принадлежности</span></a></li><li  class="level2 nav-30-2-2 category-item"><a href="https://varus.ua/plivka-harchova" ><span>Фольга, пленка, пергамент</span></a></li><li  class="level2 nav-30-2-3 category-item"><a href="https://varus.ua/servetki-stolovi" ><span>Салфетки столовые</span></a></li><li  class="level2 nav-30-2-4 category-item"><a href="https://varus.ua/emnosti-ta-upakovka-dlya-produktiv" ><span>Емкости и упаковка для продуктов</span></a></li><li  class="level2 nav-30-2-5 category-item"><a href="https://varus.ua/zasobi-dlya-prigotuvannya-produktiv" ><span>Средства для приготовления продуктов</span></a></li><li  class="level2 nav-30-2-6 category-item"><a href="https://varus.ua/filtri-ta-kuvshini" ><span>Фильтры и кувшины</span></a></li><li  class="level2 nav-30-2-7 category-item last"><a href="https://varus.ua/svichki-dlya-tortiv" ><span>Свечи для тортов</span></a></li></ul></li><li  class="level1 nav-30-3 category-item"><a href="https://varus.ua/rushniki" ><span>Полотенца</span></a></li><li  class="level1 nav-30-4 category-item parent"><a href="https://varus.ua/elektrotovari-ta-osvitlennya" ><span>Электротовары и освещения</span></a><ul class="level1 submenu"><li  class="level2 nav-30-4-1 category-item first"><a href="https://varus.ua/elektropriladi" ><span>Электроприборы</span></a></li><li  class="level2 nav-30-4-2 category-item"><a href="https://varus.ua/batareyki" ><span>Батарейки</span></a></li><li  class="level2 nav-30-4-3 category-item last"><a href="https://varus.ua/lampochki" ><span>Лампочки</span></a></li></ul></li><li  class="level1 nav-30-5 category-item parent"><a href="https://varus.ua/posud" ><span>Посуда</span></a><ul class="level1 submenu"><li  class="level2 nav-30-5-1 category-item first"><a href="https://varus.ua/bagatorazoviy-posud" ><span>Многоразовая посуда</span></a></li><li  class="level2 nav-30-5-2 category-item"><a href="https://varus.ua/odnorazoviy-posud" ><span>Одноразовая посуда</span></a></li><li  class="level2 nav-30-5-3 category-item last"><a href="https://varus.ua/chashki" ><span>Чашки</span></a></li></ul></li><li  class="level1 nav-30-6 category-item parent"><a href="https://varus.ua/odyag-vzuttya-ta-aksesuari" ><span>Одежда, обувь и аксессуары</span></a><ul class="level1 submenu"><li  class="level2 nav-30-6-1 category-item first"><a href="https://varus.ua/vzuttya" ><span>Обувь</span></a></li><li  class="level2 nav-30-6-2 category-item"><a href="https://varus.ua/shkarpetki" ><span>Носки</span></a></li><li  class="level2 nav-30-6-3 category-item"><a href="https://varus.ua/aksesuari" ><span>Аксессуары</span></a></li><li  class="level2 nav-30-6-4 category-item"><a href="https://varus.ua/odyag" ><span>Одежда</span></a></li><li  class="level2 nav-30-6-5 category-item"><a href="https://varus.ua/kolgoti-zhinochi" ><span>Колготы женские</span></a></li><li  class="level2 nav-30-6-6 category-item last"><a href="https://varus.ua/golovni-ubori" ><span>Головные уборы</span></a></li></ul></li><li  class="level1 nav-30-7 category-item parent"><a href="https://varus.ua/sad-ta-gorod" ><span>Сад и огород</span></a><ul class="level1 submenu"><li  class="level2 nav-30-7-1 category-item first"><a href="https://varus.ua/roslini-v-gorschikah-ta-sadzhenci" ><span>Растения в горшках и саженцы</span></a></li><li  class="level2 nav-30-7-2 category-item"><a href="https://varus.ua/grunt-ta-dobrivo" ><span>Грунт и удобрения</span></a></li><li  class="level2 nav-30-7-3 category-item"><a href="https://varus.ua/gorschiki-dlya-roslin" ><span>Горшки для растений</span></a></li><li  class="level2 nav-30-7-4 category-item"><a href="https://varus.ua/nasinnya" ><span>Семена</span></a></li><li  class="level2 nav-30-7-5 category-item last"><a href="https://varus.ua/sadovi-priladdya" ><span>Садовые принадлежности</span></a></li></ul></li><li  class="level1 nav-30-8 category-item"><a href="https://varus.ua/suveniri-ta-dekor" ><span>Сувениры и декор</span></a></li><li  class="level1 nav-30-9 category-item"><a href="https://varus.ua/sumki-ta-paketi" ><span>Сумки и пакеты</span></a></li><li  class="level1 nav-30-10 category-item"><a href="https://varus.ua/tovari-dlya-kempingu-ta-vidpochinku" ><span>Товары для кемпинга и отдыхом</span></a></li><li  class="level1 nav-30-11 category-item"><a href="https://varus.ua/kanctovari" ><span>Канцтовары</span></a></li><li  class="level1 nav-30-12 category-item"><a href="https://varus.ua/sport-ta-rozvagi" ><span>Спорт и развлечения</span></a></li><li  class="level1 nav-30-13 category-item parent"><a href="https://varus.ua/pechatna-produkciya" ><span>Печатная продукция</span></a><ul class="level1 submenu"><li  class="level2 nav-30-13-1 category-item first"><a href="https://varus.ua/zhurnali-ta-presa" ><span>Журналы и пресса</span></a></li><li  class="level2 nav-30-13-2 category-item"><a href="https://varus.ua/knigi" ><span>Книги</span></a></li><li  class="level2 nav-30-13-3 category-item last"><a href="https://varus.ua/listivki" ><span>Открытки</span></a></li></ul></li><li  class="level1 nav-30-14 category-item"><a href="https://varus.ua/novorichni-tovari" ><span>Новогодние товары</span></a></li><li  class="level1 nav-30-15 category-item"><a href="https://varus.ua/sertifikaty" ><span>Сертификаты</span></a></li><li  class="level1 nav-30-16 category-item last"><a href="https://varus.ua/startovi-paketi" ><span>Стартовые пакеты и карты</span></a></li></ul></li><li  class="level0 nav-31 category-item level-top parent"><a href="https://varus.ua/tovari-dlya-ditey"  class="level-top" ><span>Товары для детей</span></a><ul class="level0 submenu"><li  class="level1 nav-31-1 category-item first parent"><a href="https://varus.ua/dityache-harchuvannya" ><span>Детское питание</span></a><ul class="level1 submenu"><li  class="level2 nav-31-1-1 category-item first"><a href="https://varus.ua/dityacha-kasha" ><span>Детская каша</span></a></li><li  class="level2 nav-31-1-2 category-item"><a href="https://varus.ua/dityache-pyure" ><span>Детское пюре</span></a></li><li  class="level2 nav-31-1-3 category-item last"><a href="https://varus.ua/molochni-sumishi" ><span>Молочные смеси</span></a></li></ul></li><li  class="level1 nav-31-2 category-item"><a href="https://varus.ua/pidguzniki" ><span>Подгузники</span></a></li><li  class="level1 nav-31-3 category-item"><a href="https://varus.ua/zasobi-doglyadu-za-ditinoyu" ><span>Средства ухода за ребенком</span></a></li><li  class="level1 nav-31-4 category-item parent"><a href="https://varus.ua/goduvannya-ditini" ><span>Кормления ребенка</span></a><ul class="level1 submenu"><li  class="level2 nav-31-4-1 category-item first"><a href="https://varus.ua/plyashechki" ><span>Бутылочки</span></a></li><li  class="level2 nav-31-4-2 category-item"><a href="https://varus.ua/posud-dlya-ditey" ><span>Посуда для детей</span></a></li><li  class="level2 nav-31-4-3 category-item last"><a href="https://varus.ua/soski-ta-pustishki" ><span>Соски и пустышки</span></a></li></ul></li><li  class="level1 nav-31-5 category-item"><a href="https://varus.ua/igrashki" ><span>Игрушки</span></a></li><li  class="level1 nav-31-6 category-item"><a href="https://varus.ua/detskie-tovary" ><span>Детские товары</span></a></li><li  class="level1 nav-31-7 category-item last parent"><a href="https://varus.ua/shkilni-tovari" ><span>Школьные товары</span></a><ul class="level1 submenu"><li  class="level2 nav-31-7-1 category-item first"><a href="https://varus.ua/albomi-dlya-malyuvannya" ><span>Альбомы для рисования</span></a></li><li  class="level2 nav-31-7-2 category-item"><a href="https://varus.ua/penali" ><span>Пеналы</span></a></li><li  class="level2 nav-31-7-3 category-item"><a href="https://varus.ua/zoshiti" ><span>Тетради</span></a></li><li  class="level2 nav-31-7-4 category-item"><a href="https://varus.ua/shkilni-ryukzaki" ><span>Школьные рюкзаки</span></a></li><li  class="level2 nav-31-7-5 category-item last"><a href="https://varus.ua/schodenniki" ><span>Дневники</span></a></li></ul></li></ul></li><li  class="level0 nav-32 last level-top"><a href="https://varus.ua/test1"  class="level-top" ><span>Blog</span></a></li>            </ul>
+</nav>
+                </div>
+                                            <div class="section-item-title nav-sections-item-title"
+                     data-role="collapsible">
+                    <a class="nav-sections-item-switch"
+                       data-toggle="switch" href="#store.links">
+                        Учётная запись                    </a>
+                </div>
+                <div class="section-item-content nav-sections-item-content"
+                     id="store.links"
+                     data-role="content">
+                    <!-- Account links -->                </div>
+                                            <div class="section-item-title nav-sections-item-title"
+                     data-role="collapsible">
+                    <a class="nav-sections-item-switch"
+                       data-toggle="switch" href="#store.settings">
+                        Настройки                    </a>
+                </div>
+                <div class="section-item-content nav-sections-item-content"
+                     id="store.settings"
+                     data-role="content">
+                            <div class="switcher language switcher-language" data-ui-id="language-switcher" id="switcher-language-nav">
+        <strong class="label switcher-label"><span>Язык</span></strong>
+        <div class="actions dropdown options switcher-options">
+            <div class="action toggle switcher-trigger"
+                 id="switcher-language-trigger-nav"
+                 data-mage-init='{"dropdown":{}}'
+                 data-toggle="dropdown"
+                 data-trigger-keypress-button="true">
+                <strong class="view-ru">
+                    <span>RU</span>
+                </strong>
+            </div>
+            <ul class="dropdown switcher-dropdown"
+                data-target="dropdown">
+                                                                                                <li class="view-ua switcher-option">
+                            <a href="https://varus.ua/stores/store/redirect/___store/ua/___from_store/ru/uenc/aHR0cHM6Ly92YXJ1cy51YS9zaXRlbWFwLWluZGV4LnhtbD9fX19zdG9yZT11YQ~~/">
+                                UA                            </a>
+                        </li>
+                                                </ul>
+        </div>
+    </div>
+                </div>
+                    </div>
+    </div>
+<main id="maincontent" class="page-main"><a id="contentarea" tabindex="-1"></a>
+<div class="page-title-wrapper">
+    <h1 class="page-title"
+                >
+        <span class="base" data-ui-id="page-title-wrapper" >Whoops, our bad...</span>    </h1>
+    </div>
+<div class="page messages"><div data-placeholder="messages"></div>
+<div data-bind="scope: 'messages'">
+    <!-- ko if: cookieMessagesObservable() && cookieMessagesObservable().length > 0 -->
+    <div aria-atomic="true" role="alert" class="messages" data-bind="foreach: {
+        data: cookieMessagesObservable(), as: 'message'
+    }">
+        <div data-bind="attr: {
+            class: 'message-' + message.type + ' ' + message.type + ' message',
+            'data-ui-id': 'message-' + message.type
+        }">
+            <div data-bind="html: $parent.prepareMessageForHtml(message.text)"></div>
+        </div>
+    </div>
+    <!-- /ko -->
+
+    <div aria-atomic="true" role="alert" class="messages" data-bind="foreach: {
+        data: messages().messages, as: 'message'
+    }, afterRender: purgeMessages">
+        <div data-bind="attr: {
+            class: 'message-' + message.type + ' ' + message.type + ' message',
+            'data-ui-id': 'message-' + message.type
+        }">
+            <div data-bind="html: $parent.prepareMessageForHtml(message.text)"></div>
+        </div>
+    </div>
+</div>
+
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_Ui/js/core/app": {
+                "components": {
+                        "messages": {
+                            "component": "Magento_Theme/js/view/messages"
+                        }
+                    }
+                }
+            }
+    }
+</script>
+</div><div class="columns"><div class="column main"><input name="form_key" type="hidden" value="eShyRNjqssa8QhjB" /><div id="authenticationPopup" data-bind="scope:'authenticationPopup', style: {display: 'none'}">
+        <script>window.authenticationPopup = {"autocomplete":"off","customerRegisterUrl":"https:\/\/varus.ua\/customer\/account\/create\/","customerForgotPasswordUrl":"https:\/\/varus.ua\/customer\/account\/forgotpassword\/","baseUrl":"https:\/\/varus.ua\/","customerLoginUrl":"https:\/\/varus.ua\/customer\/ajax\/login\/"}</script>    <!-- ko template: getTemplate() --><!-- /ko -->
+        <script type="text/x-magento-init">
+        {
+            "#authenticationPopup": {
+                "Magento_Ui/js/core/app": {"components":{"authenticationPopup":{"component":"Magento_Customer\/js\/view\/authentication-popup","children":{"messages":{"component":"Magento_Ui\/js\/view\/messages","displayArea":"messages"},"captcha":{"component":"Magento_Captcha\/js\/view\/checkout\/loginCaptcha","displayArea":"additional-login-form-fields","formId":"user_login","configSource":"checkout"}}}}}            },
+            "*": {
+                "Magento_Ui/js/block-loader": "https\u003A\u002F\u002Fazgwcsav2varusprod01.blob.core.windows.net\u002Fazgwc\u002Dblob\u002Dstatic\u002Dvarus\u002Dprod\u002D01\u002Fback\u002Fstatic\u002Fversion1779136040\u002Ffrontend\u002FMagento\u002Fluma\u002Fru_RU\u002Fimages\u002Floader\u002D1.gif"
+                            }
+        }
+    </script>
+</div>
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_Customer/js/section-config": {
+                "sections": {"stores\/store\/switch":["*"],"stores\/store\/switchrequest":["*"],"directory\/currency\/switch":["*"],"*":["messages"],"customer\/account\/logout":["*","recently_viewed_product","recently_compared_product"],"customer\/account\/loginpost":["*"],"customer\/account\/createpost":["*"],"customer\/account\/editpost":["*"],"customer\/ajax\/login":["checkout-data","cart","captcha"],"catalog\/product_compare\/add":["compare-products"],"catalog\/product_compare\/remove":["compare-products"],"catalog\/product_compare\/clear":["compare-products"],"sales\/guest\/reorder":["cart","ammessages"],"sales\/order\/reorder":["cart","ammessages"],"checkout\/cart\/add":["cart","directory-data","ammessages"],"checkout\/cart\/delete":["cart","ammessages"],"checkout\/cart\/updatepost":["cart","ammessages"],"checkout\/cart\/updateitemoptions":["cart","ammessages"],"checkout\/cart\/couponpost":["cart","ammessages"],"checkout\/cart\/estimatepost":["cart","ammessages"],"checkout\/cart\/estimateupdatepost":["cart","ammessages"],"checkout\/onepage\/saveorder":["cart","checkout-data","last-ordered-items","ammessages"],"checkout\/sidebar\/removeitem":["cart","ammessages"],"checkout\/sidebar\/updateitemqty":["cart","ammessages"],"rest\/*\/v1\/carts\/*\/payment-information":["cart","last-ordered-items","captcha","instant-purchase","ammessages"],"rest\/*\/v1\/guest-carts\/*\/payment-information":["cart","captcha","ammessages"],"rest\/*\/v1\/guest-carts\/*\/selected-payment-method":["cart","checkout-data","ammessages"],"rest\/*\/v1\/carts\/*\/selected-payment-method":["cart","checkout-data","instant-purchase","ammessages"],"customer\/address\/*":["instant-purchase"],"customer\/account\/*":["instant-purchase"],"vault\/cards\/deleteaction":["instant-purchase"],"multishipping\/checkout\/overviewpost":["cart","ammessages"],"review\/product\/post":["review"],"paymentservicespaypal\/smartbuttons\/placeorder":["cart","checkout-data"],"paymentservicespaypal\/smartbuttons\/cancel":["cart","checkout-data"],"wishlist\/index\/add":["wishlist"],"wishlist\/index\/remove":["wishlist"],"wishlist\/index\/updateitemoptions":["wishlist"],"wishlist\/index\/update":["wishlist"],"wishlist\/index\/cart":["wishlist","cart"],"wishlist\/index\/fromcart":["wishlist","cart"],"wishlist\/index\/allcart":["wishlist","cart"],"wishlist\/shared\/allcart":["wishlist","cart"],"wishlist\/shared\/cart":["cart"],"faq\/index\/save":["faq"],"amasty_promo\/cart\/add":["cart","ammessages"],"paypal\/express\/placeorder":["ammessages"],"paypal\/payflowexpress\/placeorder":["ammessages"],"paypal\/express\/onauthorization":["ammessages"],"braintree\/paypal\/placeorder":["ammessages"],"authorizenet\/directpost_payment\/place":["ammessages"]},
+                "clientSideSections": ["checkout-data","cart-data","faq_product"],
+                "baseUrls": ["https:\/\/varus.ua\/"],
+                "sectionNames": ["messages","customer","compare-products","last-ordered-items","cart","directory-data","captcha","instant-purchase","loggedAsCustomer","review","payments","wishlist","faq","ammessages","recently_viewed_product","recently_compared_product","product_data_storage"]            }
+        }
+    }
+</script>
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_Customer/js/customer-data": {
+                "sectionLoadUrl": "https\u003A\u002F\u002Fvarus.ua\u002Fcustomer\u002Fsection\u002Fload\u002F",
+                "expirableSectionLifetime": 60,
+                "expirableSectionNames": ["cart"],
+                "cookieLifeTime": "3600",
+                "cookieDomain": "",
+                "updateSessionUrl": "https\u003A\u002F\u002Fvarus.ua\u002Fcustomer\u002Faccount\u002FupdateSession\u002F",
+                "isLoggedIn": ""
+            }
+        }
+    }
+</script>
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_Customer/js/invalidation-processor": {
+                "invalidationRules": {
+                    "website-rule": {
+                        "Magento_Customer/js/invalidation-rules/website-rule": {
+                            "scopeConfig": {
+                                "websiteId": "1"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+</script>
+<script type="text/x-magento-init">
+    {
+        "body": {
+            "pageCache": {"url":"https:\/\/varus.ua\/page_cache\/block\/render\/","handles":["default","cms_noroute_index","cms_page_view","cms_noroute_index_id_no-route","blog_css"],"originalRequest":{"route":"cms","controller":"noroute","action":"index","uri":"\/sitemap-index.xml"},"versionCookieName":"private_content_version"}        }
+    }
+</script>
+
+    <script>
+        if (window.require) {
+            require(['jquery', 'Magefan_Blog/js/lib/mfblogunveil', 'domReady!'], function($){
+                $('.mfblogunveil').mfblogunveil();
+            });
+        } else {
+            /* e.g. hyva theme */
+            document.addEventListener("DOMContentLoaded", function(){
+                var items =  document.getElementsByClassName('mfblogunveil');
+                var el, url;
+                if (items.length) {
+                    for (var i=0; i<items.length;i++) {
+                        el = items[i];
+                        url = el.getAttribute('data-original');
+                        if (!url) {
+                            continue;
+                        }
+                        if ('IMG' == el.tagName) {
+                            el.src = url;
+                        } else {
+                            el.style.backgroundImage = "url('" + url  + "')";
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+
+<dl>
+<dt>The page you requested was not found, and we have a fine guess why.</dt>
+<dd>
+<ul class="disc">
+<li>If you typed the URL directly, please make sure the spelling is correct.</li>
+<li>If you clicked on a link to get here, the link is outdated.</li>
+</ul></dd>
+</dl>
+<dl>
+<dt>What can you do?</dt>
+<dd>Have no fear, help is near! There are many ways you can get back on track with Magento Store.</dd>
+<dd>
+<ul class="disc">
+<li><a href="#" onclick="history.go(-1); return false;">Go back</a> to the previous page.</li>
+<li>Use the search bar at the top of the page to search for your products.</li>
+<li>Follow these links to get you back on track!<br /><a href="https://varus.ua/">Store Home</a> <span class="separator">|</span> <a href="https://varus.ua/customer/account/">My Account</a></li></ul></dd></dl>
+</div><div class="sidebar sidebar-additional"><div class="block block-compare" data-bind="scope: 'compareProducts'" data-role="compare-products-sidebar">
+    <div class="block-title">
+        <strong id="block-compare-heading" role="heading" aria-level="2">Сравнение продуктов</strong>
+        <span class="counter qty no-display" data-bind="text: compareProducts().countCaption, css: {'no-display': !compareProducts().count}"></span>
+    </div>
+    <!-- ko if: compareProducts().count -->
+    <div class="block-content no-display" aria-labelledby="block-compare-heading" data-bind="css: {'no-display': !compareProducts().count}">
+        <ol id="compare-items" class="product-items product-items-names" data-bind="foreach: compareProducts().items">
+                <li class="product-item">
+                    <input type="hidden" class="compare-item-id" data-bind="value: id"/>
+                    <strong class="product-item-name">
+                        <a data-bind="attr: {href: product_url}, html: name" class="product-item-link"></a>
+                    </strong>
+                    <a href="#"
+                       data-bind="attr: {'data-post': remove_url}"
+                       title="&#x0423;&#x0434;&#x0430;&#x043B;&#x0438;&#x0442;&#x044C;&#x20;&#x044D;&#x0442;&#x043E;&#x0442;&#x20;&#x044D;&#x043B;&#x0435;&#x043C;&#x0435;&#x043D;&#x0442;"
+                       class="action delete">
+                        <span>Удалить этот элемент</span>
+                    </a>
+                </li>
+        </ol>
+        <div class="actions-toolbar">
+            <div class="primary">
+                <a data-bind="attr: {'href': compareProducts().listUrl}" class="action compare primary"><span>Сравнить</span></a>
+            </div>
+            <div class="secondary">
+                <a id="compare-clear-all" href="#" class="action clear" data-post="{&quot;action&quot;:&quot;https:\/\/varus.ua\/catalog\/product_compare\/clear\/&quot;,&quot;data&quot;:{&quot;uenc&quot;:&quot;&quot;,&quot;confirmation&quot;:true,&quot;confirmationMessage&quot;:&quot;\u0412\u044b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u0441\u0435 \u0442\u043e\u0432\u0430\u0440\u044b \u0438\u0437 \u0441\u043f\u0438\u0441\u043a\u0430 \&quot;\u0421\u0440\u0430\u0432\u043d\u0435\u043d\u0438\u0435 \u0442\u043e\u0432\u0430\u0440\u043e\u0432\&quot;?&quot;}}">
+                    <span>Очистить все</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- /ko -->
+    <!-- ko ifnot: compareProducts().count -->
+    <div class="empty">У вас нет товаров для сравнения.</div>
+    <!-- /ko -->
+</div>
+<script type="text/x-magento-init">
+{"[data-role=compare-products-sidebar]": {"Magento_Ui/js/core/app": {"components":{"compareProducts":{"component":"Magento_Catalog\/js\/view\/compare-products"}}}}}
+</script>
+    <div class="block block-wishlist" data-bind="scope: 'wishlist'">
+        <div class="block-title">
+            <strong role="heading" aria-level="2">Мой список желаний</strong>
+            <!-- ko if: wishlist().counter -->
+            <span data-bind="text: wishlist().counter" class="counter"></span>
+            <!-- /ko -->
+        </div>
+        <div class="block-content">
+            <strong class="subtitle">Последние добавленные элементы</strong>
+            <!-- ko if: wishlist().counter -->
+                <ol class="product-items no-display"
+                    id="wishlist-sidebar"
+                    data-bind="foreach: wishlist().items, css: {'no-display': null}">
+                    <li class="product-item">
+                        <div class="product-item-info">
+                            <a class="product-item-photo" data-bind="attr: { href: product_url, title: product_name }">
+                                <!-- ko template: {name: $data.image.template, data: $data.image} --><!-- /ko -->
+                            </a>
+                            <div class="product-item-details">
+                                <strong class="product-item-name">
+                                    <a data-bind="attr: { href: product_url }" class="product-item-link">
+                                        <span data-bind="text: product_name"></span>
+                                    </a>
+                                </strong>
+                                <div data-bind="html: product_price"></div>
+                                <div class="product-item-actions">
+                                    <!-- ko if: product_is_saleable_and_visible -->
+                                    <div class="actions-primary">
+                                        <!-- ko if: product_has_required_options -->
+                                        <a href="#"
+                                           data-bind="attr: {'data-post': add_to_cart_params}"
+                                           class="action tocart primary">
+                                            <span>Добавить в корзину</span>
+                                        </a>
+                                        <!-- /ko -->
+                                        <!-- ko ifnot: product_has_required_options -->
+                                            <button type="button"
+                                                    class="action tocart primary"
+                                                    data-bind="attr: {'data-post': add_to_cart_params}">
+                                                <span>Добавить в корзину</span>
+                                            </button>
+                                        <!-- /ko -->
+                                    </div>
+                                    <!-- /ko -->
+                                    <div class="actions-secondary">
+                                        <a href="#"  data-bind="attr: {'data-post': delete_item_params}"
+                                           title="&#x0423;&#x0434;&#x0430;&#x043B;&#x0438;&#x0442;&#x044C;&#x20;&#x044D;&#x0442;&#x043E;&#x0442;&#x20;&#x044D;&#x043B;&#x0435;&#x043C;&#x0435;&#x043D;&#x0442;"
+                                           class="btn-remove action delete">
+                                            <span>Удалить этот элемент</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ol>
+                <div class="actions-toolbar no-display" data-bind="css: {'no-display': null}">
+                    <div class="primary">
+                        <a class="action details"
+                           href="https://varus.ua/wishlist/"
+                           title="&#x041F;&#x0435;&#x0440;&#x0435;&#x043C;&#x0435;&#x0441;&#x0442;&#x0438;&#x0442;&#x044C;&#x0441;&#x044F;&#x20;&#x0432;&#x20;&#x0441;&#x043F;&#x0438;&#x0441;&#x043E;&#x043A;&#x20;&#x0436;&#x0435;&#x043B;&#x0430;&#x043D;&#x0438;&#x0439;">
+                            <span>Переместиться в список желаний</span>
+                        </a>
+                    </div>
+                </div>
+            <!-- /ko -->
+            <!-- ko ifnot: wishlist().counter -->
+                <div class="empty">У вас нет товаров в списке пожеланий.</div>
+            <!-- /ko -->
+        </div>
+    </div>
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_Ui/js/core/app": {
+                "components": {
+                    "wishlist": {
+                        "component": "Magento_Wishlist/js/view/wishlist"
+                    }
+                }
+            }
+        }
+    }
+</script>
+</div></div></main><footer class="page-footer"><div class="footer content"><div class="block newsletter">
+    <div class="title"><strong>Новостная рассылка</strong></div>
+    <div class="content">
+        <form class="form subscribe"
+            novalidate
+            action="https://varus.ua/newsletter/subscriber/new/"
+            method="post"
+            data-mage-init='{"validation": {"errorClass": "mage-error"}}'
+            id="newsletter-validate-detail">
+            <div class="field newsletter">
+                <div class="control">
+                    <label for="newsletter">
+                        <span class="label">
+                            Sign Up for Our Newsletter:                        </span>
+                        <input name="email" type="email" id="newsletter"
+                               placeholder="Enter your email address"
+                               data-mage-init='{"mage/trim-input":{}}'
+                               data-validate="{required:true, 'validate-email':true}"
+                        />
+                    </label>
+                </div>
+            </div>
+            <div class="actions">
+                <button class="action subscribe primary"
+                        title="Subscribe"
+                        type="submit"
+                        aria-label="Subscribe"
+                    >
+                    <span>Subscribe</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_Customer/js/block-submit-on-send": {
+                "formId": "newsletter-validate-detail"
+            }
+        }
+    }
+</script>
+<ul class="footer links"><li class="nav item"><a href="https://varus.ua/privacy-policy-cookie-restriction-mode/">Privacy and Cookie Policy</a></li><li class="nav item"><a href="https://varus.ua/search/term/popular/">Поисковые запросы</a></li><li class="nav item"><a href="https://varus.ua/catalogsearch/advanced/" data-action="advanced-search">Расширенный поиск</a></li><li class="nav item"><a href="https://varus.ua/sales/guest/form/">Заказ и возврат</a></li><li class="nav item"><a href="https://varus.ua/contact/">Обратная связь</a></li><li class="nav item"><a href="https://varus.ua/knowledge-base/">FAQ</a></li><li><a href="https://varus.ua/test1" id="idolr2kgqY" >Blog1</a></li></ul></div></footer><script type="text/x-magento-init">
+        {
+            "*": {
+                "Magento_Ui/js/core/app": {
+                    "components": {
+                        "storage-manager": {
+                            "component": "Magento_Catalog/js/storage-manager",
+                            "appendTo": "",
+                            "storagesConfiguration" : {"recently_viewed_product":{"requestConfig":{"syncUrl":"https:\/\/varus.ua\/catalog\/product\/frontend_action_synchronize\/"},"lifetime":"1000","allowToSendRequest":null},"recently_compared_product":{"requestConfig":{"syncUrl":"https:\/\/varus.ua\/catalog\/product\/frontend_action_synchronize\/"},"lifetime":"1000","allowToSendRequest":null},"product_data_storage":{"updateRequestConfig":{"url":"https:\/\/varus.ua\/rest\/ru\/V1\/products-render-info"},"requestConfig":{"syncUrl":"https:\/\/varus.ua\/catalog\/product\/frontend_action_synchronize\/"},"allowToSendRequest":null}}                        }
+                    }
+                }
+            }
+        }
+</script>
+
+<small class="copyright">
+    <span>Copyright © 2013-present Magento, Inc. All rights reserved.</span>
+</small>
+</div>    </body>
+</html>

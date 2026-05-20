@@ -17,6 +17,8 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<CrawlerOptions>(configuration.GetSection("Crawler"));
         services.Configure<QueueOptions>(configuration.GetSection("Queue"));
+        services.AddScoped<ISitemapProductUrlDiscoverySource, SitemapProductUrlDiscoverySource>();
+        services.AddScoped<IProductUrlDiscoveryService, ProductUrlDiscoveryService>();
         services.AddScoped<RunCrawlerUseCase>();
         services.AddScoped<IRunCrawlerUseCase>(provider => provider.GetRequiredService<RunCrawlerUseCase>());
         return services;
@@ -67,6 +69,27 @@ public static class ServiceCollectionExtensions
             .ToArray();
 
         services.AddSingleton<IOptions<UrlFilterOptions>>(Options.Create(options));
+        return services;
+    }
+
+    /// <summary>Registers the category seed URL file location from crawler configuration.</summary>
+    public static IServiceCollection AddCategorySeedUrlFileOptions(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string contentRootPath)
+    {
+        var pathSetting = configuration.GetSection("Crawler").GetValue<string>("CategorySeedUrlsFilePath");
+        var resolvedPath = string.IsNullOrWhiteSpace(pathSetting)
+            ? string.Empty
+            : Path.IsPathRooted(pathSetting)
+                ? pathSetting
+                : Path.GetFullPath(Path.Combine(contentRootPath, pathSetting));
+
+        services.AddSingleton<IOptions<CategorySeedUrlFileOptions>>(Options.Create(new CategorySeedUrlFileOptions
+        {
+            PathSetting = pathSetting ?? string.Empty,
+            ResolvedPath = resolvedPath
+        }));
         return services;
     }
 }

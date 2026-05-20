@@ -21,7 +21,7 @@ public sealed class RunCrawlerUseCaseTests
         var ingestionRepo = new FakeIngestionRunRepository();
         var queueRepo = new FakeQueueRepository();
         var snapshotRepo = new FakePriceSnapshotRepository();
-        var source = new FakeSource(["https://example/ovochi/1"]);
+        var source = new FakeDiscoveryService(["https://example/ovochi/1"]);
         var extractor = new FakeExtractor(ProductExtractResult.Success(
             new ProductCard("1", "name", "url", "item", 10m, 12m, true, true, null, null), 200, 10, 1.0d));
 
@@ -45,7 +45,7 @@ public sealed class RunCrawlerUseCaseTests
         var ingestionRepo = new FakeIngestionRunRepository();
         var queueRepo = new FakeQueueRepository();
         var snapshotRepo = new FakePriceSnapshotRepository();
-        var source = new ThrowingSource();
+        var source = new ThrowingDiscoveryService();
         var extractor =
             new FakeExtractor(ProductExtractResult.Fail(CrawlerErrorCodes.Unknown, null, "boom", 10, 1.0d, false));
 
@@ -59,13 +59,13 @@ public sealed class RunCrawlerUseCaseTests
     }
 
     [Fact]
-    public async Task RunVegetablesAsync_SitemapUnavailable_SetsSpecificErrorInfo()
+    public async Task RunVegetablesAsync_ProductUrlDiscoveryUnavailable_SetsSpecificErrorInfo()
     {
         var crawlerRepo = new FakeCrawlerRunRepository();
         var ingestionRepo = new FakeIngestionRunRepository();
         var queueRepo = new FakeQueueRepository();
         var snapshotRepo = new FakePriceSnapshotRepository();
-        var source = new SitemapUnavailableSource();
+        var source = new ProductUrlDiscoveryUnavailableService();
         var extractor =
             new FakeExtractor(ProductExtractResult.Fail(CrawlerErrorCodes.Unknown, null, "unused", 10, 1.0d, false));
 
@@ -78,7 +78,7 @@ public sealed class RunCrawlerUseCaseTests
         Assert.Equal(RunStatus.Error, crawlerRepo.LastStatus);
         Assert.Equal(RunStatus.Error, ingestionRepo.LastStatus);
         Assert.NotNull(ingestionRepo.LastError);
-        Assert.Equal("SitemapUnavailable", ingestionRepo.LastError.Code);
+        Assert.Equal(CrawlerErrorCodes.ProductUrlDiscoveryUnavailable, ingestionRepo.LastError.Code);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public sealed class RunCrawlerUseCaseTests
         var ingestionRepo = new FakeIngestionRunRepository();
         var queueRepo = new FakeQueueRepository();
         var snapshotRepo = new FakePriceSnapshotRepository();
-        var source = new FakeSource(["https://example/ovochi/missing"]);
+        var source = new FakeDiscoveryService(["https://example/ovochi/missing"]);
         var extractor =
             new FakeExtractor(ProductExtractResult.Fail(CrawlerErrorCodes.NotFound, 404, "HTTP 404", 11, 1.0d, false));
 
@@ -114,7 +114,7 @@ public sealed class RunCrawlerUseCaseTests
         {
             NextWriteResult = new ProductObservationWriteResult(5, 77, true)
         };
-        var source = new FakeSource(["https://example/ovochi/partial"]);
+        var source = new FakeDiscoveryService(["https://example/ovochi/partial"]);
         var extractor = new FakeExtractor(ProductExtractResult.Partial(
             new ProductCard("sku-1", "name", "url", "partial", 10m, 12m, true, true, 1m, "kg"),
             CrawlerErrorCodes.ParseFailed,
@@ -141,7 +141,7 @@ public sealed class RunCrawlerUseCaseTests
         var ingestionRepo = new FakeIngestionRunRepository();
         var queueRepo = new FakeQueueRepository();
         var snapshotRepo = new FakePriceSnapshotRepository();
-        var source = new FakeSource(["https://example/ovochi/missing"]);
+        var source = new FakeDiscoveryService(["https://example/ovochi/missing"]);
         var extractor =
             new FakeExtractor(ProductExtractResult.Fail(CrawlerErrorCodes.Timeout, 504, "HTTP 504", 11, 1.0d, true));
 
@@ -158,7 +158,7 @@ public sealed class RunCrawlerUseCaseTests
         IIngestionRunRepository ingestion,
         IPriceCollectQueueRepository queue,
         IPriceSnapshotRepository snapshot,
-        IProductUrlSource source,
+        IProductUrlDiscoveryService source,
         IProductCardExtractor extractor)
     {
         var crawlerOptions = Options.Create(new CrawlerOptions
@@ -177,11 +177,9 @@ public sealed class RunCrawlerUseCaseTests
             RetryMaxDelayMs = 20,
             ReaperIntervalSeconds = 1
         });
-        var filterOptions = Options.Create(new UrlFilterOptions());
         return new RunCrawlerUseCase(
             crawlerOptions,
             queueOptions,
-            filterOptions,
             source,
             extractor,
             crawler,
@@ -191,22 +189,22 @@ public sealed class RunCrawlerUseCaseTests
             NullLogger<RunCrawlerUseCase>.Instance);
     }
 
-    private sealed class FakeSource(IReadOnlyList<string> urls) : IProductUrlSource
+    private sealed class FakeDiscoveryService(IReadOnlyList<string> urls) : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) =>
+        public Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct) =>
             Task.FromResult(urls);
     }
 
-    private sealed class ThrowingSource : IProductUrlSource
+    private sealed class ThrowingDiscoveryService : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) =>
+        public Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct) =>
             throw new InvalidOperationException("boom");
     }
 
-    private sealed class SitemapUnavailableSource : IProductUrlSource
+    private sealed class ProductUrlDiscoveryUnavailableService : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) =>
-            throw new SitemapUnavailableException("SitemapUnavailable: No valid sitemap found.");
+        public Task<IReadOnlyList<string>> DiscoverProductUrlsAsync(CancellationToken ct) =>
+            throw new ProductUrlDiscoveryUnavailableException("No product URLs found.");
     }
 
     private sealed class FakeExtractor(ProductExtractResult result) : IProductCardExtractor

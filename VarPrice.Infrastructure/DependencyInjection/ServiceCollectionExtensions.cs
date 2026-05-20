@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISitemapResponseValidator, SitemapResponseValidator>();
         services.AddScoped<SitemapDiscoveryService>();
         services.AddScoped<IProductUrlSource, SitemapReader>();
+        services.AddScoped<ICategoryProductUrlDiscoverySource, CategoryProductUrlDiscoverySource>();
         services.AddSingleton<VarusRequestCoordinator>();
         services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
 
