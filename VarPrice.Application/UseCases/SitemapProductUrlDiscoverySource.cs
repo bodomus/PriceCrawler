@@ -8,7 +8,6 @@ namespace VarPrice.Application.UseCases;
 
 public sealed class SitemapProductUrlDiscoverySource(
     IOptions<CrawlerOptions> options,
-    IOptions<UrlFilterOptions> urlFilterOptions,
     IProductUrlSource sitemapReader,
     ILogger<SitemapProductUrlDiscoverySource> logger) : ISitemapProductUrlDiscoverySource
 {
@@ -16,17 +15,15 @@ public sealed class SitemapProductUrlDiscoverySource(
     {
         var opt = options.Value;
         var urls = await sitemapReader.GetProductUrlsAsync(opt.SitemapIndexUrl, ct);
-        var filtered = ProductUrlFiltering.Apply(
-            urls,
-            opt,
-            urlFilterOptions.Value,
-            logger,
-            sourceName: "sitemap");
+        var candidates = urls
+            .Where(x => Uri.TryCreate(x, UriKind.Absolute, out _))
+            .Select(x => new Uri(x))
+            .ToList();
 
         logger.LogInformation(
-            "Product URL discovery completed using sitemap. Count={Count}",
-            filtered.Count);
+            "Sitemap product URL candidates discovered. Count={Count}",
+            candidates.Count);
 
-        return filtered;
+        return candidates;
     }
 }

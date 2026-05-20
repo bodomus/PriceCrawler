@@ -253,7 +253,7 @@ public sealed class ProductUrlDiscoveryTests
     [Fact]
     public void CategoryHtmlParser_DeduplicatesAndNormalizesProductLinks()
     {
-        var result = CategoryProductUrlDiscoverySource.ExtractProductUrls(
+        var result = new CategoryProductLinkExtractor().ExtractProductUrls(
             """
             <div class="product-card"><a href="/product-a?utm=1#details">A</a></div>
             <div class="product-card"><a href="https://varus.ua/product-a">A duplicate</a></div>
@@ -320,7 +320,7 @@ public sealed class ProductUrlDiscoveryTests
     private static ProductUrlDiscoveryService CreateDiscoveryService(
         ISitemapProductUrlDiscoverySource sitemap,
         ICategoryProductUrlDiscoverySource category)
-        => new(sitemap, category, NullLogger<ProductUrlDiscoveryService>.Instance);
+        => new(sitemap, category, new PassThroughProductUrlFilter(), NullLogger<ProductUrlDiscoveryService>.Instance);
 
     private static CategoryProductUrlDiscoverySourceHarness CreateCategorySource(
         string seedPath,
@@ -336,15 +336,20 @@ public sealed class ProductUrlDiscoveryTests
         });
         var coordinator = new VarusRequestCoordinator(crawlerOptions, NullLogger<VarusRequestCoordinator>.Instance);
         var source = new CategoryProductUrlDiscoverySource(
-            new StubHttpClientFactory(client),
-            coordinator,
+            new CategorySeedProvider(
+                Options.Create(new CategorySeedUrlFileOptions
+                {
+                    PathSetting = seedPath,
+                    ResolvedPath = seedPath
+                }),
+                NullLogger<CategorySeedProvider>.Instance),
+            new CategoryPageLoader(
+                new StubHttpClientFactory(client),
+                coordinator,
+                NullLogger<CategoryPageLoader>.Instance),
+            new CategoryProductLinkExtractor(),
+            new CategoryPaginationStrategy(),
             crawlerOptions,
-            Options.Create(new UrlFilterOptions()),
-            Options.Create(new CategorySeedUrlFileOptions
-            {
-                PathSetting = seedPath,
-                ResolvedPath = seedPath
-            }),
             NullLogger<CategoryProductUrlDiscoverySource>.Instance);
 
         return new CategoryProductUrlDiscoverySourceHarness(source, coordinator);
@@ -418,6 +423,12 @@ public sealed class ProductUrlDiscoveryTests
 
             return Task.FromResult<IReadOnlyCollection<Uri>>(_urls ?? []);
         }
+    }
+
+    private sealed class PassThroughProductUrlFilter : IProductUrlFilter
+    {
+        public IReadOnlyList<string> Apply(IEnumerable<Uri> urls, string sourceName) =>
+            urls.Select(x => x.AbsoluteUri).ToList();
     }
 
     private sealed class StubHttpClientFactory(HttpClient httpClient) : IHttpClientFactory

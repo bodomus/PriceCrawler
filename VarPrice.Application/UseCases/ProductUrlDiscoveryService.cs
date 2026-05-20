@@ -8,18 +8,21 @@ namespace VarPrice.Application.UseCases;
 public sealed class ProductUrlDiscoveryService(
     ISitemapProductUrlDiscoverySource sitemapSource,
     ICategoryProductUrlDiscoverySource categorySource,
+    IProductUrlFilter productUrlFilter,
     ILogger<ProductUrlDiscoveryService> logger) : IProductUrlDiscoveryService
 {
     public async Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct)
     {
         try
         {
-            var sitemapUrls = await sitemapSource.DiscoverProductUrlsAsync(ct);
+            var sitemapUrls = productUrlFilter.Apply(
+                await sitemapSource.DiscoverProductUrlsAsync(ct),
+                "sitemap");
             if (sitemapUrls.Count > 0)
             {
                 return new ProductUrlDiscoveryResult(
                     ProductUrlDiscoverySourceKind.Sitemap,
-                    sitemapUrls.Select(x => x.AbsoluteUri).ToList());
+                    sitemapUrls);
             }
 
             logger.LogWarning(
@@ -33,7 +36,9 @@ public sealed class ProductUrlDiscoveryService(
                 ex.Message);
         }
 
-        var categoryUrls = await categorySource.DiscoverProductUrlsAsync(ct);
+        var categoryUrls = productUrlFilter.Apply(
+            await categorySource.DiscoverProductUrlsAsync(ct),
+            "category-seed");
         if (categoryUrls.Count > 0)
         {
             logger.LogInformation(
@@ -41,7 +46,7 @@ public sealed class ProductUrlDiscoveryService(
                 categoryUrls.Count);
             return new ProductUrlDiscoveryResult(
                 ProductUrlDiscoverySourceKind.CategorySeed,
-                categoryUrls.Select(x => x.AbsoluteUri).ToList());
+                categoryUrls);
         }
 
         const string message =

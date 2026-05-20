@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<CrawlerOptions>(configuration.GetSection("Crawler"));
         services.Configure<QueueOptions>(configuration.GetSection("Queue"));
+        services.AddScoped<IProductUrlFilter, ProductUrlFilter>();
         services.AddScoped<ISitemapProductUrlDiscoverySource, SitemapProductUrlDiscoverySource>();
         services.AddScoped<IProductUrlDiscoveryService, ProductUrlDiscoveryService>();
         services.AddScoped<RunCrawlerUseCase>();
