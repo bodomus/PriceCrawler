@@ -172,6 +172,41 @@ public sealed class ProductUrlDiscoveryTests
     }
 
     [Fact]
+    public async Task CategorySeedSource_StopsOnNoNewProductUrls()
+    {
+        using var temp = new TempDirectory();
+        var seedPath = temp.WriteSeedFile(SeedJson("Fresh", "https://varus.ua/ovochi-svizhi"));
+        using var client = CreateTrackedHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://varus.ua/ovochi-svizhi"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-1">Page 1</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=2">Next</a>
+                """),
+            ["https://varus.ua/ovochi-svizhi?page=2"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-1?tracking=duplicate">Duplicate</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=3">Next</a>
+                """),
+            ["https://varus.ua/ovochi-svizhi?page=3"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-3">Should not load</a></div>
+                """)
+        }, out var handler);
+
+        await using var source = CreateCategorySource(seedPath, client, maxPagesPerSeed: 5);
+        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(["https://varus.ua/product-page-1"], result.Select(x => x.AbsoluteUri));
+        Assert.Equal(
+            [
+                "https://varus.ua/ovochi-svizhi",
+                "https://varus.ua/ovochi-svizhi?page=2"
+            ],
+            handler.RequestUris);
+    }
+
+    [Fact]
     public async Task CategorySeedSource_StopsOnMaxCategoryPagesPerSeed()
     {
         using var temp = new TempDirectory();
