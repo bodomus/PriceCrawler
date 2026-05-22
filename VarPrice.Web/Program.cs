@@ -40,6 +40,7 @@ builder.Services.AddScoped<IProductAnalysisService, InfrastructureRuns.ProductAn
 builder.Services.AddVarPriceApplication(builder.Configuration);
 builder.Services.AddVarPriceInfrastructure(builder.Configuration);
 builder.Services.AddUrlFilterOptionsFromFile(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddCategorySeedUrlFileOptions(builder.Configuration, builder.Environment.ContentRootPath);
 
 builder.Services.AddSingleton<ILoggingBootstrapper, LoggingBootstrapper>();
 

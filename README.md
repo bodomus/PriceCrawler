@@ -186,9 +186,11 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 - `ConnectionStrings:Postgres`
 - `Crawler:SitemapIndexUrl`
+- `Crawler:CategorySeedUrlsFilePath`
 - `Crawler:VegetablesUrlContains`
 - `Crawler:MaxProductsPerRun`
 - `Crawler:MaxUrls`
+- `Crawler:MaxCategoryPagesPerSeed` (default `3`)
 - `Crawler:MaxConcurrency` (default `4`)
 - `Crawler:RequestsPerSecond` (default `2.0`)
 - `Crawler:RequestTimeoutSeconds` (default `15`)
@@ -209,9 +211,11 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 - `ConnectionStrings__Postgres`
 - `Crawler__SitemapIndexUrl`
+- `Crawler__CategorySeedUrlsFilePath`
 - `Crawler__VegetablesUrlContains`
 - `Crawler__MaxProductsPerRun`
 - `Crawler__MaxUrls`
+- `Crawler__MaxCategoryPagesPerSeed`
 - `Crawler__MaxConcurrency`
 - `Crawler__RequestsPerSecond`
 - `Crawler__RequestTimeoutSeconds`
@@ -236,6 +240,7 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `timeout`
 - `http_5xx`
 - `parse_failed`
+- `ProductUrlDiscoveryUnavailable`
 - `unknown`
 
 ## Модель хранения результатов обхода

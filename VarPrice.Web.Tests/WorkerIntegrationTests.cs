@@ -633,7 +633,7 @@ public sealed class WorkerIntegrationTests
 
     private static RunCrawlerUseCase CreateUseCase(
         IPgConnectionFactory factory,
-        IProductUrlSource source,
+        IProductUrlDiscoveryService source,
         IProductCardExtractor extractor,
         QueueOptions? queueOptions = null)
         => new(
@@ -655,7 +655,6 @@ public sealed class WorkerIntegrationTests
                 RetryMaxDelayMs = 10,
                 ReaperIntervalSeconds = 1
             }),
-            Options.Create(new UrlFilterOptions()),
             source,
             extractor,
             CreateCrawlerRunRepository(factory),
@@ -754,15 +753,15 @@ public sealed class WorkerIntegrationTests
         return Convert.ToDateTime(value);
     }
 
-    private sealed class StaticSource(IReadOnlyList<string> urls) : IProductUrlSource
+    private sealed class StaticSource(IReadOnlyList<string> urls) : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) =>
-            Task.FromResult(urls);
+        public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct) =>
+            Task.FromResult(new ProductUrlDiscoveryResult(ProductUrlDiscoverySourceKind.Sitemap, urls));
     }
 
-    private sealed class ThrowingSource : IProductUrlSource
+    private sealed class ThrowingSource : IProductUrlDiscoveryService
     {
-        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct)
+        public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct)
             => throw new InvalidOperationException("fatal source error");
     }
 

@@ -18,6 +18,7 @@ var logFilePath = Path.Combine(logsDirectoryPath, "varprice-worker.log");
 builder.Services.AddVarPriceApplication(builder.Configuration);
 builder.Services.AddVarPriceInfrastructure(builder.Configuration);
 builder.Services.AddUrlFilterOptionsFromFile(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddCategorySeedUrlFileOptions(builder.Configuration, builder.Environment.ContentRootPath);
 
 builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
     .ReadFrom.Configuration(builder.Configuration)

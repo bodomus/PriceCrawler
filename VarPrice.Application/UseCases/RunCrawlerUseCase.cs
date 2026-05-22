@@ -16,8 +16,7 @@ namespace VarPrice.Application.UseCases;
 public sealed class RunCrawlerUseCase(
     IOptions<CrawlerOptions> options,
     IOptions<QueueOptions> queueOptions,
-    IOptions<UrlFilterOptions> urlFilterOptions,
-    IProductUrlSource sitemapReader,
+    IProductUrlDiscoveryService productUrlDiscoveryService,
     IProductCardExtractor extractor,
     ICrawlerRunRepository crawlerRunRepository,
     IIngestionRunRepository ingestionRunRepository,
@@ -29,31 +28,30 @@ public sealed class RunCrawlerUseCase(
     {
         var opt = options.Value;
         var queueOpt = queueOptions.Value;
-        var runId = await crawlerRunRepository.StartAsync("sitemap", ct);
+        ProductUrlDiscoveryResult discovery;
+
+        try
+        {
+            discovery = await productUrlDiscoveryService.DiscoverProductUrlsAsync(ct);
+        }
+        catch (ProductUrlDiscoveryUnavailableException ex)
+        {
+            return await FinishDiscoveryFailureAsync(
+                CrawlerErrorCodes.ProductUrlDiscoveryUnavailable,
+                ex.Message,
+                ct);
+        }
+        catch (Exception ex)
+        {
+            return await FinishDiscoveryFailureAsync("crawler_failed", ex.Message, ct);
+        }
+
+        var runId = await crawlerRunRepository.StartAsync(ToCrawlerRunSource(discovery.SourceKind), ct);
         var ingestionRunId = await ingestionRunRepository.StartAsync(runId, ct);
 
         try
         {
-            var urls = await sitemapReader.GetProductUrlsAsync(opt.SitemapIndexUrl, ct);
-            if (!string.IsNullOrWhiteSpace(opt.VegetablesUrlContains))
-            {
-                urls = urls.Where(x => x.Contains(opt.VegetablesUrlContains, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
-
-            var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
-            if (excluded.Length > 0)
-            {
-                urls = urls
-                    .Where(u => !excluded.Any(ex => u.Contains(ex, StringComparison.OrdinalIgnoreCase)))
-                    .ToList();
-            }
-
-            var maxProductsPerRun = Math.Max(1, opt.MaxProductsPerRun);
-            var maxUrls = Math.Max(1, opt.MaxUrls);
-            urls = urls.Take(Math.Min(maxProductsPerRun, maxUrls)).ToList();
-
-            var queueItems = urls
+            var queueItems = discovery.Urls
                 .Select(url => new QueueEnqueueItem(url, BuildIdempotencyKey(runId, url)))
                 .ToList();
             var enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
@@ -83,19 +81,6 @@ public sealed class RunCrawlerUseCase(
                 stats.Dead,
                 note);
         }
-        catch (SitemapUnavailableException ex)
-        {
-            const string errorCode = "SitemapUnavailable";
-            var errorInfo = new ErrorInfo(errorCode, ex.Message);
-            await ingestionRunRepository.FinishAsync(ingestionRunId, RunStatus.Error, errorInfo, ct);
-            await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, ex.Message, ct);
-            return new CrawlerRunResult(
-                runId,
-                RunStatus.Error.ToString().ToLowerInvariant(),
-                0,
-                1,
-                ex.Message);
-        }
         catch (Exception ex)
         {
             var errorInfo = new ErrorInfo("crawler_failed", ex.Message);
@@ -109,6 +94,29 @@ public sealed class RunCrawlerUseCase(
                 ex.Message);
         }
     }
+
+    private async Task<CrawlerRunResult> FinishDiscoveryFailureAsync(string errorCode, string message,
+        CancellationToken ct)
+    {
+        var runId = await crawlerRunRepository.StartAsync("discovery", ct);
+        var ingestionRunId = await ingestionRunRepository.StartAsync(runId, ct);
+        var errorInfo = new ErrorInfo(errorCode, message);
+        await ingestionRunRepository.FinishAsync(ingestionRunId, RunStatus.Error, errorInfo, ct);
+        await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, message, ct);
+        return new CrawlerRunResult(
+            runId,
+            RunStatus.Error.ToString().ToLowerInvariant(),
+            0,
+            1,
+            message);
+    }
+
+    private static string ToCrawlerRunSource(ProductUrlDiscoverySourceKind sourceKind) =>
+        sourceKind switch
+        {
+            ProductUrlDiscoverySourceKind.CategorySeed => "category-seed",
+            _ => "sitemap"
+        };
 
     private async Task DrainQueueAsync(long runId, CrawlerOptions crawlerOptionsValue, QueueOptions queueOptionsValue,
         CancellationToken ct)
