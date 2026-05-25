@@ -25,10 +25,7 @@ public sealed class CategorySeedProvider(
 
         if (!File.Exists(path))
         {
-            logger.LogWarning(
-                "Category seed URL discovery unavailable. Reason=CategorySeedFileMissing; FilePath={FilePath}",
-                path);
-            return [];
+            throw new FileNotFoundException($"Category seed URL file not found: {path}", path);
         }
 
         CategorySeedConfig? config;
@@ -41,11 +38,7 @@ public sealed class CategorySeedProvider(
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(
-                ex,
-                "Category seed URL discovery unavailable. Reason=CategorySeedFileInvalid; FilePath={FilePath}",
-                path);
-            return [];
+            throw new InvalidOperationException($"Invalid JSON in category seed URL file: {path}", ex);
         }
 
         var entries = config?.Crawler?.CategorySeedUrls ?? [];

@@ -44,6 +44,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICategoryPageLoader, CategoryPageLoader>();
         services.AddScoped<ICategoryProductLinkExtractor, CategoryProductLinkExtractor>();
         services.AddScoped<ICategoryPaginationStrategy, CategoryPaginationStrategy>();
+        services.AddScoped<IProductUrlDiscoveryStrategyFactory, ProductUrlDiscoveryStrategyFactory>();
+        services.AddScoped<CategorySeedProductUrlDiscoveryStrategy>();
         services.AddScoped<ICategoryProductUrlDiscoverySource, CategoryProductUrlDiscoverySource>();
         services.AddSingleton<VarusRequestCoordinator>();
         services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();

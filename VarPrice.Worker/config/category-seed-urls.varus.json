@@ -1,0 +1,1890 @@
+﻿{
+    "Crawler": {
+        "CategorySeedUrls": [
+            {
+                "name": "Здоровое питание и Эко товары",
+                "url": "https://varus.ua/healthy"
+            },
+            {
+                "name": "Органические продукты",
+                "url": "https://varus.ua/organic-food"
+            },
+            {
+                "name": "Веганские продукты",
+                "url": "https://varus.ua/vegan-food"
+            },
+            {
+                "name": "Безглютеновые продукты",
+                "url": "https://varus.ua/glutenfree-food"
+            },
+            {
+                "name": "Безлактозные продукты",
+                "url": "https://varus.ua/lactfree-food"
+            },
+            {
+                "name": "Продукты без добавления сахара",
+                "url": "https://varus.ua/nosugar-food"
+            },
+            {
+                "name": "Продукты для спортсменов",
+                "url": "https://varus.ua/sport-food"
+            },
+            {
+                "name": "Кофе без кофеина",
+                "url": "https://varus.ua/nocoff-food"
+            },
+            {
+                "name": "Экологическая бытовая химия",
+                "url": "https://varus.ua/eco-products"
+            },
+            {
+                "name": "Собственные марки",
+                "url": "https://varus.ua/own-trademarks"
+            },
+            {
+                "name": "Продукты",
+                "url": "https://varus.ua/own-food"
+            },
+            {
+                "name": "Вода, соки и напитки",
+                "url": "https://varus.ua/own-drinks"
+            },
+            {
+                "name": "Чай, кофе и горячие напитки",
+                "url": "https://varus.ua/own-hotdrinks"
+            },
+            {
+                "name": "Алкоголь",
+                "url": "https://varus.ua/own-alco"
+            },
+            {
+                "name": "Гигиена и уход",
+                "url": "https://varus.ua/own-care"
+            },
+            {
+                "name": "Бытовая химия",
+                "url": "https://varus.ua/own-clean"
+            },
+            {
+                "name": "Товары для дома",
+                "url": "https://varus.ua/own-house"
+            },
+            {
+                "name": "Товары для животных",
+                "url": "https://varus.ua/own-pets"
+            },
+            {
+                "name": "Товары для детей",
+                "url": "https://varus.ua/own-children"
+            },
+            {
+                "name": "Фрукты, овощи, орехи",
+                "url": "https://varus.ua/frukti-ovochi-gorihi"
+            },
+            {
+                "name": "Овощи свежие",
+                "url": "https://varus.ua/ovochi-svizhi"
+            },
+            {
+                "name": "Фрукты свежие",
+                "url": "https://varus.ua/frukti-svizhi"
+            },
+            {
+                "name": "Бананы",
+                "url": "https://varus.ua/banani"
+            },
+            {
+                "name": "Яблоки",
+                "url": "https://varus.ua/yabluka"
+            },
+            {
+                "name": "Груши",
+                "url": "https://varus.ua/grushi"
+            },
+            {
+                "name": "Виноград",
+                "url": "https://varus.ua/vinograd"
+            },
+            {
+                "name": "Ананасы",
+                "url": "https://varus.ua/ananasi"
+            },
+            {
+                "name": "Манго",
+                "url": "https://varus.ua/mango"
+            },
+            {
+                "name": "Киви",
+                "url": "https://varus.ua/kivi"
+            },
+            {
+                "name": "Цитрусовые фрукты",
+                "url": "https://varus.ua/citrusovi"
+            },
+            {
+                "name": "Тропические фрукты",
+                "url": "https://varus.ua/tropichni-frukti"
+            },
+            {
+                "name": "Персики, сливы, абрикосы",
+                "url": "https://varus.ua/persiki-slivi-abrikosi"
+            },
+            {
+                "name": "Арбузы и дыни",
+                "url": "https://varus.ua/kavuni-ta-dini"
+            },
+            {
+                "name": "Зелень свежая",
+                "url": "https://varus.ua/zelen-svizha"
+            },
+            {
+                "name": "Ягоды свежие",
+                "url": "https://varus.ua/yagodi-svizhi"
+            },
+            {
+                "name": "Грибы",
+                "url": "https://varus.ua/gribi"
+            },
+            {
+                "name": "Сухофрукты и цукаты",
+                "url": "https://varus.ua/suhofrukti"
+            },
+            {
+                "name": "Орехи и семена",
+                "url": "https://varus.ua/gorihi-ta-nasinnya"
+            },
+            {
+                "name": "Мясо и полуфабрикаты",
+                "url": "https://varus.ua/myasni-virobi-ta-yaycya"
+            },
+            {
+                "name": "Курятина",
+                "url": "https://varus.ua/kuryatina"
+            },
+            {
+                "name": "Индюшатина",
+                "url": "https://varus.ua/indichatina"
+            },
+            {
+                "name": "Говядина",
+                "url": "https://varus.ua/yalovichina"
+            },
+            {
+                "name": "Свинина",
+                "url": "https://varus.ua/svinina"
+            },
+            {
+                "name": "Мясо утки",
+                "url": "https://varus.ua/myaso-kachki"
+            },
+            {
+                "name": "Прочее мясо",
+                "url": "https://varus.ua/catalog/category/view/s/prochee-mjaso/id/59995/"
+            },
+            {
+                "name": "Маринованный шашлык",
+                "url": "https://varus.ua/shashlik-marinovaniy"
+            },
+            {
+                "name": "Стейки",
+                "url": "https://varus.ua/stejki"
+            },
+            {
+                "name": "Фарш",
+                "url": "https://varus.ua/farsh"
+            },
+            {
+                "name": "Мясные полуфабрикаты",
+                "url": "https://varus.ua/napivfabrikati-myasni"
+            },
+            {
+                "name": "Субпродукты",
+                "url": "https://varus.ua/subprodukti"
+            },
+            {
+                "name": "Рыба и морепродукты",
+                "url": "https://varus.ua/riba"
+            },
+            {
+                "name": "Креветки",
+                "url": "https://varus.ua/krevetki"
+            },
+            {
+                "name": "Замороженная рыба",
+                "url": "https://varus.ua/riba-zamorozhena"
+            },
+            {
+                "name": "Крабовые палочки",
+                "url": "https://varus.ua/krabovi-palochki"
+            },
+            {
+                "name": "Икра",
+                "url": "https://varus.ua/ikra-ribi"
+            },
+            {
+                "name": "Морепродукты",
+                "url": "https://varus.ua/moluski"
+            },
+            {
+                "name": "Охлажденная рыба",
+                "url": "https://varus.ua/riba-oholodzhena"
+            },
+            {
+                "name": "Слабосоленая рыба",
+                "url": "https://varus.ua/riba-kopchena-vyalina-solena"
+            },
+            {
+                "name": "Копченая и вяленая рыба",
+                "url": "https://varus.ua/riba-ta-moreprodukti"
+            },
+            {
+                "name": "Рыба холодного копчения",
+                "url": "https://varus.ua/riba-holodnogo-kopchennya"
+            },
+            {
+                "name": "Рыба горячего копчения",
+                "url": "https://varus.ua/riba-garyachogo-kopchennya"
+            },
+            {
+                "name": "Вяленая рыба",
+                "url": "https://varus.ua/vyalena-riba"
+            },
+            {
+                "name": "Пасты из рыбы и икры",
+                "url": "https://varus.ua/pasti-z-moreproduktiv"
+            },
+            {
+                "name": "Раки",
+                "url": "https://varus.ua/raki"
+            },
+            {
+                "name": "Рыбный фарш и полуфабрикаты",
+                "url": "https://varus.ua/ribni-napivfabrikati"
+            },
+            {
+                "name": "Морская капуста и водоросли",
+                "url": "https://varus.ua/morska-kapusta-ta-vodorosli"
+            },
+            {
+                "name": "Живая рыба",
+                "url": "https://varus.ua/riba-zhiva"
+            },
+            {
+                "name": "Алкоголь",
+                "url": "https://varus.ua/alkogol"
+            },
+            {
+                "name": "Пиво",
+                "url": "https://varus.ua/pivo"
+            },
+            {
+                "name": "Вино",
+                "url": "https://varus.ua/vino"
+            },
+            {
+                "name": "Игристые вина и шампанское",
+                "url": "https://varus.ua/igristi-vina"
+            },
+            {
+                "name": "Крепкий алкоголь",
+                "url": "https://varus.ua/micni-napoi"
+            },
+            {
+                "name": "Виски",
+                "url": "https://varus.ua/viski"
+            },
+            {
+                "name": "Коньяк и бренди",
+                "url": "https://varus.ua/konyak"
+            },
+            {
+                "name": "Джин",
+                "url": "https://varus.ua/dzhin"
+            },
+            {
+                "name": "Водка",
+                "url": "https://varus.ua/gorilka"
+            },
+            {
+                "name": "Ром",
+                "url": "https://varus.ua/rom"
+            },
+            {
+                "name": "Текила",
+                "url": "https://varus.ua/tekila"
+            },
+            {
+                "name": "Настойки и биттеры",
+                "url": "https://varus.ua/nastoyanki"
+            },
+            {
+                "name": "Ликеры",
+                "url": "https://varus.ua/likeri"
+            },
+            {
+                "name": "Вермуты",
+                "url": "https://varus.ua/vermuti"
+            },
+            {
+                "name": "Сидры",
+                "url": "https://varus.ua/sidri"
+            },
+            {
+                "name": "Слабоалкогольные напитки",
+                "url": "https://varus.ua/alkogolni-energetiki"
+            },
+            {
+                "name": "Колбасы, сосиски, деликатесы",
+                "url": "https://varus.ua/kolbasy-sosiski-delikatesy"
+            },
+            {
+                "name": "Колбасы",
+                "url": "https://varus.ua/kovbasi"
+            },
+            {
+                "name": "Сосиски и сардельки",
+                "url": "https://varus.ua/sosiski-ta-sardelki"
+            },
+            {
+                "name": "Хамон и прошуто",
+                "url": "https://varus.ua/hamon-ta-proshutto"
+            },
+            {
+                "name": "Балык",
+                "url": "https://varus.ua/balik"
+            },
+            {
+                "name": "Ветчина",
+                "url": "https://varus.ua/shinka"
+            },
+            {
+                "name": "Грудинка",
+                "url": "https://varus.ua/grudinka"
+            },
+            {
+                "name": "Сало",
+                "url": "https://varus.ua/salo"
+            },
+            {
+                "name": "Мясные деликатесы",
+                "url": "https://varus.ua/narizki-ta-delikatesi"
+            },
+            {
+                "name": "Соевые продукты",
+                "url": "https://varus.ua/soevi-produkti"
+            },
+            {
+                "name": "Сыры",
+                "url": "https://varus.ua/siri"
+            },
+            {
+                "name": "Твердые и полутвердые сыры",
+                "url": "https://varus.ua/tverdi-ta-napivtverdi-siri"
+            },
+            {
+                "name": "Плавленые и копченые сыры",
+                "url": "https://varus.ua/plavleni-ta-kopcheni-siri"
+            },
+            {
+                "name": "Кремовые и мягкие сыры",
+                "url": "https://varus.ua/kremovi-ta-myaki-siri"
+            },
+            {
+                "name": "Рассольные сыры",
+                "url": "https://varus.ua/rozsilni-siri"
+            },
+            {
+                "name": "Сыры с плесенью",
+                "url": "https://varus.ua/siri-iz-plisnyavoyu"
+            },
+            {
+                "name": "Тофу и растительные сыры",
+                "url": "https://varus.ua/tofu-ta-roslinni-siri"
+            },
+            {
+                "name": "Сырные наборы",
+                "url": "https://varus.ua/sirni-nabori"
+            },
+            {
+                "name": "Сыры для пиццы",
+                "url": "https://varus.ua/siri-dlya-pici"
+            },
+            {
+                "name": "Сыры для суши",
+                "url": "https://varus.ua/siri-dlya-sushi"
+            },
+            {
+                "name": "Соусы к сырам",
+                "url": "https://varus.ua/sousi-do-siriv"
+            },
+            {
+                "name": "Молочные продукты и яйца",
+                "url": "https://varus.ua/molochni-produkti"
+            },
+            {
+                "name": "Яйца",
+                "url": "https://varus.ua/yaycya"
+            },
+            {
+                "name": "Молоко",
+                "url": "https://varus.ua/moloko"
+            },
+            {
+                "name": "Растительное молоко",
+                "url": "https://varus.ua/napoi-roslinni"
+            },
+            {
+                "name": "Сметана",
+                "url": "https://varus.ua/smetana"
+            },
+            {
+                "name": "Сливочное масло",
+                "url": "https://varus.ua/maslo"
+            },
+            {
+                "name": "Маргарин",
+                "url": "https://varus.ua/margarin"
+            },
+            {
+                "name": "Йогурты",
+                "url": "https://varus.ua/yogurti"
+            },
+            {
+                "name": "Кисломолочные сыры",
+                "url": "https://varus.ua/kislomolochni-siri"
+            },
+            {
+                "name": "Кисломолочные напитки",
+                "url": "https://varus.ua/kislomolochni-produkti"
+            },
+            {
+                "name": "Кефир",
+                "url": "https://varus.ua/kefir"
+            },
+            {
+                "name": "Ряженка",
+                "url": "https://varus.ua/ryazhanka"
+            },
+            {
+                "name": "Айран",
+                "url": "https://varus.ua/napoi-kislomolochni"
+            },
+            {
+                "name": "Закваски и сыворотки",
+                "url": "https://varus.ua/zakvaski"
+            },
+            {
+                "name": "Сливки",
+                "url": "https://varus.ua/vershki"
+            },
+            {
+                "name": "Молочные десерты",
+                "url": "https://varus.ua/deserti-molochni"
+            },
+            {
+                "name": "Сгущенное молоко",
+                "url": "https://varus.ua/zguschene-moloko"
+            },
+            {
+                "name": "Сырки глазированные",
+                "url": "https://varus.ua/sirki"
+            },
+            {
+                "name": "Бакалея",
+                "url": "https://varus.ua/bakaliya"
+            },
+            {
+                "name": "Соусы и маринады",
+                "url": "https://varus.ua/sousi"
+            },
+            {
+                "name": "Горчица",
+                "url": "https://varus.ua/girchicya"
+            },
+            {
+                "name": "Кетчупы",
+                "url": "https://varus.ua/ketchupi"
+            },
+            {
+                "name": "Майонезы",
+                "url": "https://varus.ua/mayonezi"
+            },
+            {
+                "name": "Томатная паста",
+                "url": "https://varus.ua/pasta-tomatna"
+            },
+            {
+                "name": "Специальные соусы",
+                "url": "https://varus.ua/sousi-specialni"
+            },
+            {
+                "name": "Соевые соусы",
+                "url": "https://varus.ua/sousi-soevi"
+            },
+            {
+                "name": "Хрен",
+                "url": "https://varus.ua/hrin"
+            },
+            {
+                "name": "Маринады и заправки",
+                "url": "https://varus.ua/marinadi-ta-zapravki"
+            },
+            {
+                "name": "Специи и приправы",
+                "url": "https://varus.ua/pripravi-ta-specii"
+            },
+            {
+                "name": "Соль",
+                "url": "https://varus.ua/sil"
+            },
+            {
+                "name": "Сахар",
+                "url": "https://varus.ua/cukor"
+            },
+            {
+                "name": "Растительное масло",
+                "url": "https://varus.ua/maslo-roslinne"
+            },
+            {
+                "name": "Уксус",
+                "url": "https://varus.ua/ocet"
+            },
+            {
+                "name": "Крупы",
+                "url": "https://varus.ua/krupi"
+            },
+            {
+                "name": "Бобовые крупы",
+                "url": "https://varus.ua/bobovi-krupi"
+            },
+            {
+                "name": "Гречка",
+                "url": "https://varus.ua/grechka"
+            },
+            {
+                "name": "Кукурузная крупа",
+                "url": "https://varus.ua/kukurudzyana-krupa"
+            },
+            {
+                "name": "Манная крупа",
+                "url": "https://varus.ua/manna-krupa"
+            },
+            {
+                "name": "Крупа пшеничная",
+                "url": "https://varus.ua/pshenichna-krupa"
+            },
+            {
+                "name": "Пшено",
+                "url": "https://varus.ua/pshono"
+            },
+            {
+                "name": "Ячневая и перловая крупа",
+                "url": "https://varus.ua/yachna-krupa"
+            },
+            {
+                "name": "Рис",
+                "url": "https://varus.ua/ris"
+            },
+            {
+                "name": "Овсяная крупа",
+                "url": "https://varus.ua/vivsyana-krupa"
+            },
+            {
+                "name": "Макаронные изделия",
+                "url": "https://varus.ua/makaronni-virobi"
+            },
+            {
+                "name": "Еда быстрого приготовления",
+                "url": "https://varus.ua/stravi-shvidkogo-prigotuvannya"
+            },
+            {
+                "name": "Бульоны и супы",
+                "url": "https://varus.ua/bulyoni-ta-supi"
+            },
+            {
+                "name": "Вермишель быстрого приготовления",
+                "url": "https://varus.ua/vermishel-shvidkogo-prigotuvannya"
+            },
+            {
+                "name": "Каши быстрого приготовления",
+                "url": "https://varus.ua/kashi-shvitkogo-prigotuvannya"
+            },
+            {
+                "name": "Пюре быстрого приготовления",
+                "url": "https://varus.ua/pyure-shvidkogo-prigotuvannya"
+            },
+            {
+                "name": "Сухие завтраки",
+                "url": "https://varus.ua/suhi-snidanki"
+            },
+            {
+                "name": "Продукты для выпечки",
+                "url": "https://varus.ua/produkti-dlya-vipichki"
+            },
+            {
+                "name": "Мука",
+                "url": "https://varus.ua/boroshno"
+            },
+            {
+                "name": "Дрожжи",
+                "url": "https://varus.ua/drizhdzhi"
+            },
+            {
+                "name": "Желе, пудинги, кисель",
+                "url": "https://varus.ua/zhele"
+            },
+            {
+                "name": "Кокосовая стружка",
+                "url": "https://varus.ua/kokosova-struzhka"
+            },
+            {
+                "name": "Кремы и глазури",
+                "url": "https://varus.ua/kremi-ta-glazuri"
+            },
+            {
+                "name": "Мак",
+                "url": "https://varus.ua/mak"
+            },
+            {
+                "name": "Панировки",
+                "url": "https://varus.ua/paniruvannya"
+            },
+            {
+                "name": "Присыпки и украшения",
+                "url": "https://varus.ua/prisipki-ta-prikrasi"
+            },
+            {
+                "name": "Ингредиенты и добавки для выпечки",
+                "url": "https://varus.ua/harchovi-koncentrati"
+            },
+            {
+                "name": "Варенье и джемы",
+                "url": "https://varus.ua/varennya"
+            },
+            {
+                "name": "Мед",
+                "url": "https://varus.ua/med"
+            },
+            {
+                "name": "Сиропы и топпинги",
+                "url": "https://varus.ua/siropi-ta-topingi"
+            },
+            {
+                "name": "Продукты для суши",
+                "url": "https://varus.ua/produkti-dlya-sushi"
+            },
+            {
+                "name": "Суперфуды",
+                "url": "https://varus.ua/kinoa-chia-amarant"
+            },
+            {
+                "name": "Хлебобулочные изделия",
+                "url": "https://varus.ua/hlibobulochni-virobi"
+            },
+            {
+                "name": "Хлеб",
+                "url": "https://varus.ua/hlib"
+            },
+            {
+                "name": "Хлебцы",
+                "url": "https://varus.ua/hlibci"
+            },
+            {
+                "name": "Сушки и сухари",
+                "url": "https://varus.ua/sushki-ta-suhari"
+            },
+            {
+                "name": "Булочные изделия",
+                "url": "https://varus.ua/bulochni-virobi"
+            },
+            {
+                "name": "Пироги",
+                "url": "https://varus.ua/pirogi"
+            },
+            {
+                "name": "Мучные кулинарные изделия",
+                "url": "https://varus.ua/muchnye-kulinarnye-izdeliya"
+            },
+            {
+                "name": "Лепешки и заготовки",
+                "url": "https://varus.ua/korzhi-ta-zagotovki"
+            },
+            {
+                "name": "Кондитерские изделия и сладости",
+                "url": "https://varus.ua/konditerski-virobi-ta-solodoschi"
+            },
+            {
+                "name": "Кондитерская выпечка",
+                "url": "https://varus.ua/konditerska-vipichka"
+            },
+            {
+                "name": "Торты",
+                "url": "https://varus.ua/torti"
+            },
+            {
+                "name": "Печенье",
+                "url": "https://varus.ua/pechivo"
+            },
+            {
+                "name": "Пряники",
+                "url": "https://varus.ua/pryaniki"
+            },
+            {
+                "name": "Вафли",
+                "url": "https://varus.ua/vafli"
+            },
+            {
+                "name": "Кексы и маффины",
+                "url": "https://varus.ua/keksi-ta-mafini"
+            },
+            {
+                "name": "Крекеры",
+                "url": "https://varus.ua/krekeri"
+            },
+            {
+                "name": "Круассаны",
+                "url": "https://varus.ua/kruasani"
+            },
+            {
+                "name": "Пончики",
+                "url": "https://varus.ua/ponchiki"
+            },
+            {
+                "name": "Пирожные",
+                "url": "https://varus.ua/tistechtka"
+            },
+            {
+                "name": "Кондитерские рулеты",
+                "url": "https://varus.ua/ruleti-konditerski"
+            },
+            {
+                "name": "Паска",
+                "url": "https://varus.ua/pasha"
+            },
+            {
+                "name": "Шоколад",
+                "url": "https://varus.ua/shokolad"
+            },
+            {
+                "name": "Конфеты",
+                "url": "https://varus.ua/cukerki"
+            },
+            {
+                "name": "Жевательные резинки",
+                "url": "https://varus.ua/zhuvalni-gumki"
+            },
+            {
+                "name": "Батончики",
+                "url": "https://varus.ua/batonchiki"
+            },
+            {
+                "name": "Пасты",
+                "url": "https://varus.ua/pasti-shokoladno-gorihovi"
+            },
+            {
+                "name": "Зефир",
+                "url": "https://varus.ua/zefir"
+            },
+            {
+                "name": "Мармелад",
+                "url": "https://varus.ua/marmelad"
+            },
+            {
+                "name": "Десерты",
+                "url": "https://varus.ua/deserti"
+            },
+            {
+                "name": "Восточные сладости",
+                "url": "https://varus.ua/shidni-solodoschi"
+            },
+            {
+                "name": "Чай, кофе, горячие напитки",
+                "url": "https://varus.ua/napoi"
+            },
+            {
+                "name": "Чай",
+                "url": "https://varus.ua/chay"
+            },
+            {
+                "name": "Кофе",
+                "url": "https://varus.ua/kava-zernova"
+            },
+            {
+                "name": "Какао",
+                "url": "https://varus.ua/kakao"
+            },
+            {
+                "name": "Горячий шоколад",
+                "url": "https://varus.ua/goryachiy-shokolad"
+            },
+            {
+                "name": "Кофемашины",
+                "url": "https://varus.ua/kofemashiny"
+            },
+            {
+                "name": "Вода, соки, напитки",
+                "url": "https://varus.ua/bezalkogolni-napoi"
+            },
+            {
+                "name": "Минеральная вода",
+                "url": "https://varus.ua/mineralna-voda"
+            },
+            {
+                "name": "Сладкая вода",
+                "url": "https://varus.ua/solodki-napoi"
+            },
+            {
+                "name": "Комбуча",
+                "url": "https://varus.ua/kombucha"
+            },
+            {
+                "name": "Соки и нектары",
+                "url": "https://varus.ua/soki"
+            },
+            {
+                "name": "Холодный чай и кофе",
+                "url": "https://varus.ua/holodnij-chaj-ta-kava"
+            },
+            {
+                "name": "Энергетические напитки",
+                "url": "https://varus.ua/energetiki"
+            },
+            {
+                "name": "Квас",
+                "url": "https://varus.ua/kvas"
+            },
+            {
+                "name": "Снеки",
+                "url": "https://varus.ua/sneki"
+            },
+            {
+                "name": "Чипсы",
+                "url": "https://varus.ua/chipsi"
+            },
+            {
+                "name": "Сухарики",
+                "url": "https://varus.ua/suhariki"
+            },
+            {
+                "name": "Попкорн",
+                "url": "https://varus.ua/popkorn"
+            },
+            {
+                "name": "Орешки",
+                "url": "https://varus.ua/gorishki"
+            },
+            {
+                "name": "Рыбные снеки",
+                "url": "https://varus.ua/sneki-ribni"
+            },
+            {
+                "name": "Мясные снеки",
+                "url": "https://varus.ua/sneki-m-yasni"
+            },
+            {
+                "name": "Кукурузные снеки",
+                "url": "https://varus.ua/sneki-kukurudzyani"
+            },
+            {
+                "name": "Жареные семечки",
+                "url": "https://varus.ua/sneki-z-nasinnya"
+            },
+            {
+                "name": "Замороженные продукты",
+                "url": "https://varus.ua/zamorozheni-produkti"
+            },
+            {
+                "name": "Мороженое",
+                "url": "https://varus.ua/morozivo"
+            },
+            {
+                "name": "Замороженные полуфабрикаты",
+                "url": "https://varus.ua/kulinarni-napivfabrikati"
+            },
+            {
+                "name": "Замороженные овощи",
+                "url": "https://varus.ua/zamorozheni-ovochi"
+            },
+            {
+                "name": "Замороженные ягоды",
+                "url": "https://varus.ua/zamorozheni-frukti-ta-yagodi"
+            },
+            {
+                "name": "Замороженные грибы",
+                "url": "https://varus.ua/zamorozheni-gribi"
+            },
+            {
+                "name": "Замороженная пицца",
+                "url": "https://varus.ua/zamorozhena-pica"
+            },
+            {
+                "name": "Замороженное тесто",
+                "url": "https://varus.ua/zamorozhene-tisto"
+            },
+            {
+                "name": "Консервация и соление",
+                "url": "https://varus.ua/catalog/category/view/s/konservacija-i-solenie/id/58295/"
+            },
+            {
+                "name": "Овощная консервация и соленья",
+                "url": "https://varus.ua/konservaciya-ovocheva"
+            },
+            {
+                "name": "Рыбные консервы",
+                "url": "https://varus.ua/konservi-ribni"
+            },
+            {
+                "name": "Мясные консервы",
+                "url": "https://varus.ua/konservi-myasni"
+            },
+            {
+                "name": "Фруктовая консервация",
+                "url": "https://varus.ua/konservaciya-fruktova"
+            },
+            {
+                "name": "Консервированные грибы",
+                "url": "https://varus.ua/gribi-konservovani"
+            },
+            {
+                "name": "Оливки и маслины",
+                "url": "https://varus.ua/olivki-konservovani"
+            },
+            {
+                "name": "Бутербродные закуски и намазки",
+                "url": "https://varus.ua/zakuski-buterbrodni"
+            },
+            {
+                "name": "Паштеты",
+                "url": "https://varus.ua/pashteti"
+            },
+            {
+                "name": "Хумус",
+                "url": "https://varus.ua/hummus"
+            },
+            {
+                "name": "Консервированные супы и каши",
+                "url": "https://varus.ua/kashi-konservovani"
+            },
+            {
+                "name": "Табачные изделия",
+                "url": "https://varus.ua/tyutyunovi-virobi"
+            },
+            {
+                "name": "Сигареты",
+                "url": "https://varus.ua/cigarki"
+            },
+            {
+                "name": "Электронные сигареты",
+                "url": "https://varus.ua/elektronni-sigareti"
+            },
+            {
+                "name": "Стики",
+                "url": "https://varus.ua/stiki"
+            },
+            {
+                "name": "Никотиновые подушечки",
+                "url": "https://varus.ua/nikotinovi-peki"
+            },
+            {
+                "name": "Зажигалки",
+                "url": "https://varus.ua/zapalnichki"
+            },
+            {
+                "name": "VARUS CAFE",
+                "url": "https://varus.ua/varuscafe"
+            },
+            {
+                "name": "Пицца",
+                "url": "https://varus.ua/varuscafe/pica"
+            },
+            {
+                "name": "WOK",
+                "url": "https://varus.ua/varuscafe/wok"
+            },
+            {
+                "name": "Салаты",
+                "url": "https://varus.ua/varuscafe/salati-ta-zakuski"
+            },
+            {
+                "name": "Первые блюда",
+                "url": "https://varus.ua/varuscafe/pershi-stravi"
+            },
+            {
+                "name": "Вторые блюда",
+                "url": "https://varus.ua/varuscafe/drugi-stravi"
+            },
+            {
+                "name": "Рыбные блюда",
+                "url": "https://varus.ua/varuscafe/ribni-stravi"
+            },
+            {
+                "name": "Блинчики, сырники, запеканки",
+                "url": "https://varus.ua/varuscafe/pancakes"
+            },
+            {
+                "name": "Сендвичи",
+                "url": "https://varus.ua/varuscafe/buterbrodi"
+            },
+            {
+                "name": "Напитки",
+                "url": "https://varus.ua/varuscafe/gotovi-napoi"
+            },
+            {
+                "name": "Собственная выпечка и десерты VARUS",
+                "url": "https://varus.ua/vlasna-vipichka"
+            },
+            {
+                "name": "Хлеб и багеты",
+                "url": "https://varus.ua/hlib-ta-bageti"
+            },
+            {
+                "name": "Булочки и сдобные изделия",
+                "url": "https://varus.ua/bulochki-ta-zdobni-virobi"
+            },
+            {
+                "name": "Слоеные изделия и круассаны",
+                "url": "https://varus.ua/listkovi-virobi-ta-kruasani"
+            },
+            {
+                "name": "Пироги и печенье",
+                "url": "https://varus.ua/pirogi-ta-pechivo"
+            },
+            {
+                "name": "Торты и десерты",
+                "url": "https://varus.ua/vlasni-konditerski-virobi"
+            },
+            {
+                "name": "Пончики и маффины",
+                "url": "https://varus.ua/ponchiki-ta-mafini"
+            },
+            {
+                "name": "Тесто",
+                "url": "https://varus.ua/tisto"
+            },
+            {
+                "name": "Гигиена и уход",
+                "url": "https://varus.ua/kosmetika-ta-doglyad"
+            },
+            {
+                "name": "Личная гигиена",
+                "url": "https://varus.ua/osobista-gigiyena"
+            },
+            {
+                "name": "Туалетная бумага",
+                "url": "https://varus.ua/tualetniy-papir"
+            },
+            {
+                "name": "Прокладки",
+                "url": "https://varus.ua/prokladki"
+            },
+            {
+                "name": "Тампоны",
+                "url": "https://varus.ua/tamponi"
+            },
+            {
+                "name": "Средства для интимной гигиены",
+                "url": "https://varus.ua/zasobi-dlya-intimnoyi-gigiyeni"
+            },
+            {
+                "name": "Бумажные полотенца",
+                "url": "https://varus.ua/paperovi-rushniki"
+            },
+            {
+                "name": "Влажные салфетки",
+                "url": "https://varus.ua/vologi-servetki"
+            },
+            {
+                "name": "Косметические салфетки",
+                "url": "https://varus.ua/kosmetichni-servetki"
+            },
+            {
+                "name": "Носовые платки",
+                "url": "https://varus.ua/nosovi-hustochki"
+            },
+            {
+                "name": "Ватные диски",
+                "url": "https://varus.ua/vatni-diski"
+            },
+            {
+                "name": "Ватные палочки",
+                "url": "https://varus.ua/vatni-palichki"
+            },
+            {
+                "name": "Уход за телом",
+                "url": "https://varus.ua/doglyad-za-tilom"
+            },
+            {
+                "name": "Мыло",
+                "url": "https://varus.ua/milo"
+            },
+            {
+                "name": "Гели для душа",
+                "url": "https://varus.ua/geli-dlya-dushu"
+            },
+            {
+                "name": "Дезодоранты",
+                "url": "https://varus.ua/dezodoranti"
+            },
+            {
+                "name": "Кремы для тела",
+                "url": "https://varus.ua/kremi"
+            },
+            {
+                "name": "Лосьоны для тела",
+                "url": "https://varus.ua/losjoni-dlya-tila"
+            },
+            {
+                "name": "Спреи для тела",
+                "url": "https://varus.ua/spreyi-dlya-tila"
+            },
+            {
+                "name": "Скрабы и пилинги для тела",
+                "url": "https://varus.ua/skrabi-i-pilingi"
+            },
+            {
+                "name": "Бомбочки, пена и соль для ванны",
+                "url": "https://varus.ua/pina-ta-sil-dlya-vanni"
+            },
+            {
+                "name": "Наборы для ухода за телом",
+                "url": "https://varus.ua/nabori-dlya-doglyadu-za-tilom"
+            },
+            {
+                "name": "Эфирные масла",
+                "url": "https://varus.ua/efirna-oliya"
+            },
+            {
+                "name": "Средства для маникюра",
+                "url": "https://varus.ua/zasobi-dlya-manikyuru"
+            },
+            {
+                "name": "Уход за полостью рта",
+                "url": "https://varus.ua/doglyad-za-rotovoyu-porozhninoyu"
+            },
+            {
+                "name": "Зубные пасты",
+                "url": "https://varus.ua/zubni-pasti"
+            },
+            {
+                "name": "Зубные щетки",
+                "url": "https://varus.ua/zubni-schitki"
+            },
+            {
+                "name": "Ополаскиватели полости рта",
+                "url": "https://varus.ua/opoliskuvachi-rotovoi-porozhnini"
+            },
+            {
+                "name": "Зубные нити и зубочистки",
+                "url": "https://varus.ua/zubochistki-ta-nitki"
+            },
+            {
+                "name": "Освежители полости рта",
+                "url": "https://varus.ua/osvizhuvachi"
+            },
+            {
+                "name": "Уход за волосами",
+                "url": "https://varus.ua/doglyad-za-volossyam"
+            },
+            {
+                "name": "Шампуни",
+                "url": "https://varus.ua/shampuni"
+            },
+            {
+                "name": "Бальзамы для волос",
+                "url": "https://varus.ua/balzami-dlya-volossya"
+            },
+            {
+                "name": "Кондиционеры для волос",
+                "url": "https://varus.ua/kondicioneri-dlya-volossya"
+            },
+            {
+                "name": "Маски для волос",
+                "url": "https://varus.ua/maski-dlya-volossya"
+            },
+            {
+                "name": "Филлеры для волос",
+                "url": "https://varus.ua/fileri-dlya-volossya"
+            },
+            {
+                "name": "Термозащита для волос",
+                "url": "https://varus.ua/termozahist-dlya-volossya"
+            },
+            {
+                "name": "Спреи для волос",
+                "url": "https://varus.ua/spreyi-dlya-volossya"
+            },
+            {
+                "name": "Скрабы для кожи головы",
+                "url": "https://varus.ua/skrabi-dlya-shkiri-golovi"
+            },
+            {
+                "name": "Сыворотки для волос",
+                "url": "https://varus.ua/sirovatki-dlya-volossya"
+            },
+            {
+                "name": "Масла для волос",
+                "url": "https://varus.ua/oliya-dlya-volossya"
+            },
+            {
+                "name": "Кремы для волос",
+                "url": "https://varus.ua/kremi-dlya-volossya"
+            },
+            {
+                "name": "Наборы для ухода за волосами",
+                "url": "https://varus.ua/nabori-dlya-doglyadu-za-volossyam"
+            },
+            {
+                "name": "Аксессуары для волос",
+                "url": "https://varus.ua/aksesuari-dlya-volossya"
+            },
+            {
+                "name": "Средства для укладки волос",
+                "url": "https://varus.ua/zasobi-dlya-ukladannya-volossya"
+            },
+            {
+                "name": "Лаки для волос",
+                "url": "https://varus.ua/lak-dlya-volossya"
+            },
+            {
+                "name": "Гели для волос",
+                "url": "https://varus.ua/geli-dlya-volossya"
+            },
+            {
+                "name": "Муссы для волос",
+                "url": "https://varus.ua/musi-dlya-volossya"
+            },
+            {
+                "name": "Пенки для волос",
+                "url": "https://varus.ua/pinki-dlya-volossya"
+            },
+            {
+                "name": "Средства для окрашивания волос",
+                "url": "https://varus.ua/zasobi-dlya-farbuvannya-volossya"
+            },
+            {
+                "name": "Осветлители для волос",
+                "url": "https://varus.ua/osvitlyuvachi-dlya-volossya"
+            },
+            {
+                "name": "Тонирующие средства для волос",
+                "url": "https://varus.ua/toniruyuschie-sredstva-dlya-volos"
+            },
+            {
+                "name": "Краски для волос",
+                "url": "https://varus.ua/farba-dlya-volossya"
+            },
+            {
+                "name": "Краски для бровей и ресниц",
+                "url": "https://varus.ua/farbi-dlya-briv-ta-vij"
+            },
+            {
+                "name": "Уход за лицом",
+                "url": "https://varus.ua/doglyad-za-oblichchyam"
+            },
+            {
+                "name": "Кремы для лица",
+                "url": "https://varus.ua/kremi-dlya-oblichchya"
+            },
+            {
+                "name": "Средства для умывания",
+                "url": "https://varus.ua/zasobi-dlya-vmivannya"
+            },
+            {
+                "name": "Средства для пилинга лица",
+                "url": "https://varus.ua/zasobi-dlya-pilingu-oblichchya"
+            },
+            {
+                "name": "Сыворотки для лица",
+                "url": "https://varus.ua/sirovatki-dlya-oblichchya"
+            },
+            {
+                "name": "Уход за кожей вокруг глаз",
+                "url": "https://varus.ua/doglyad-za-shkiroyu-navkolo-ochej"
+            },
+            {
+                "name": "Средства для демакияжа",
+                "url": "https://varus.ua/zasobi-dlya-demakiyazhu"
+            },
+            {
+                "name": "Средства по уходу за губами",
+                "url": "https://varus.ua/zasobi-doglyadu-za-gubami"
+            },
+            {
+                "name": "Маски для лица",
+                "url": "https://varus.ua/maski-dlya-oblichchya"
+            },
+            {
+                "name": "Тоники для лица",
+                "url": "https://varus.ua/tonik-dlya-oblichchya"
+            },
+            {
+                "name": "Средства для бритья",
+                "url": "https://varus.ua/tovari-dlya-golinnya"
+            },
+            {
+                "name": "Косметика для бритья",
+                "url": "https://varus.ua/zasobi-dlya-golinnya"
+            },
+            {
+                "name": "Косметика после бритья",
+                "url": "https://varus.ua/zasobi-pislya-golinnya"
+            },
+            {
+                "name": "Сменные кассеты для бритья",
+                "url": "https://varus.ua/zminni-kaseti-dlya-britvi"
+            },
+            {
+                "name": "Наборы для бритья",
+                "url": "https://varus.ua/nabori-dlya-golinnya"
+            },
+            {
+                "name": "Станки для бритья",
+                "url": "https://varus.ua/stanki-dlya-golinnya"
+            },
+            {
+                "name": "БАДы (пищевые добавки)",
+                "url": "https://varus.ua/harchovi-dobavki"
+            },
+            {
+                "name": "Товары для здоровья",
+                "url": "https://varus.ua/tovari-dlya-zdorovya"
+            },
+            {
+                "name": "Антисептики",
+                "url": "https://varus.ua/antiseptiki"
+            },
+            {
+                "name": "Презервативы",
+                "url": "https://varus.ua/prezervativi"
+            },
+            {
+                "name": "Домашняя аптечка",
+                "url": "https://varus.ua/medichni-zasobi"
+            },
+            {
+                "name": "Средства против насекомых",
+                "url": "https://varus.ua/zasobi-proti-komah"
+            },
+            {
+                "name": "Солнцезащитные средства",
+                "url": "https://varus.ua/soncezahisni-zasobi"
+            },
+            {
+                "name": "Бытовая химия",
+                "url": "https://varus.ua/pobutova-himiya"
+            },
+            {
+                "name": "Средства для стирки",
+                "url": "https://varus.ua/zasobi-dlya-prannya"
+            },
+            {
+                "name": "Гели для стирки",
+                "url": "https://varus.ua/ridki-zasobi-dlya-prannya"
+            },
+            {
+                "name": "Порошки для стирки",
+                "url": "https://varus.ua/poroshki-dlya-prannya"
+            },
+            {
+                "name": "Кондиционеры и ополаскиватели для белья",
+                "url": "https://varus.ua/kondicioneri-dlya-bilizni"
+            },
+            {
+                "name": "Капсулы для стирки",
+                "url": "https://varus.ua/kapsuli-dlya-prannya"
+            },
+            {
+                "name": "Пятновыводители и отбеливатели",
+                "url": "https://varus.ua/plyamovividniki"
+            },
+            {
+                "name": "Салфетки для стирки",
+                "url": "https://varus.ua/servetki-dlya-prannya"
+            },
+            {
+                "name": "Хозяйственное мыло",
+                "url": "https://varus.ua/milo-gospodarske"
+            },
+            {
+                "name": "Средства для посудомоечных машин",
+                "url": "https://varus.ua/zasobi-dlya-posudomijnih-mashin"
+            },
+            {
+                "name": "Уход за обувью",
+                "url": "https://varus.ua/doglyad-za-vzuttyam"
+            },
+            {
+                "name": "Средства восстановления и защиты обуви",
+                "url": "https://varus.ua/zasobi-vidnovlennya-ta-zahistu"
+            },
+            {
+                "name": "Губки и щетки для обуви",
+                "url": "https://varus.ua/gubki-ta-schitki-dlya-vzuttya"
+            },
+            {
+                "name": "Краска для обуви",
+                "url": "https://varus.ua/farba-dlya-vzuttya"
+            },
+            {
+                "name": "Кремы для обуви",
+                "url": "https://varus.ua/kremi-dlya-vzuttya"
+            },
+            {
+                "name": "Дезодоранты для обуви",
+                "url": "https://varus.ua/dezodoranti-dlya-vzuttya"
+            },
+            {
+                "name": "Аксессуары для обуви",
+                "url": "https://varus.ua/aksesuari-dlya-vzuttya"
+            },
+            {
+                "name": "Средства для ухода за унитазом",
+                "url": "https://varus.ua/zasobi-dlya-doglyadu-za-unitazom"
+            },
+            {
+                "name": "Средства для уборки",
+                "url": "https://varus.ua/zasobi-dlya-pribirannya"
+            },
+            {
+                "name": "Средства для кухни",
+                "url": "https://varus.ua/zasobi-dlya-kuhni"
+            },
+            {
+                "name": "Средства для ванных комнат",
+                "url": "https://varus.ua/zasobi-dlya-vannih-kimnat"
+            },
+            {
+                "name": "Универсальные моющие средства",
+                "url": "https://varus.ua/universalni-miyuchi-zasobi"
+            },
+            {
+                "name": "Средства для мытья полов",
+                "url": "https://varus.ua/zasobi-dlya-mittya-pidlogi"
+            },
+            {
+                "name": "Средства для прочистки труб",
+                "url": "https://varus.ua/zasobi-dlya-prochishennya-trub"
+            },
+            {
+                "name": "Средства для мытья окон",
+                "url": "https://varus.ua/zasobi-dlya-mittya-vikon"
+            },
+            {
+                "name": "Средства для ухода за мебелью",
+                "url": "https://varus.ua/zasobi-dlya-doglyadu-za-meblyami"
+            },
+            {
+                "name": "Средства для чистки ковров",
+                "url": "https://varus.ua/zasobi-dlya-chishennya-kilimiv"
+            },
+            {
+                "name": "Средства по уходу за бытовой техникой",
+                "url": "https://varus.ua/zasobi-po-doglyadu-za-pobutovoyu-tehnikoyu"
+            },
+            {
+                "name": "Средства для мытья посуды",
+                "url": "https://varus.ua/zasobi-dlya-mittya-posudu"
+            },
+            {
+                "name": "Освежители воздуха",
+                "url": "https://varus.ua/osvizhuvachi-povitrya"
+            },
+            {
+                "name": "Товары для животных",
+                "url": "https://varus.ua/tovari-dlya-tvarin"
+            },
+            {
+                "name": "Товары для котов",
+                "url": "https://varus.ua/tovari-dlya-kotiv"
+            },
+            {
+                "name": "Корм для котов",
+                "url": "https://varus.ua/korm-dlya-tvarin"
+            },
+            {
+                "name": "Лакомство для котов",
+                "url": "https://varus.ua/lasoshi-dlya-kotiv"
+            },
+            {
+                "name": "Наполнители туалетов для котов",
+                "url": "https://varus.ua/napovnyuvachi-dlya-tualetiv"
+            },
+            {
+                "name": "Игрушки для котов",
+                "url": "https://varus.ua/igrashki-dlya-kotiv"
+            },
+            {
+                "name": "Аксессуары для котов",
+                "url": "https://varus.ua/aksesuari-dlya-kotiv"
+            },
+            {
+                "name": "Товары для собак",
+                "url": "https://varus.ua/tovari-dlya-sobak"
+            },
+            {
+                "name": "Корм для собак",
+                "url": "https://varus.ua/korm-dlya-sobak"
+            },
+            {
+                "name": "Лакомство для собак",
+                "url": "https://varus.ua/lasoshi-dlya-sobak"
+            },
+            {
+                "name": "Игрушки для собак",
+                "url": "https://varus.ua/igrashki-dlya-sobak"
+            },
+            {
+                "name": "Аксессуары для собак",
+                "url": "https://varus.ua/aksesuari-dlya-sobak"
+            },
+            {
+                "name": "Товары для птиц",
+                "url": "https://varus.ua/tovari-dlya-ptahiv"
+            },
+            {
+                "name": "Корм для птиц",
+                "url": "https://varus.ua/korm-dlya-ptahiv"
+            },
+            {
+                "name": "Лакомство для птиц",
+                "url": "https://varus.ua/lasoshi-dlya-ptahiv"
+            },
+            {
+                "name": "Игрушки для птиц",
+                "url": "https://varus.ua/igrashki-dlya-ptahiv"
+            },
+            {
+                "name": "Аксессуары для птиц",
+                "url": "https://varus.ua/aksesuari-dlya-ptahiv"
+            },
+            {
+                "name": "Товары для грызунов",
+                "url": "https://varus.ua/tovari-dlya-grizuniv"
+            },
+            {
+                "name": "Корм для грызунов",
+                "url": "https://varus.ua/korm-dlya-grizuniv"
+            },
+            {
+                "name": "Лакомство для грызунов",
+                "url": "https://varus.ua/lasoshi-dlya-grizuniv"
+            },
+            {
+                "name": "Аквариумистика",
+                "url": "https://varus.ua/akvariumistika"
+            },
+            {
+                "name": "Корм для рыб",
+                "url": "https://varus.ua/korm-dlya-rib"
+            },
+            {
+                "name": "Товары для дома",
+                "url": "https://varus.ua/tovari-dlya-domu-ta-sadu"
+            },
+            {
+                "name": "Хозяйственные товары",
+                "url": "https://varus.ua/gospodarski-tovari"
+            },
+            {
+                "name": "Губки и тряпки",
+                "url": "https://varus.ua/gubki-ta-ganchirki"
+            },
+            {
+                "name": "Губки для ванной",
+                "url": "https://varus.ua/gubki-dlya-vannoi"
+            },
+            {
+                "name": "Пакеты для мусора",
+                "url": "https://varus.ua/paketi-dlya-smittya"
+            },
+            {
+                "name": "Швабры",
+                "url": "https://varus.ua/shvabri"
+            },
+            {
+                "name": "Аксессуары и принадлежности для ванной",
+                "url": "https://varus.ua/aksesuri-ta-priladdya-dlya-vannoi"
+            },
+            {
+                "name": "Товары для стирки и сушки",
+                "url": "https://varus.ua/tovary-dlya-prannya-ta-sushki"
+            },
+            {
+                "name": "Перчатки хозяйственные",
+                "url": "https://varus.ua/rukavici-gospodarchi"
+            },
+            {
+                "name": "Свечи",
+                "url": "https://varus.ua/svichki"
+            },
+            {
+                "name": "Ведра, тазы, корзины",
+                "url": "https://varus.ua/vidra-tazi-koshiki"
+            },
+            {
+                "name": "Метлы, веники и совки",
+                "url": "https://varus.ua/mitli-viniki-ta-sovki"
+            },
+            {
+                "name": "Спички",
+                "url": "https://varus.ua/sirnyki"
+            },
+            {
+                "name": "Щетки",
+                "url": "https://varus.ua/schitki"
+            },
+            {
+                "name": "Клей",
+                "url": "https://varus.ua/kley"
+            },
+            {
+                "name": "Товары для кухни",
+                "url": "https://varus.ua/tovari-dlya-kuhni"
+            },
+            {
+                "name": "Кухонные принадлежности",
+                "url": "https://varus.ua/kuhonni-priladdya"
+            },
+            {
+                "name": "Фольга, пленка, пергамент",
+                "url": "https://varus.ua/plivka-harchova"
+            },
+            {
+                "name": "Салфетки столовые",
+                "url": "https://varus.ua/servetki-stolovi"
+            },
+            {
+                "name": "Емкости и упаковка для продуктов",
+                "url": "https://varus.ua/emnosti-ta-upakovka-dlya-produktiv"
+            },
+            {
+                "name": "Средства для приготовления продуктов",
+                "url": "https://varus.ua/zasobi-dlya-prigotuvannya-produktiv"
+            },
+            {
+                "name": "Фильтры и кувшины",
+                "url": "https://varus.ua/filtri-ta-kuvshini"
+            },
+            {
+                "name": "Свечи для тортов",
+                "url": "https://varus.ua/svichki-dlya-tortiv"
+            },
+            {
+                "name": "Полотенца",
+                "url": "https://varus.ua/rushniki"
+            },
+            {
+                "name": "Электротовары и освещения",
+                "url": "https://varus.ua/elektrotovari-ta-osvitlennya"
+            },
+            {
+                "name": "Электроприборы",
+                "url": "https://varus.ua/elektropriladi"
+            },
+            {
+                "name": "Батарейки",
+                "url": "https://varus.ua/batareyki"
+            },
+            {
+                "name": "Лампочки",
+                "url": "https://varus.ua/lampochki"
+            },
+            {
+                "name": "Посуда",
+                "url": "https://varus.ua/posud"
+            },
+            {
+                "name": "Многоразовая посуда",
+                "url": "https://varus.ua/bagatorazoviy-posud"
+            },
+            {
+                "name": "Одноразовая посуда",
+                "url": "https://varus.ua/odnorazoviy-posud"
+            },
+            {
+                "name": "Чашки",
+                "url": "https://varus.ua/chashki"
+            },
+            {
+                "name": "Одежда, обувь и аксессуары",
+                "url": "https://varus.ua/odyag-vzuttya-ta-aksesuari"
+            },
+            {
+                "name": "Обувь",
+                "url": "https://varus.ua/vzuttya"
+            },
+            {
+                "name": "Носки",
+                "url": "https://varus.ua/shkarpetki"
+            },
+            {
+                "name": "Аксессуары",
+                "url": "https://varus.ua/aksesuari"
+            },
+            {
+                "name": "Одежда",
+                "url": "https://varus.ua/odyag"
+            },
+            {
+                "name": "Колготы женские",
+                "url": "https://varus.ua/kolgoti-zhinochi"
+            },
+            {
+                "name": "Головные уборы",
+                "url": "https://varus.ua/golovni-ubori"
+            },
+            {
+                "name": "Сад и огород",
+                "url": "https://varus.ua/sad-ta-gorod"
+            },
+            {
+                "name": "Растения в горшках и саженцы",
+                "url": "https://varus.ua/roslini-v-gorschikah-ta-sadzhenci"
+            },
+            {
+                "name": "Грунт и удобрения",
+                "url": "https://varus.ua/grunt-ta-dobrivo"
+            },
+            {
+                "name": "Горшки для растений",
+                "url": "https://varus.ua/gorschiki-dlya-roslin"
+            },
+            {
+                "name": "Семена",
+                "url": "https://varus.ua/nasinnya"
+            },
+            {
+                "name": "Садовые принадлежности",
+                "url": "https://varus.ua/sadovi-priladdya"
+            },
+            {
+                "name": "Сувениры и декор",
+                "url": "https://varus.ua/suveniri-ta-dekor"
+            },
+            {
+                "name": "Сумки и пакеты",
+                "url": "https://varus.ua/sumki-ta-paketi"
+            },
+            {
+                "name": "Товары для кемпинга и отдыхом",
+                "url": "https://varus.ua/tovari-dlya-kempingu-ta-vidpochinku"
+            },
+            {
+                "name": "Канцтовары",
+                "url": "https://varus.ua/kanctovari"
+            },
+            {
+                "name": "Спорт и развлечения",
+                "url": "https://varus.ua/sport-ta-rozvagi"
+            },
+            {
+                "name": "Печатная продукция",
+                "url": "https://varus.ua/pechatna-produkciya"
+            },
+            {
+                "name": "Журналы и пресса",
+                "url": "https://varus.ua/zhurnali-ta-presa"
+            },
+            {
+                "name": "Книги",
+                "url": "https://varus.ua/knigi"
+            },
+            {
+                "name": "Открытки",
+                "url": "https://varus.ua/listivki"
+            },
+            {
+                "name": "Новогодние товары",
+                "url": "https://varus.ua/novorichni-tovari"
+            },
+            {
+                "name": "Сертификаты",
+                "url": "https://varus.ua/sertifikaty"
+            },
+            {
+                "name": "Стартовые пакеты и карты",
+                "url": "https://varus.ua/startovi-paketi"
+            },
+            {
+                "name": "Товары для детей",
+                "url": "https://varus.ua/tovari-dlya-ditey"
+            },
+            {
+                "name": "Детское питание",
+                "url": "https://varus.ua/dityache-harchuvannya"
+            },
+            {
+                "name": "Детская каша",
+                "url": "https://varus.ua/dityacha-kasha"
+            },
+            {
+                "name": "Детское пюре",
+                "url": "https://varus.ua/dityache-pyure"
+            },
+            {
+                "name": "Молочные смеси",
+                "url": "https://varus.ua/molochni-sumishi"
+            },
+            {
+                "name": "Подгузники",
+                "url": "https://varus.ua/pidguzniki"
+            },
+            {
+                "name": "Средства ухода за ребенком",
+                "url": "https://varus.ua/zasobi-doglyadu-za-ditinoyu"
+            },
+            {
+                "name": "Кормления ребенка",
+                "url": "https://varus.ua/goduvannya-ditini"
+            },
+            {
+                "name": "Бутылочки",
+                "url": "https://varus.ua/plyashechki"
+            },
+            {
+                "name": "Посуда для детей",
+                "url": "https://varus.ua/posud-dlya-ditey"
+            },
+            {
+                "name": "Соски и пустышки",
+                "url": "https://varus.ua/soski-ta-pustishki"
+            },
+            {
+                "name": "Игрушки",
+                "url": "https://varus.ua/igrashki"
+            },
+            {
+                "name": "Детские товары",
+                "url": "https://varus.ua/detskie-tovary"
+            },
+            {
+                "name": "Школьные товары",
+                "url": "https://varus.ua/shkilni-tovari"
+            },
+            {
+                "name": "Альбомы для рисования",
+                "url": "https://varus.ua/albomi-dlya-malyuvannya"
+            },
+            {
+                "name": "Пеналы",
+                "url": "https://varus.ua/penali"
+            },
+            {
+                "name": "Тетради",
+                "url": "https://varus.ua/zoshiti"
+            },
+            {
+                "name": "Школьные рюкзаки",
+                "url": "https://varus.ua/shkilni-ryukzaki"
+            },
+            {
+                "name": "Дневники",
+                "url": "https://varus.ua/schodenniki"
+            },
+            {
+                "name": "Blog",
+                "url": "https://varus.ua/test1"
+            }
+        ]
+    }
+}

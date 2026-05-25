@@ -6,54 +6,34 @@ using VarPrice.Application.Models;
 namespace VarPrice.Application.UseCases;
 
 public sealed class ProductUrlDiscoveryService(
-    ISitemapProductUrlDiscoverySource sitemapSource,
-    ICategoryProductUrlDiscoverySource categorySource,
+    IProductUrlDiscoveryStrategyFactory strategyFactory,
     IProductUrlFilter productUrlFilter,
     ILogger<ProductUrlDiscoveryService> logger) : IProductUrlDiscoveryService
 {
     public async Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct)
     {
-        try
-        {
-            var sitemapUrls = productUrlFilter.Apply(
-                await sitemapSource.DiscoverProductUrlsAsync(ct),
-                "sitemap");
-            if (sitemapUrls.Count > 0)
-            {
-                return new ProductUrlDiscoveryResult(
-                    ProductUrlDiscoverySourceKind.Sitemap,
-                    sitemapUrls);
-            }
-
-            logger.LogWarning(
-                "Sitemap product URL discovery returned no URLs. Trying category seed fallback. Reason=EmptySitemapResult");
-        }
-        catch (SitemapUnavailableException ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Sitemap product URL discovery unavailable. Trying category seed fallback. Reason={Reason}",
-                ex.Message);
-        }
-
-        var categoryUrls = productUrlFilter.Apply(
-            await categorySource.DiscoverProductUrlsAsync(ct),
-            "category-seed");
-        if (categoryUrls.Count > 0)
+        var strategy = strategyFactory.Create();
+        var discoveredItems = await strategy.DiscoverAsync(ct);
+        var candidateUrls = discoveredItems
+            .Select(x => x.Url)
+            .Where(x => Uri.TryCreate(x, UriKind.Absolute, out _))
+            .Select(x => new Uri(x));
+        var urls = productUrlFilter.Apply(candidateUrls, strategy.SourceName);
+        if (urls.Count > 0)
         {
             logger.LogInformation(
-                "Product URL discovery completed using category seed fallback. ProductUrlCount={ProductUrlCount}",
-                categoryUrls.Count);
-            return new ProductUrlDiscoveryResult(
-                ProductUrlDiscoverySourceKind.CategorySeed,
-                categoryUrls);
+                "Product URL discovery completed. DiscoveryMode={DiscoveryMode}; SourceName={SourceName}; ProductUrlCount={ProductUrlCount}",
+                strategy.SourceKind,
+                strategy.SourceName,
+                urls.Count);
+            return new ProductUrlDiscoveryResult(strategy.SourceKind, urls);
         }
 
-        const string message =
-            "Product URL discovery failed. No product URLs available from sitemap or category seed fallback.";
+        var message = $"Product URL discovery failed. No product URLs available from {strategy.SourceName}.";
         logger.LogError(
-            "{Message} FailureKind={FailureKind}",
+            "{Message} SourceName={SourceName}; FailureKind={FailureKind}",
             message,
+            strategy.SourceName,
             CrawlerErrorCodes.ProductUrlDiscoveryUnavailable);
         throw new ProductUrlDiscoveryUnavailableException(message);
     }

@@ -1,0 +1,471 @@
+﻿<li class="level0 nav-7 category-item level-top parent"><a href="https://varus.ua/healthy" class="level-top" ><span>Здоровое питание и Эко товары</span></a>
+<li class="level1 nav-7-1 category-item first"><a href="https://varus.ua/organic-food" ><span>Органические продукты</span></a>
+<li class="level1 nav-7-2 category-item"><a href="https://varus.ua/vegan-food" ><span>Веганские продукты</span></a>
+<li class="level1 nav-7-3 category-item"><a href="https://varus.ua/glutenfree-food" ><span>Безглютеновые продукты</span></a>
+<li class="level1 nav-7-4 category-item"><a href="https://varus.ua/lactfree-food" ><span>Безлактозные продукты</span></a>
+<li class="level1 nav-7-5 category-item"><a href="https://varus.ua/nosugar-food" ><span>Продукты без добавления сахара</span></a>
+<li class="level1 nav-7-6 category-item"><a href="https://varus.ua/sport-food" ><span>Продукты для спортсменов</span></a>
+<li class="level1 nav-7-7 category-item"><a href="https://varus.ua/nocoff-food" ><span>Кофе без кофеина</span></a>
+<li class="level1 nav-7-8 category-item last"><a href="https://varus.ua/eco-products" ><span>Экологическая бытовая химия</span></a>
+<li class="level0 nav-8 category-item level-top parent"><a href="https://varus.ua/own-trademarks" class="level-top" ><span>Собственные марки</span></a>
+<li class="level1 nav-8-1 category-item first"><a href="https://varus.ua/own-food" ><span>Продукты</span></a>
+<li class="level1 nav-8-2 category-item"><a href="https://varus.ua/own-drinks" ><span>Вода, соки и напитки</span></a>
+<li class="level1 nav-8-3 category-item"><a href="https://varus.ua/own-hotdrinks" ><span>Чай, кофе и горячие напитки</span></a>
+<li class="level1 nav-8-4 category-item"><a href="https://varus.ua/own-alco" ><span>Алкоголь</span></a>
+<li class="level1 nav-8-5 category-item"><a href="https://varus.ua/own-care" ><span>Гигиена и уход</span></a>
+<li class="level1 nav-8-6 category-item"><a href="https://varus.ua/own-clean" ><span>Бытовая химия</span></a>
+<li class="level1 nav-8-7 category-item"><a href="https://varus.ua/own-house" ><span>Товары для дома</span></a>
+<li class="level1 nav-8-8 category-item"><a href="https://varus.ua/own-pets" ><span>Товары для животных</span></a>
+<li class="level1 nav-8-9 category-item last"><a href="https://varus.ua/own-children" ><span>Товары для детей</span></a>
+<li class="level0 nav-9 category-item level-top parent"><a href="https://varus.ua/frukti-ovochi-gorihi" class="level-top" ><span>Фрукты, овощи, орехи</span></a>
+<li class="level1 nav-9-1 category-item first"><a href="https://varus.ua/ovochi-svizhi" ><span>Овощи свежие</span></a>
+<li class="level1 nav-9-2 category-item parent"><a href="https://varus.ua/frukti-svizhi" ><span>Фрукты свежие</span></a>
+<li class="level2 nav-9-2-1 category-item first"><a href="https://varus.ua/banani" ><span>Бананы</span></a>
+<li class="level2 nav-9-2-2 category-item"><a href="https://varus.ua/yabluka" ><span>Яблоки</span></a>
+<li class="level2 nav-9-2-3 category-item"><a href="https://varus.ua/grushi" ><span>Груши</span></a>
+<li class="level2 nav-9-2-4 category-item"><a href="https://varus.ua/vinograd" ><span>Виноград</span></a>
+<li class="level2 nav-9-2-5 category-item"><a href="https://varus.ua/ananasi" ><span>Ананасы</span></a>
+<li class="level2 nav-9-2-6 category-item"><a href="https://varus.ua/mango" ><span>Манго</span></a>
+<li class="level2 nav-9-2-7 category-item"><a href="https://varus.ua/kivi" ><span>Киви</span></a>
+<li class="level2 nav-9-2-8 category-item"><a href="https://varus.ua/citrusovi" ><span>Цитрусовые фрукты</span></a>
+<li class="level2 nav-9-2-9 category-item"><a href="https://varus.ua/tropichni-frukti" ><span>Тропические фрукты</span></a>
+<li class="level2 nav-9-2-10 category-item"><a href="https://varus.ua/persiki-slivi-abrikosi" ><span>Персики, сливы, абрикосы</span></a>
+<li class="level2 nav-9-2-11 category-item last"><a href="https://varus.ua/kavuni-ta-dini" ><span>Арбузы и дыни</span></a>
+<li class="level1 nav-9-3 category-item"><a href="https://varus.ua/zelen-svizha" ><span>Зелень свежая</span></a>
+<li class="level1 nav-9-4 category-item"><a href="https://varus.ua/yagodi-svizhi" ><span>Ягоды свежие</span></a>
+<li class="level1 nav-9-5 category-item"><a href="https://varus.ua/gribi" ><span>Грибы</span></a>
+<li class="level1 nav-9-6 category-item"><a href="https://varus.ua/suhofrukti" ><span>Сухофрукты и цукаты</span></a>
+<li class="level1 nav-9-7 category-item last"><a href="https://varus.ua/gorihi-ta-nasinnya" ><span>Орехи и семена</span></a>
+<li class="level0 nav-10 category-item level-top parent"><a href="https://varus.ua/myasni-virobi-ta-yaycya" class="level-top" ><span>Мясо и полуфабрикаты</span></a>
+<li class="level1 nav-10-1 category-item first"><a href="https://varus.ua/kuryatina" ><span>Курятина</span></a>
+<li class="level1 nav-10-2 category-item"><a href="https://varus.ua/indichatina" ><span>Индюшатина</span></a>
+<li class="level1 nav-10-3 category-item"><a href="https://varus.ua/yalovichina" ><span>Говядина</span></a>
+<li class="level1 nav-10-4 category-item"><a href="https://varus.ua/svinina" ><span>Свинина</span></a>
+<li class="level1 nav-10-5 category-item"><a href="https://varus.ua/myaso-kachki" ><span>Мясо утки</span></a>
+<li class="level1 nav-10-6 category-item"><a href="https://varus.ua/catalog/category/view/s/prochee-mjaso/id/59995/" ><span>Прочее мясо</span></a>
+<li class="level1 nav-10-7 category-item"><a href="https://varus.ua/shashlik-marinovaniy" ><span>Маринованный шашлык</span></a>
+<li class="level1 nav-10-8 category-item"><a href="https://varus.ua/stejki" ><span>Стейки</span></a>
+<li class="level1 nav-10-9 category-item"><a href="https://varus.ua/farsh" ><span>Фарш</span></a>
+<li class="level1 nav-10-10 category-item"><a href="https://varus.ua/napivfabrikati-myasni" ><span>Мясные полуфабрикаты</span></a>
+<li class="level1 nav-10-11 category-item last"><a href="https://varus.ua/subprodukti" ><span>Субпродукты</span></a>
+<li class="level0 nav-11 category-item level-top parent"><a href="https://varus.ua/riba" class="level-top" ><span>Рыба и морепродукты</span></a>
+<li class="level1 nav-11-1 category-item first"><a href="https://varus.ua/krevetki" ><span>Креветки</span></a>
+<li class="level1 nav-11-2 category-item"><a href="https://varus.ua/riba-zamorozhena" ><span>Замороженная рыба</span></a>
+<li class="level1 nav-11-3 category-item"><a href="https://varus.ua/krabovi-palochki" ><span>Крабовые палочки</span></a>
+<li class="level1 nav-11-4 category-item"><a href="https://varus.ua/ikra-ribi" ><span>Икра</span></a>
+<li class="level1 nav-11-5 category-item"><a href="https://varus.ua/moluski" ><span>Морепродукты</span></a>
+<li class="level1 nav-11-6 category-item"><a href="https://varus.ua/riba-oholodzhena" ><span>Охлажденная рыба</span></a>
+<li class="level1 nav-11-7 category-item"><a href="https://varus.ua/riba-kopchena-vyalina-solena" ><span>Слабосоленая рыба</span></a>
+<li class="level1 nav-11-8 category-item parent"><a href="https://varus.ua/riba-ta-moreprodukti" ><span>Копченая и вяленая рыба</span></a>
+<li class="level2 nav-11-8-1 category-item first"><a href="https://varus.ua/riba-holodnogo-kopchennya" ><span>Рыба холодного копчения</span></a>
+<li class="level2 nav-11-8-2 category-item"><a href="https://varus.ua/riba-garyachogo-kopchennya" ><span>Рыба горячего копчения</span></a>
+<li class="level2 nav-11-8-3 category-item last"><a href="https://varus.ua/vyalena-riba" ><span>Вяленая рыба</span></a>
+<li class="level1 nav-11-9 category-item"><a href="https://varus.ua/pasti-z-moreproduktiv" ><span>Пасты из рыбы и икры</span></a>
+<li class="level1 nav-11-10 category-item"><a href="https://varus.ua/raki" ><span>Раки</span></a>
+<li class="level1 nav-11-11 category-item"><a href="https://varus.ua/ribni-napivfabrikati" ><span>Рыбный фарш и полуфабрикаты</span></a>
+<li class="level1 nav-11-12 category-item"><a href="https://varus.ua/morska-kapusta-ta-vodorosli" ><span>Морская капуста и водоросли</span></a>
+<li class="level1 nav-11-13 category-item last"><a href="https://varus.ua/riba-zhiva" ><span>Живая рыба</span></a>
+<li class="level0 nav-12 category-item level-top parent"><a href="https://varus.ua/alkogol" class="level-top" ><span>Алкоголь</span></a>
+<li class="level1 nav-12-1 category-item first"><a href="https://varus.ua/pivo" ><span>Пиво</span></a>
+<li class="level1 nav-12-2 category-item"><a href="https://varus.ua/vino" ><span>Вино</span></a>
+<li class="level1 nav-12-3 category-item"><a href="https://varus.ua/igristi-vina" ><span>Игристые вина и шампанское</span></a>
+<li class="level1 nav-12-4 category-item parent"><a href="https://varus.ua/micni-napoi" ><span>Крепкий алкоголь</span></a>
+<li class="level2 nav-12-4-1 category-item first"><a href="https://varus.ua/viski" ><span>Виски</span></a>
+<li class="level2 nav-12-4-2 category-item"><a href="https://varus.ua/konyak" ><span>Коньяк и бренди</span></a>
+<li class="level2 nav-12-4-3 category-item"><a href="https://varus.ua/dzhin" ><span>Джин</span></a>
+<li class="level2 nav-12-4-4 category-item"><a href="https://varus.ua/gorilka" ><span>Водка</span></a>
+<li class="level2 nav-12-4-5 category-item"><a href="https://varus.ua/rom" ><span>Ром</span></a>
+<li class="level2 nav-12-4-6 category-item"><a href="https://varus.ua/tekila" ><span>Текила</span></a>
+<li class="level2 nav-12-4-7 category-item"><a href="https://varus.ua/nastoyanki" ><span>Настойки и биттеры</span></a>
+<li class="level2 nav-12-4-8 category-item last"><a href="https://varus.ua/likeri" ><span>Ликеры</span></a>
+<li class="level1 nav-12-5 category-item"><a href="https://varus.ua/vermuti" ><span>Вермуты</span></a>
+<li class="level1 nav-12-6 category-item"><a href="https://varus.ua/sidri" ><span>Сидры</span></a>
+<li class="level1 nav-12-7 category-item last"><a href="https://varus.ua/alkogolni-energetiki" ><span>Слабоалкогольные напитки</span></a>
+<li class="level0 nav-13 category-item level-top parent"><a href="https://varus.ua/kolbasy-sosiski-delikatesy" class="level-top" ><span>Колбасы, сосиски, деликатесы</span></a>
+<li class="level1 nav-13-1 category-item first"><a href="https://varus.ua/kovbasi" ><span>Колбасы</span></a>
+<li class="level1 nav-13-2 category-item"><a href="https://varus.ua/sosiski-ta-sardelki" ><span>Сосиски и сардельки</span></a>
+<li class="level1 nav-13-3 category-item"><a href="https://varus.ua/hamon-ta-proshutto" ><span>Хамон и прошуто</span></a>
+<li class="level1 nav-13-4 category-item"><a href="https://varus.ua/balik" ><span>Балык</span></a>
+<li class="level1 nav-13-5 category-item"><a href="https://varus.ua/shinka" ><span>Ветчина</span></a>
+<li class="level1 nav-13-6 category-item"><a href="https://varus.ua/grudinka" ><span>Грудинка</span></a>
+<li class="level1 nav-13-7 category-item"><a href="https://varus.ua/salo" ><span>Сало</span></a>
+<li class="level1 nav-13-8 category-item"><a href="https://varus.ua/narizki-ta-delikatesi" ><span>Мясные деликатесы</span></a>
+<li class="level1 nav-13-9 category-item last"><a href="https://varus.ua/soevi-produkti" ><span>Соевые продукты</span></a>
+<li class="level0 nav-14 category-item level-top parent"><a href="https://varus.ua/siri" class="level-top" ><span>Сыры</span></a>
+<li class="level1 nav-14-1 category-item first"><a href="https://varus.ua/tverdi-ta-napivtverdi-siri" ><span>Твердые и полутвердые сыры</span></a>
+<li class="level1 nav-14-2 category-item"><a href="https://varus.ua/plavleni-ta-kopcheni-siri" ><span>Плавленые и копченые сыры</span></a>
+<li class="level1 nav-14-3 category-item"><a href="https://varus.ua/kremovi-ta-myaki-siri" ><span>Кремовые и мягкие сыры</span></a>
+<li class="level1 nav-14-4 category-item"><a href="https://varus.ua/rozsilni-siri" ><span>Рассольные сыры</span></a>
+<li class="level1 nav-14-5 category-item"><a href="https://varus.ua/siri-iz-plisnyavoyu" ><span>Сыры с плесенью</span></a>
+<li class="level1 nav-14-6 category-item"><a href="https://varus.ua/tofu-ta-roslinni-siri" ><span>Тофу и растительные сыры</span></a>
+<li class="level1 nav-14-7 category-item"><a href="https://varus.ua/sirni-nabori" ><span>Сырные наборы</span></a>
+<li class="level1 nav-14-8 category-item"><a href="https://varus.ua/siri-dlya-pici" ><span>Сыры для пиццы</span></a>
+<li class="level1 nav-14-9 category-item"><a href="https://varus.ua/siri-dlya-sushi" ><span>Сыры для суши</span></a>
+<li class="level1 nav-14-10 category-item last"><a href="https://varus.ua/sousi-do-siriv" ><span>Соусы к сырам</span></a>
+<li class="level0 nav-15 category-item level-top parent"><a href="https://varus.ua/molochni-produkti" class="level-top" ><span>Молочные продукты и яйца</span></a>
+<li class="level1 nav-15-1 category-item first"><a href="https://varus.ua/yaycya" ><span>Яйца</span></a>
+<li class="level1 nav-15-2 category-item"><a href="https://varus.ua/moloko" ><span>Молоко</span></a>
+<li class="level1 nav-15-3 category-item"><a href="https://varus.ua/napoi-roslinni" ><span>Растительное молоко</span></a>
+<li class="level1 nav-15-4 category-item"><a href="https://varus.ua/smetana" ><span>Сметана</span></a>
+<li class="level1 nav-15-5 category-item"><a href="https://varus.ua/maslo" ><span>Сливочное масло</span></a>
+<li class="level1 nav-15-6 category-item"><a href="https://varus.ua/margarin" ><span>Маргарин</span></a>
+<li class="level1 nav-15-7 category-item"><a href="https://varus.ua/yogurti" ><span>Йогурты</span></a>
+<li class="level1 nav-15-8 category-item"><a href="https://varus.ua/kislomolochni-siri" ><span>Кисломолочные сыры</span></a>
+<li class="level1 nav-15-9 category-item parent"><a href="https://varus.ua/kislomolochni-produkti" ><span>Кисломолочные напитки</span></a>
+<li class="level2 nav-15-9-1 category-item first"><a href="https://varus.ua/kefir" ><span>Кефир</span></a>
+<li class="level2 nav-15-9-2 category-item"><a href="https://varus.ua/ryazhanka" ><span>Ряженка</span></a>
+<li class="level2 nav-15-9-3 category-item"><a href="https://varus.ua/napoi-kislomolochni" ><span>Айран</span></a>
+<li class="level2 nav-15-9-4 category-item last"><a href="https://varus.ua/zakvaski" ><span>Закваски и сыворотки</span></a>
+<li class="level1 nav-15-10 category-item"><a href="https://varus.ua/vershki" ><span>Сливки</span></a>
+<li class="level1 nav-15-11 category-item"><a href="https://varus.ua/deserti-molochni" ><span>Молочные десерты</span></a>
+<li class="level1 nav-15-12 category-item"><a href="https://varus.ua/zguschene-moloko" ><span>Сгущенное молоко</span></a>
+<li class="level1 nav-15-13 category-item last"><a href="https://varus.ua/sirki" ><span>Сырки глазированные</span></a>
+<li class="level0 nav-16 category-item level-top parent"><a href="https://varus.ua/bakaliya" class="level-top" ><span>Бакалея</span></a>
+<li class="level1 nav-16-1 category-item first parent"><a href="https://varus.ua/sousi" ><span>Соусы и маринады</span></a>
+<li class="level2 nav-16-1-1 category-item first"><a href="https://varus.ua/girchicya" ><span>Горчица</span></a>
+<li class="level2 nav-16-1-2 category-item"><a href="https://varus.ua/ketchupi" ><span>Кетчупы</span></a>
+<li class="level2 nav-16-1-3 category-item"><a href="https://varus.ua/mayonezi" ><span>Майонезы</span></a>
+<li class="level2 nav-16-1-4 category-item"><a href="https://varus.ua/pasta-tomatna" ><span>Томатная паста</span></a>
+<li class="level2 nav-16-1-5 category-item"><a href="https://varus.ua/sousi-specialni" ><span>Специальные соусы</span></a>
+<li class="level2 nav-16-1-6 category-item"><a href="https://varus.ua/sousi-soevi" ><span>Соевые соусы</span></a>
+<li class="level2 nav-16-1-7 category-item"><a href="https://varus.ua/hrin" ><span>Хрен</span></a>
+<li class="level2 nav-16-1-8 category-item last"><a href="https://varus.ua/marinadi-ta-zapravki" ><span>Маринады и заправки</span></a>
+<li class="level1 nav-16-2 category-item"><a href="https://varus.ua/pripravi-ta-specii" ><span>Специи и приправы</span></a>
+<li class="level1 nav-16-3 category-item"><a href="https://varus.ua/sil" ><span>Соль</span></a>
+<li class="level1 nav-16-4 category-item"><a href="https://varus.ua/cukor" ><span>Сахар</span></a>
+<li class="level1 nav-16-5 category-item"><a href="https://varus.ua/maslo-roslinne" ><span>Растительное масло</span></a>
+<li class="level1 nav-16-6 category-item"><a href="https://varus.ua/ocet" ><span>Уксус</span></a>
+<li class="level1 nav-16-7 category-item parent"><a href="https://varus.ua/krupi" ><span>Крупы</span></a>
+<li class="level2 nav-16-7-1 category-item first"><a href="https://varus.ua/bobovi-krupi" ><span>Бобовые крупы</span></a>
+<li class="level2 nav-16-7-2 category-item"><a href="https://varus.ua/grechka" ><span>Гречка</span></a>
+<li class="level2 nav-16-7-3 category-item"><a href="https://varus.ua/kukurudzyana-krupa" ><span>Кукурузная крупа</span></a>
+<li class="level2 nav-16-7-4 category-item"><a href="https://varus.ua/manna-krupa" ><span>Манная крупа</span></a>
+<li class="level2 nav-16-7-5 category-item"><a href="https://varus.ua/pshenichna-krupa" ><span>Крупа пшеничная</span></a>
+<li class="level2 nav-16-7-6 category-item"><a href="https://varus.ua/pshono" ><span>Пшено</span></a>
+<li class="level2 nav-16-7-7 category-item"><a href="https://varus.ua/yachna-krupa" ><span>Ячневая и перловая крупа</span></a>
+<li class="level2 nav-16-7-8 category-item"><a href="https://varus.ua/ris" ><span>Рис</span></a>
+<li class="level2 nav-16-7-9 category-item last"><a href="https://varus.ua/vivsyana-krupa" ><span>Овсяная крупа</span></a>
+<li class="level1 nav-16-8 category-item"><a href="https://varus.ua/makaronni-virobi" ><span>Макаронные изделия</span></a>
+<li class="level1 nav-16-9 category-item parent"><a href="https://varus.ua/stravi-shvidkogo-prigotuvannya" ><span>Еда быстрого приготовления</span></a>
+<li class="level2 nav-16-9-1 category-item first"><a href="https://varus.ua/bulyoni-ta-supi" ><span>Бульоны и супы</span></a>
+<li class="level2 nav-16-9-2 category-item"><a href="https://varus.ua/vermishel-shvidkogo-prigotuvannya" ><span>Вермишель быстрого приготовления</span></a>
+<li class="level2 nav-16-9-3 category-item"><a href="https://varus.ua/kashi-shvitkogo-prigotuvannya" ><span>Каши быстрого приготовления</span></a>
+<li class="level2 nav-16-9-4 category-item"><a href="https://varus.ua/pyure-shvidkogo-prigotuvannya" ><span>Пюре быстрого приготовления</span></a>
+<li class="level2 nav-16-9-5 category-item last"><a href="https://varus.ua/suhi-snidanki" ><span>Сухие завтраки</span></a>
+<li class="level1 nav-16-10 category-item parent"><a href="https://varus.ua/produkti-dlya-vipichki" ><span>Продукты для выпечки</span></a>
+<li class="level2 nav-16-10-1 category-item first"><a href="https://varus.ua/boroshno" ><span>Мука</span></a>
+<li class="level2 nav-16-10-2 category-item"><a href="https://varus.ua/drizhdzhi" ><span>Дрожжи</span></a>
+<li class="level2 nav-16-10-3 category-item"><a href="https://varus.ua/zhele" ><span>Желе, пудинги, кисель</span></a>
+<li class="level2 nav-16-10-4 category-item"><a href="https://varus.ua/kokosova-struzhka" ><span>Кокосовая стружка</span></a>
+<li class="level2 nav-16-10-5 category-item"><a href="https://varus.ua/kremi-ta-glazuri" ><span>Кремы и глазури</span></a>
+<li class="level2 nav-16-10-6 category-item"><a href="https://varus.ua/mak" ><span>Мак</span></a>
+<li class="level2 nav-16-10-7 category-item"><a href="https://varus.ua/paniruvannya" ><span>Панировки</span></a>
+<li class="level2 nav-16-10-8 category-item"><a href="https://varus.ua/prisipki-ta-prikrasi" ><span>Присыпки и украшения</span></a>
+<li class="level2 nav-16-10-9 category-item last"><a href="https://varus.ua/harchovi-koncentrati" ><span>Ингредиенты и добавки для выпечки</span></a>
+<li class="level1 nav-16-11 category-item"><a href="https://varus.ua/varennya" ><span>Варенье и джемы</span></a>
+<li class="level1 nav-16-12 category-item"><a href="https://varus.ua/med" ><span>Мед</span></a>
+<li class="level1 nav-16-13 category-item"><a href="https://varus.ua/siropi-ta-topingi" ><span>Сиропы и топпинги</span></a>
+<li class="level1 nav-16-14 category-item"><a href="https://varus.ua/produkti-dlya-sushi" ><span>Продукты для суши</span></a>
+<li class="level1 nav-16-15 category-item last"><a href="https://varus.ua/kinoa-chia-amarant" ><span>Суперфуды</span></a>
+<li class="level0 nav-17 category-item level-top parent"><a href="https://varus.ua/hlibobulochni-virobi" class="level-top" ><span>Хлебобулочные изделия</span></a>
+<li class="level1 nav-17-1 category-item first"><a href="https://varus.ua/hlib" ><span>Хлеб</span></a>
+<li class="level1 nav-17-2 category-item"><a href="https://varus.ua/hlibci" ><span>Хлебцы</span></a>
+<li class="level1 nav-17-3 category-item"><a href="https://varus.ua/sushki-ta-suhari" ><span>Сушки и сухари</span></a>
+<li class="level1 nav-17-4 category-item"><a href="https://varus.ua/bulochni-virobi" ><span>Булочные изделия</span></a>
+<li class="level1 nav-17-5 category-item"><a href="https://varus.ua/pirogi" ><span>Пироги</span></a>
+<li class="level1 nav-17-6 category-item"><a href="https://varus.ua/muchnye-kulinarnye-izdeliya" ><span>Мучные кулинарные изделия</span></a>
+<li class="level1 nav-17-7 category-item last"><a href="https://varus.ua/korzhi-ta-zagotovki" ><span>Лепешки и заготовки</span></a>
+<li class="level0 nav-18 category-item level-top parent"><a href="https://varus.ua/konditerski-virobi-ta-solodoschi" class="level-top" ><span>Кондитерские изделия и сладости</span></a>
+<li class="level1 nav-18-1 category-item first parent"><a href="https://varus.ua/konditerska-vipichka" ><span>Кондитерская выпечка</span></a>
+<li class="level2 nav-18-1-1 category-item first"><a href="https://varus.ua/torti" ><span>Торты</span></a>
+<li class="level2 nav-18-1-2 category-item"><a href="https://varus.ua/pechivo" ><span>Печенье</span></a>
+<li class="level2 nav-18-1-3 category-item"><a href="https://varus.ua/pryaniki" ><span>Пряники</span></a>
+<li class="level2 nav-18-1-4 category-item"><a href="https://varus.ua/vafli" ><span>Вафли</span></a>
+<li class="level2 nav-18-1-5 category-item"><a href="https://varus.ua/keksi-ta-mafini" ><span>Кексы и маффины</span></a>
+<li class="level2 nav-18-1-6 category-item"><a href="https://varus.ua/krekeri" ><span>Крекеры</span></a>
+<li class="level2 nav-18-1-7 category-item"><a href="https://varus.ua/kruasani" ><span>Круассаны</span></a>
+<li class="level2 nav-18-1-8 category-item"><a href="https://varus.ua/ponchiki" ><span>Пончики</span></a>
+<li class="level2 nav-18-1-9 category-item"><a href="https://varus.ua/tistechtka" ><span>Пирожные</span></a>
+<li class="level2 nav-18-1-10 category-item"><a href="https://varus.ua/ruleti-konditerski" ><span>Кондитерские рулеты</span></a>
+<li class="level2 nav-18-1-11 category-item last"><a href="https://varus.ua/pasha" ><span>Паска</span></a>
+<li class="level1 nav-18-2 category-item"><a href="https://varus.ua/shokolad" ><span>Шоколад</span></a>
+<li class="level1 nav-18-3 category-item"><a href="https://varus.ua/cukerki" ><span>Конфеты</span></a>
+<li class="level1 nav-18-4 category-item"><a href="https://varus.ua/zhuvalni-gumki" ><span>Жевательные резинки</span></a>
+<li class="level1 nav-18-5 category-item"><a href="https://varus.ua/batonchiki" ><span>Батончики</span></a>
+<li class="level1 nav-18-6 category-item"><a href="https://varus.ua/pasti-shokoladno-gorihovi" ><span>Пасты</span></a>
+<li class="level1 nav-18-7 category-item"><a href="https://varus.ua/zefir" ><span>Зефир</span></a>
+<li class="level1 nav-18-8 category-item"><a href="https://varus.ua/marmelad" ><span>Мармелад</span></a>
+<li class="level1 nav-18-9 category-item"><a href="https://varus.ua/deserti" ><span>Десерты</span></a>
+<li class="level1 nav-18-10 category-item last"><a href="https://varus.ua/shidni-solodoschi" ><span>Восточные сладости</span></a>
+<li class="level0 nav-19 category-item level-top parent"><a href="https://varus.ua/napoi" class="level-top" ><span>Чай, кофе, горячие напитки</span></a>
+<li class="level1 nav-19-1 category-item first"><a href="https://varus.ua/chay" ><span>Чай</span></a>
+<li class="level1 nav-19-2 category-item"><a href="https://varus.ua/kava-zernova" ><span>Кофе</span></a>
+<li class="level1 nav-19-3 category-item"><a href="https://varus.ua/kakao" ><span>Какао</span></a>
+<li class="level1 nav-19-4 category-item"><a href="https://varus.ua/goryachiy-shokolad" ><span>Горячий шоколад</span></a>
+<li class="level1 nav-19-5 category-item last"><a href="https://varus.ua/kofemashiny" ><span>Кофемашины</span></a>
+<li class="level0 nav-20 category-item level-top parent"><a href="https://varus.ua/bezalkogolni-napoi" class="level-top" ><span>Вода, соки, напитки</span></a>
+<li class="level1 nav-20-1 category-item first"><a href="https://varus.ua/mineralna-voda" ><span>Минеральная вода</span></a>
+<li class="level1 nav-20-2 category-item"><a href="https://varus.ua/solodki-napoi" ><span>Сладкая вода</span></a>
+<li class="level1 nav-20-3 category-item"><a href="https://varus.ua/kombucha" ><span>Комбуча</span></a>
+<li class="level1 nav-20-4 category-item"><a href="https://varus.ua/soki" ><span>Соки и нектары</span></a>
+<li class="level1 nav-20-5 category-item"><a href="https://varus.ua/holodnij-chaj-ta-kava" ><span>Холодный чай и кофе</span></a>
+<li class="level1 nav-20-6 category-item"><a href="https://varus.ua/energetiki" ><span>Энергетические напитки</span></a>
+<li class="level1 nav-20-7 category-item last"><a href="https://varus.ua/kvas" ><span>Квас</span></a>
+<li class="level0 nav-21 category-item level-top parent"><a href="https://varus.ua/sneki" class="level-top" ><span>Снеки</span></a>
+<li class="level1 nav-21-1 category-item first"><a href="https://varus.ua/chipsi" ><span>Чипсы</span></a>
+<li class="level1 nav-21-2 category-item"><a href="https://varus.ua/suhariki" ><span>Сухарики</span></a>
+<li class="level1 nav-21-3 category-item"><a href="https://varus.ua/popkorn" ><span>Попкорн</span></a>
+<li class="level1 nav-21-4 category-item"><a href="https://varus.ua/gorishki" ><span>Орешки</span></a>
+<li class="level1 nav-21-5 category-item"><a href="https://varus.ua/sneki-ribni" ><span>Рыбные снеки</span></a>
+<li class="level1 nav-21-6 category-item"><a href="https://varus.ua/sneki-m-yasni" ><span>Мясные снеки</span></a>
+<li class="level1 nav-21-7 category-item"><a href="https://varus.ua/sneki-kukurudzyani" ><span>Кукурузные снеки</span></a>
+<li class="level1 nav-21-8 category-item last"><a href="https://varus.ua/sneki-z-nasinnya" ><span>Жареные семечки</span></a>
+<li class="level0 nav-22 category-item level-top parent"><a href="https://varus.ua/zamorozheni-produkti" class="level-top" ><span>Замороженные продукты</span></a>
+<li class="level1 nav-22-1 category-item first"><a href="https://varus.ua/morozivo" ><span>Мороженое</span></a>
+<li class="level1 nav-22-2 category-item"><a href="https://varus.ua/kulinarni-napivfabrikati" ><span>Замороженные полуфабрикаты</span></a>
+<li class="level1 nav-22-3 category-item"><a href="https://varus.ua/zamorozheni-ovochi" ><span>Замороженные овощи</span></a>
+<li class="level1 nav-22-4 category-item"><a href="https://varus.ua/zamorozheni-frukti-ta-yagodi" ><span>Замороженные ягоды</span></a>
+<li class="level1 nav-22-5 category-item"><a href="https://varus.ua/zamorozheni-gribi" ><span>Замороженные грибы</span></a>
+<li class="level1 nav-22-6 category-item"><a href="https://varus.ua/zamorozhena-pica" ><span>Замороженная пицца</span></a>
+<li class="level1 nav-22-7 category-item last"><a href="https://varus.ua/zamorozhene-tisto" ><span>Замороженное тесто</span></a>
+<li class="level0 nav-23 category-item level-top parent"><a href="https://varus.ua/catalog/category/view/s/konservacija-i-solenie/id/58295/" class="level-top" ><span>Консервация и соление</span></a>
+<li class="level1 nav-23-1 category-item first"><a href="https://varus.ua/konservaciya-ovocheva" ><span>Овощная консервация и соленья</span></a>
+<li class="level1 nav-23-2 category-item"><a href="https://varus.ua/konservi-ribni" ><span>Рыбные консервы</span></a>
+<li class="level1 nav-23-3 category-item"><a href="https://varus.ua/konservi-myasni" ><span>Мясные консервы</span></a>
+<li class="level1 nav-23-4 category-item"><a href="https://varus.ua/konservaciya-fruktova" ><span>Фруктовая консервация</span></a>
+<li class="level1 nav-23-5 category-item"><a href="https://varus.ua/gribi-konservovani" ><span>Консервированные грибы </span></a>
+<li class="level1 nav-23-6 category-item"><a href="https://varus.ua/olivki-konservovani" ><span>Оливки и маслины</span></a>
+<li class="level1 nav-23-7 category-item"><a href="https://varus.ua/zakuski-buterbrodni" ><span>Бутербродные закуски и намазки </span></a>
+<li class="level1 nav-23-8 category-item"><a href="https://varus.ua/pashteti" ><span>Паштеты</span></a>
+<li class="level1 nav-23-9 category-item"><a href="https://varus.ua/hummus" ><span>Хумус</span></a>
+<li class="level1 nav-23-10 category-item last"><a href="https://varus.ua/kashi-konservovani" ><span>Консервированные супы и каши</span></a>
+<li class="level0 nav-24 category-item level-top parent"><a href="https://varus.ua/tyutyunovi-virobi" class="level-top" ><span>Табачные изделия</span></a>
+<li class="level1 nav-24-1 category-item first"><a href="https://varus.ua/cigarki" ><span>Сигареты</span></a>
+<li class="level1 nav-24-2 category-item"><a href="https://varus.ua/elektronni-sigareti" ><span>Электронные сигареты</span></a>
+<li class="level1 nav-24-3 category-item"><a href="https://varus.ua/stiki" ><span>Стики</span></a>
+<li class="level1 nav-24-4 category-item"><a href="https://varus.ua/nikotinovi-peki" ><span> Никотиновые подушечки</span></a>
+<li class="level1 nav-24-5 category-item last"><a href="https://varus.ua/zapalnichki" ><span>Зажигалки</span></a>
+<li class="level0 nav-25 category-item level-top parent"><a href="https://varus.ua/varuscafe" class="level-top" ><span>VARUS CAFE</span></a>
+<li class="level1 nav-25-1 category-item first"><a href="https://varus.ua/varuscafe/pica" ><span>Пицца</span></a>
+<li class="level1 nav-25-2 category-item"><a href="https://varus.ua/varuscafe/wok" ><span>WOK</span></a>
+<li class="level1 nav-25-3 category-item"><a href="https://varus.ua/varuscafe/salati-ta-zakuski" ><span>Салаты</span></a>
+<li class="level1 nav-25-4 category-item"><a href="https://varus.ua/varuscafe/pershi-stravi" ><span>Первые блюда</span></a>
+<li class="level1 nav-25-5 category-item"><a href="https://varus.ua/varuscafe/drugi-stravi" ><span>Вторые блюда</span></a>
+<li class="level1 nav-25-6 category-item"><a href="https://varus.ua/varuscafe/ribni-stravi" ><span>Рыбные блюда</span></a>
+<li class="level1 nav-25-7 category-item"><a href="https://varus.ua/varuscafe/pancakes" ><span>Блинчики, сырники, запеканки</span></a>
+<li class="level1 nav-25-8 category-item"><a href="https://varus.ua/varuscafe/buterbrodi" ><span>Сендвичи</span></a>
+<li class="level1 nav-25-9 category-item last"><a href="https://varus.ua/varuscafe/gotovi-napoi" ><span>Напитки</span></a>
+<li class="level0 nav-26 category-item level-top parent"><a href="https://varus.ua/vlasna-vipichka" class="level-top" ><span>Собственная выпечка и десерты VARUS</span></a>
+<li class="level1 nav-26-1 category-item first"><a href="https://varus.ua/hlib-ta-bageti" ><span>Хлеб и багеты</span></a>
+<li class="level1 nav-26-2 category-item"><a href="https://varus.ua/bulochki-ta-zdobni-virobi" ><span>Булочки и сдобные изделия</span></a>
+<li class="level1 nav-26-3 category-item"><a href="https://varus.ua/listkovi-virobi-ta-kruasani" ><span>Слоеные изделия и круассаны</span></a>
+<li class="level1 nav-26-4 category-item"><a href="https://varus.ua/pirogi-ta-pechivo" ><span>Пироги и печенье</span></a>
+<li class="level1 nav-26-5 category-item"><a href="https://varus.ua/vlasni-konditerski-virobi" ><span>Торты и десерты</span></a>
+<li class="level1 nav-26-6 category-item"><a href="https://varus.ua/ponchiki-ta-mafini" ><span>Пончики и маффины</span></a>
+<li class="level1 nav-26-7 category-item last"><a href="https://varus.ua/tisto" ><span>Тесто</span></a>
+<li class="level0 nav-27 category-item level-top parent"><a href="https://varus.ua/kosmetika-ta-doglyad" class="level-top" ><span>Гигиена и уход</span></a>
+<li class="level1 nav-27-1 category-item first parent"><a href="https://varus.ua/osobista-gigiyena" ><span>Личная гигиена</span></a>
+<li class="level2 nav-27-1-1 category-item first"><a href="https://varus.ua/tualetniy-papir" ><span>Туалетная бумага</span></a>
+<li class="level2 nav-27-1-2 category-item"><a href="https://varus.ua/prokladki" ><span>Прокладки</span></a>
+<li class="level2 nav-27-1-3 category-item"><a href="https://varus.ua/tamponi" ><span>Тампоны</span></a>
+<li class="level2 nav-27-1-4 category-item"><a href="https://varus.ua/zasobi-dlya-intimnoyi-gigiyeni" ><span>Средства для интимной гигиены</span></a>
+<li class="level2 nav-27-1-5 category-item"><a href="https://varus.ua/paperovi-rushniki" ><span>Бумажные полотенца</span></a>
+<li class="level2 nav-27-1-6 category-item"><a href="https://varus.ua/vologi-servetki" ><span>Влажные салфетки</span></a>
+<li class="level2 nav-27-1-7 category-item"><a href="https://varus.ua/kosmetichni-servetki" ><span>Косметические салфетки</span></a>
+<li class="level2 nav-27-1-8 category-item"><a href="https://varus.ua/nosovi-hustochki" ><span>Носовые платки</span></a>
+<li class="level2 nav-27-1-9 category-item"><a href="https://varus.ua/vatni-diski" ><span>Ватные диски</span></a>
+<li class="level2 nav-27-1-10 category-item last"><a href="https://varus.ua/vatni-palichki" ><span>Ватные палочки</span></a>
+<li class="level1 nav-27-2 category-item parent"><a href="https://varus.ua/doglyad-za-tilom" ><span>Уход за телом</span></a>
+<li class="level2 nav-27-2-1 category-item first"><a href="https://varus.ua/milo" ><span>Мыло</span></a>
+<li class="level2 nav-27-2-2 category-item"><a href="https://varus.ua/geli-dlya-dushu" ><span>Гели для душа</span></a>
+<li class="level2 nav-27-2-3 category-item"><a href="https://varus.ua/dezodoranti" ><span>Дезодоранты</span></a>
+<li class="level2 nav-27-2-4 category-item"><a href="https://varus.ua/kremi" ><span>Кремы для тела</span></a>
+<li class="level2 nav-27-2-5 category-item"><a href="https://varus.ua/losjoni-dlya-tila" ><span>Лосьоны для тела</span></a>
+<li class="level2 nav-27-2-6 category-item"><a href="https://varus.ua/spreyi-dlya-tila" ><span>Спреи для тела</span></a>
+<li class="level2 nav-27-2-7 category-item"><a href="https://varus.ua/skrabi-i-pilingi" ><span>Скрабы и пилинги для тела</span></a>
+<li class="level2 nav-27-2-8 category-item"><a href="https://varus.ua/pina-ta-sil-dlya-vanni" ><span>Бомбочки, пена и соль для ванны</span></a>
+<li class="level2 nav-27-2-9 category-item"><a href="https://varus.ua/nabori-dlya-doglyadu-za-tilom" ><span>Наборы для ухода за телом</span></a>
+<li class="level2 nav-27-2-10 category-item"><a href="https://varus.ua/efirna-oliya" ><span>Эфирные масла</span></a>
+<li class="level2 nav-27-2-11 category-item last"><a href="https://varus.ua/zasobi-dlya-manikyuru" ><span>Средства для маникюра</span></a>
+<li class="level1 nav-27-3 category-item parent"><a href="https://varus.ua/doglyad-za-rotovoyu-porozhninoyu" ><span>Уход за полостью рта</span></a>
+<li class="level2 nav-27-3-1 category-item first"><a href="https://varus.ua/zubni-pasti" ><span>Зубные пасты</span></a>
+<li class="level2 nav-27-3-2 category-item"><a href="https://varus.ua/zubni-schitki" ><span>Зубные щетки</span></a>
+<li class="level2 nav-27-3-3 category-item"><a href="https://varus.ua/opoliskuvachi-rotovoi-porozhnini" ><span>Ополаскиватели полости рта</span></a>
+<li class="level2 nav-27-3-4 category-item"><a href="https://varus.ua/zubochistki-ta-nitki" ><span>Зубные нити и зубочистки</span></a>
+<li class="level2 nav-27-3-5 category-item last"><a href="https://varus.ua/osvizhuvachi" ><span>Освежители полости рта</span></a>
+<li class="level1 nav-27-4 category-item parent"><a href="https://varus.ua/doglyad-za-volossyam" ><span>Уход за волосами</span></a>
+<li class="level2 nav-27-4-1 category-item first"><a href="https://varus.ua/shampuni" ><span>Шампуни</span></a>
+<li class="level2 nav-27-4-2 category-item"><a href="https://varus.ua/balzami-dlya-volossya" ><span>Бальзамы для волос</span></a>
+<li class="level2 nav-27-4-3 category-item"><a href="https://varus.ua/kondicioneri-dlya-volossya" ><span>Кондиционеры для волос</span></a>
+<li class="level2 nav-27-4-4 category-item"><a href="https://varus.ua/maski-dlya-volossya" ><span>Маски для волос</span></a>
+<li class="level2 nav-27-4-5 category-item"><a href="https://varus.ua/fileri-dlya-volossya" ><span>Филлеры для волос</span></a>
+<li class="level2 nav-27-4-6 category-item"><a href="https://varus.ua/termozahist-dlya-volossya" ><span>Термозащита для волос</span></a>
+<li class="level2 nav-27-4-7 category-item"><a href="https://varus.ua/spreyi-dlya-volossya" ><span>Спреи для волос</span></a>
+<li class="level2 nav-27-4-8 category-item"><a href="https://varus.ua/skrabi-dlya-shkiri-golovi" ><span>Скрабы для кожи головы</span></a>
+<li class="level2 nav-27-4-9 category-item"><a href="https://varus.ua/sirovatki-dlya-volossya" ><span>Сыворотки для волос</span></a>
+<li class="level2 nav-27-4-10 category-item"><a href="https://varus.ua/oliya-dlya-volossya" ><span>Масла для волос</span></a>
+<li class="level2 nav-27-4-11 category-item"><a href="https://varus.ua/kremi-dlya-volossya" ><span>Кремы для волос</span></a>
+<li class="level2 nav-27-4-12 category-item"><a href="https://varus.ua/nabori-dlya-doglyadu-za-volossyam" ><span>Наборы для ухода за волосами</span></a>
+<li class="level2 nav-27-4-13 category-item last"><a href="https://varus.ua/aksesuari-dlya-volossya" ><span>Аксессуары для волос</span></a>
+<li class="level1 nav-27-5 category-item parent"><a href="https://varus.ua/zasobi-dlya-ukladannya-volossya" ><span>Средства для укладки волос</span></a>
+<li class="level2 nav-27-5-1 category-item first"><a href="https://varus.ua/lak-dlya-volossya" ><span>Лаки для волос</span></a>
+<li class="level2 nav-27-5-2 category-item"><a href="https://varus.ua/geli-dlya-volossya" ><span>Гели для волос</span></a>
+<li class="level2 nav-27-5-3 category-item"><a href="https://varus.ua/musi-dlya-volossya" ><span>Муссы для волос</span></a>
+<li class="level2 nav-27-5-4 category-item last"><a href="https://varus.ua/pinki-dlya-volossya" ><span>Пенки для волос</span></a>
+<li class="level1 nav-27-6 category-item parent"><a href="https://varus.ua/zasobi-dlya-farbuvannya-volossya" ><span>Средства для окрашивания волос</span></a>
+<li class="level2 nav-27-6-1 category-item first"><a href="https://varus.ua/osvitlyuvachi-dlya-volossya" ><span>Осветлители для волос</span></a>
+<li class="level2 nav-27-6-2 category-item"><a href="https://varus.ua/toniruyuschie-sredstva-dlya-volos" ><span>Тонирующие средства для волос</span></a>
+<li class="level2 nav-27-6-3 category-item"><a href="https://varus.ua/farba-dlya-volossya" ><span>Краски для волос</span></a>
+<li class="level2 nav-27-6-4 category-item last"><a href="https://varus.ua/farbi-dlya-briv-ta-vij" ><span>Краски для бровей и ресниц</span></a>
+<li class="level1 nav-27-7 category-item parent"><a href="https://varus.ua/doglyad-za-oblichchyam" ><span>Уход за лицом</span></a>
+<li class="level2 nav-27-7-1 category-item first"><a href="https://varus.ua/kremi-dlya-oblichchya" ><span>Кремы для лица</span></a>
+<li class="level2 nav-27-7-2 category-item"><a href="https://varus.ua/zasobi-dlya-vmivannya" ><span>Средства для умывания</span></a>
+<li class="level2 nav-27-7-3 category-item"><a href="https://varus.ua/zasobi-dlya-pilingu-oblichchya" ><span>Средства для пилинга лица</span></a>
+<li class="level2 nav-27-7-4 category-item"><a href="https://varus.ua/sirovatki-dlya-oblichchya" ><span>Сыворотки для лица</span></a>
+<li class="level2 nav-27-7-5 category-item"><a href="https://varus.ua/doglyad-za-shkiroyu-navkolo-ochej" ><span>Уход за кожей вокруг глаз</span></a>
+<li class="level2 nav-27-7-6 category-item"><a href="https://varus.ua/zasobi-dlya-demakiyazhu" ><span>Средства для демакияжа</span></a>
+<li class="level2 nav-27-7-7 category-item"><a href="https://varus.ua/zasobi-doglyadu-za-gubami" ><span>Средства по уходу за губами</span></a>
+<li class="level2 nav-27-7-8 category-item"><a href="https://varus.ua/maski-dlya-oblichchya" ><span>Маски для лица</span></a>
+<li class="level2 nav-27-7-9 category-item last"><a href="https://varus.ua/tonik-dlya-oblichchya" ><span>Тоники для лица</span></a>
+<li class="level1 nav-27-8 category-item parent"><a href="https://varus.ua/tovari-dlya-golinnya" ><span>Средства для бритья</span></a>
+<li class="level2 nav-27-8-1 category-item first"><a href="https://varus.ua/zasobi-dlya-golinnya" ><span>Косметика для бритья</span></a>
+<li class="level2 nav-27-8-2 category-item"><a href="https://varus.ua/zasobi-pislya-golinnya" ><span>Косметика после бритья</span></a>
+<li class="level2 nav-27-8-3 category-item"><a href="https://varus.ua/zminni-kaseti-dlya-britvi" ><span>Сменные кассеты для бритья</span></a>
+<li class="level2 nav-27-8-4 category-item"><a href="https://varus.ua/nabori-dlya-golinnya" ><span>Наборы для бритья</span></a>
+<li class="level2 nav-27-8-5 category-item last"><a href="https://varus.ua/stanki-dlya-golinnya" ><span>Станки для бритья</span></a>
+<li class="level1 nav-27-9 category-item"><a href="https://varus.ua/harchovi-dobavki" ><span>БАДы (пищевые добавки)</span></a>
+<li class="level1 nav-27-10 category-item parent"><a href="https://varus.ua/tovari-dlya-zdorovya" ><span>Товары для здоровья</span></a>
+<li class="level2 nav-27-10-1 category-item first"><a href="https://varus.ua/antiseptiki" ><span>Антисептики</span></a>
+<li class="level2 nav-27-10-2 category-item"><a href="https://varus.ua/prezervativi" ><span>Презервативы</span></a>
+<li class="level2 nav-27-10-3 category-item last"><a href="https://varus.ua/medichni-zasobi" ><span>Домашняя аптечка</span></a>
+<li class="level1 nav-27-11 category-item"><a href="https://varus.ua/zasobi-proti-komah" ><span>Средства против насекомых</span></a>
+<li class="level1 nav-27-12 category-item last"><a href="https://varus.ua/soncezahisni-zasobi" ><span>Солнцезащитные средства</span></a>
+<li class="level0 nav-28 category-item level-top parent"><a href="https://varus.ua/pobutova-himiya" class="level-top" ><span>Бытовая химия</span></a>
+<li class="level1 nav-28-1 category-item first parent"><a href="https://varus.ua/zasobi-dlya-prannya" ><span>Средства для стирки</span></a>
+<li class="level2 nav-28-1-1 category-item first"><a href="https://varus.ua/ridki-zasobi-dlya-prannya" ><span>Гели для стирки</span></a>
+<li class="level2 nav-28-1-2 category-item"><a href="https://varus.ua/poroshki-dlya-prannya" ><span>Порошки для стирки</span></a>
+<li class="level2 nav-28-1-3 category-item"><a href="https://varus.ua/kondicioneri-dlya-bilizni" ><span>Кондиционеры и ополаскиватели для белья</span></a>
+<li class="level2 nav-28-1-4 category-item"><a href="https://varus.ua/kapsuli-dlya-prannya" ><span>Капсулы для стирки</span></a>
+<li class="level2 nav-28-1-5 category-item"><a href="https://varus.ua/plyamovividniki" ><span>Пятновыводители и отбеливатели</span></a>
+<li class="level2 nav-28-1-6 category-item last"><a href="https://varus.ua/servetki-dlya-prannya" ><span>Салфетки для стирки</span></a>
+<li class="level1 nav-28-2 category-item"><a href="https://varus.ua/milo-gospodarske" ><span>Хозяйственное мыло</span></a>
+<li class="level1 nav-28-3 category-item"><a href="https://varus.ua/zasobi-dlya-posudomijnih-mashin" ><span>Средства для посудомоечных машин</span></a>
+<li class="level1 nav-28-4 category-item parent"><a href="https://varus.ua/doglyad-za-vzuttyam" ><span>Уход за обувью</span></a>
+<li class="level2 nav-28-4-1 category-item first"><a href="https://varus.ua/zasobi-vidnovlennya-ta-zahistu" ><span>Средства восстановления и защиты обуви</span></a>
+<li class="level2 nav-28-4-2 category-item"><a href="https://varus.ua/gubki-ta-schitki-dlya-vzuttya" ><span>Губки и щетки для обуви</span></a>
+<li class="level2 nav-28-4-3 category-item"><a href="https://varus.ua/farba-dlya-vzuttya" ><span>Краска для обуви</span></a>
+<li class="level2 nav-28-4-4 category-item"><a href="https://varus.ua/kremi-dlya-vzuttya" ><span>Кремы для обуви</span></a>
+<li class="level2 nav-28-4-5 category-item"><a href="https://varus.ua/dezodoranti-dlya-vzuttya" ><span>Дезодоранты для обуви</span></a>
+<li class="level2 nav-28-4-6 category-item last"><a href="https://varus.ua/aksesuari-dlya-vzuttya" ><span>Аксессуары для обуви</span></a>
+<li class="level1 nav-28-5 category-item"><a href="https://varus.ua/zasobi-dlya-doglyadu-za-unitazom" ><span>Средства для ухода за унитазом</span></a>
+<li class="level1 nav-28-6 category-item parent"><a href="https://varus.ua/zasobi-dlya-pribirannya" ><span>Средства для уборки</span></a>
+<li class="level2 nav-28-6-1 category-item first"><a href="https://varus.ua/zasobi-dlya-kuhni" ><span>Средства для кухни</span></a>
+<li class="level2 nav-28-6-2 category-item"><a href="https://varus.ua/zasobi-dlya-vannih-kimnat" ><span>Средства для ванных комнат</span></a>
+<li class="level2 nav-28-6-3 category-item"><a href="https://varus.ua/universalni-miyuchi-zasobi" ><span>Универсальные моющие средства</span></a>
+<li class="level2 nav-28-6-4 category-item"><a href="https://varus.ua/zasobi-dlya-mittya-pidlogi" ><span>Средства для мытья полов</span></a>
+<li class="level2 nav-28-6-5 category-item"><a href="https://varus.ua/zasobi-dlya-prochishennya-trub" ><span>Средства для прочистки труб</span></a>
+<li class="level2 nav-28-6-6 category-item"><a href="https://varus.ua/zasobi-dlya-mittya-vikon" ><span>Средства для мытья окон</span></a>
+<li class="level2 nav-28-6-7 category-item"><a href="https://varus.ua/zasobi-dlya-doglyadu-za-meblyami" ><span>Средства для ухода за мебелью</span></a>
+<li class="level2 nav-28-6-8 category-item"><a href="https://varus.ua/zasobi-dlya-chishennya-kilimiv" ><span>Средства для чистки ковров</span></a>
+<li class="level2 nav-28-6-9 category-item last"><a href="https://varus.ua/zasobi-po-doglyadu-za-pobutovoyu-tehnikoyu" ><span>Средства по уходу за бытовой техникой</span></a>
+<li class="level1 nav-28-7 category-item"><a href="https://varus.ua/zasobi-dlya-mittya-posudu" ><span>Средства для мытья посуды</span></a>
+<li class="level1 nav-28-8 category-item last"><a href="https://varus.ua/osvizhuvachi-povitrya" ><span>Освежители воздуха</span></a>
+<li class="level0 nav-29 category-item level-top parent"><a href="https://varus.ua/tovari-dlya-tvarin" class="level-top" ><span>Товары для животных</span></a>
+<li class="level1 nav-29-1 category-item first parent"><a href="https://varus.ua/tovari-dlya-kotiv" ><span>Товары для котов</span></a>
+<li class="level2 nav-29-1-1 category-item first"><a href="https://varus.ua/korm-dlya-tvarin" ><span>Корм для котов</span></a>
+<li class="level2 nav-29-1-2 category-item"><a href="https://varus.ua/lasoshi-dlya-kotiv" ><span>Лакомство для котов</span></a>
+<li class="level2 nav-29-1-3 category-item"><a href="https://varus.ua/napovnyuvachi-dlya-tualetiv" ><span>Наполнители туалетов для котов</span></a>
+<li class="level2 nav-29-1-4 category-item"><a href="https://varus.ua/igrashki-dlya-kotiv" ><span>Игрушки для котов</span></a>
+<li class="level2 nav-29-1-5 category-item last"><a href="https://varus.ua/aksesuari-dlya-kotiv" ><span>Аксессуары для котов</span></a>
+<li class="level1 nav-29-2 category-item parent"><a href="https://varus.ua/tovari-dlya-sobak" ><span>Товары для собак</span></a>
+<li class="level2 nav-29-2-1 category-item first"><a href="https://varus.ua/korm-dlya-sobak" ><span>Корм для собак</span></a>
+<li class="level2 nav-29-2-2 category-item"><a href="https://varus.ua/lasoshi-dlya-sobak" ><span>Лакомство для собак</span></a>
+<li class="level2 nav-29-2-3 category-item"><a href="https://varus.ua/igrashki-dlya-sobak" ><span>Игрушки для собак</span></a>
+<li class="level2 nav-29-2-4 category-item last"><a href="https://varus.ua/aksesuari-dlya-sobak" ><span>Аксессуары для собак</span></a>
+<li class="level1 nav-29-3 category-item parent"><a href="https://varus.ua/tovari-dlya-ptahiv" ><span>Товары для птиц</span></a>
+<li class="level2 nav-29-3-1 category-item first"><a href="https://varus.ua/korm-dlya-ptahiv" ><span>Корм для птиц</span></a>
+<li class="level2 nav-29-3-2 category-item"><a href="https://varus.ua/lasoshi-dlya-ptahiv" ><span>Лакомство для птиц</span></a>
+<li class="level2 nav-29-3-3 category-item"><a href="https://varus.ua/igrashki-dlya-ptahiv" ><span>Игрушки для птиц</span></a>
+<li class="level2 nav-29-3-4 category-item last"><a href="https://varus.ua/aksesuari-dlya-ptahiv" ><span>Аксессуары для птиц</span></a>
+<li class="level1 nav-29-4 category-item parent"><a href="https://varus.ua/tovari-dlya-grizuniv" ><span>Товары для грызунов</span></a>
+<li class="level2 nav-29-4-1 category-item first"><a href="https://varus.ua/korm-dlya-grizuniv" ><span>Корм для грызунов</span></a>
+<li class="level2 nav-29-4-2 category-item last"><a href="https://varus.ua/lasoshi-dlya-grizuniv" ><span>Лакомство для грызунов</span></a>
+<li class="level1 nav-29-5 category-item last parent"><a href="https://varus.ua/akvariumistika" ><span>Аквариумистика</span></a>
+<li class="level2 nav-29-5-1 category-item first last"><a href="https://varus.ua/korm-dlya-rib" ><span>Корм для рыб</span></a>
+<li class="level0 nav-30 category-item level-top parent"><a href="https://varus.ua/tovari-dlya-domu-ta-sadu" class="level-top" ><span>Товары для дома</span></a>
+<li class="level1 nav-30-1 category-item first parent"><a href="https://varus.ua/gospodarski-tovari" ><span>Хозяйственные товары</span></a>
+<li class="level2 nav-30-1-1 category-item first"><a href="https://varus.ua/gubki-ta-ganchirki" ><span>Губки и тряпки</span></a>
+<li class="level2 nav-30-1-2 category-item"><a href="https://varus.ua/gubki-dlya-vannoi" ><span>Губки для ванной</span></a>
+<li class="level2 nav-30-1-3 category-item"><a href="https://varus.ua/paketi-dlya-smittya" ><span>Пакеты для мусора</span></a>
+<li class="level2 nav-30-1-4 category-item"><a href="https://varus.ua/shvabri" ><span>Швабры</span></a>
+<li class="level2 nav-30-1-5 category-item"><a href="https://varus.ua/aksesuri-ta-priladdya-dlya-vannoi" ><span>Аксессуары и принадлежности для ванной</span></a>
+<li class="level2 nav-30-1-6 category-item"><a href="https://varus.ua/tovary-dlya-prannya-ta-sushki" ><span>Товары для стирки и сушки</span></a>
+<li class="level2 nav-30-1-7 category-item"><a href="https://varus.ua/rukavici-gospodarchi" ><span>Перчатки хозяйственные</span></a>
+<li class="level2 nav-30-1-8 category-item"><a href="https://varus.ua/svichki" ><span>Свечи</span></a>
+<li class="level2 nav-30-1-9 category-item"><a href="https://varus.ua/vidra-tazi-koshiki" ><span>Ведра, тазы, корзины</span></a>
+<li class="level2 nav-30-1-10 category-item"><a href="https://varus.ua/mitli-viniki-ta-sovki" ><span>Метлы, веники и совки</span></a>
+<li class="level2 nav-30-1-11 category-item"><a href="https://varus.ua/sirnyki" ><span>Спички</span></a>
+<li class="level2 nav-30-1-12 category-item"><a href="https://varus.ua/schitki" ><span>Щетки</span></a>
+<li class="level2 nav-30-1-13 category-item last"><a href="https://varus.ua/kley" ><span>Клей</span></a>
+<li class="level1 nav-30-2 category-item parent"><a href="https://varus.ua/tovari-dlya-kuhni" ><span>Товары для кухни</span></a>
+<li class="level2 nav-30-2-1 category-item first"><a href="https://varus.ua/kuhonni-priladdya" ><span>Кухонные принадлежности</span></a>
+<li class="level2 nav-30-2-2 category-item"><a href="https://varus.ua/plivka-harchova" ><span>Фольга, пленка, пергамент</span></a>
+<li class="level2 nav-30-2-3 category-item"><a href="https://varus.ua/servetki-stolovi" ><span>Салфетки столовые</span></a>
+<li class="level2 nav-30-2-4 category-item"><a href="https://varus.ua/emnosti-ta-upakovka-dlya-produktiv" ><span>Емкости и упаковка для продуктов</span></a>
+<li class="level2 nav-30-2-5 category-item"><a href="https://varus.ua/zasobi-dlya-prigotuvannya-produktiv" ><span>Средства для приготовления продуктов</span></a>
+<li class="level2 nav-30-2-6 category-item"><a href="https://varus.ua/filtri-ta-kuvshini" ><span>Фильтры и кувшины</span></a>
+<li class="level2 nav-30-2-7 category-item last"><a href="https://varus.ua/svichki-dlya-tortiv" ><span>Свечи для тортов</span></a>
+<li class="level1 nav-30-3 category-item"><a href="https://varus.ua/rushniki" ><span>Полотенца</span></a>
+<li class="level1 nav-30-4 category-item parent"><a href="https://varus.ua/elektrotovari-ta-osvitlennya" ><span>Электротовары и освещения</span></a>
+<li class="level2 nav-30-4-1 category-item first"><a href="https://varus.ua/elektropriladi" ><span>Электроприборы</span></a>
+<li class="level2 nav-30-4-2 category-item"><a href="https://varus.ua/batareyki" ><span>Батарейки</span></a>
+<li class="level2 nav-30-4-3 category-item last"><a href="https://varus.ua/lampochki" ><span>Лампочки</span></a>
+<li class="level1 nav-30-5 category-item parent"><a href="https://varus.ua/posud" ><span>Посуда</span></a>
+<li class="level2 nav-30-5-1 category-item first"><a href="https://varus.ua/bagatorazoviy-posud" ><span>Многоразовая посуда</span></a>
+<li class="level2 nav-30-5-2 category-item"><a href="https://varus.ua/odnorazoviy-posud" ><span>Одноразовая посуда</span></a>
+<li class="level2 nav-30-5-3 category-item last"><a href="https://varus.ua/chashki" ><span>Чашки</span></a>
+<li class="level1 nav-30-6 category-item parent"><a href="https://varus.ua/odyag-vzuttya-ta-aksesuari" ><span>Одежда, обувь и аксессуары</span></a>
+<li class="level2 nav-30-6-1 category-item first"><a href="https://varus.ua/vzuttya" ><span>Обувь</span></a>
+<li class="level2 nav-30-6-2 category-item"><a href="https://varus.ua/shkarpetki" ><span>Носки</span></a>
+<li class="level2 nav-30-6-3 category-item"><a href="https://varus.ua/aksesuari" ><span>Аксессуары</span></a>
+<li class="level2 nav-30-6-4 category-item"><a href="https://varus.ua/odyag" ><span>Одежда</span></a>
+<li class="level2 nav-30-6-5 category-item"><a href="https://varus.ua/kolgoti-zhinochi" ><span>Колготы женские</span></a>
+<li class="level2 nav-30-6-6 category-item last"><a href="https://varus.ua/golovni-ubori" ><span>Головные уборы</span></a>
+<li class="level1 nav-30-7 category-item parent"><a href="https://varus.ua/sad-ta-gorod" ><span>Сад и огород</span></a>
+<li class="level2 nav-30-7-1 category-item first"><a href="https://varus.ua/roslini-v-gorschikah-ta-sadzhenci" ><span>Растения в горшках и саженцы</span></a>
+<li class="level2 nav-30-7-2 category-item"><a href="https://varus.ua/grunt-ta-dobrivo" ><span>Грунт и удобрения</span></a>
+<li class="level2 nav-30-7-3 category-item"><a href="https://varus.ua/gorschiki-dlya-roslin" ><span>Горшки для растений</span></a>
+<li class="level2 nav-30-7-4 category-item"><a href="https://varus.ua/nasinnya" ><span>Семена</span></a>
+<li class="level2 nav-30-7-5 category-item last"><a href="https://varus.ua/sadovi-priladdya" ><span>Садовые принадлежности</span></a>
+<li class="level1 nav-30-8 category-item"><a href="https://varus.ua/suveniri-ta-dekor" ><span>Сувениры и декор</span></a>
+<li class="level1 nav-30-9 category-item"><a href="https://varus.ua/sumki-ta-paketi" ><span>Сумки и пакеты</span></a>
+<li class="level1 nav-30-10 category-item"><a href="https://varus.ua/tovari-dlya-kempingu-ta-vidpochinku" ><span>Товары для кемпинга и отдыхом</span></a>
+<li class="level1 nav-30-11 category-item"><a href="https://varus.ua/kanctovari" ><span>Канцтовары</span></a>
+<li class="level1 nav-30-12 category-item"><a href="https://varus.ua/sport-ta-rozvagi" ><span>Спорт и развлечения</span></a>
+<li class="level1 nav-30-13 category-item parent"><a href="https://varus.ua/pechatna-produkciya" ><span>Печатная продукция</span></a>
+<li class="level2 nav-30-13-1 category-item first"><a href="https://varus.ua/zhurnali-ta-presa" ><span>Журналы и пресса</span></a>
+<li class="level2 nav-30-13-2 category-item"><a href="https://varus.ua/knigi" ><span>Книги</span></a>
+<li class="level2 nav-30-13-3 category-item last"><a href="https://varus.ua/listivki" ><span>Открытки</span></a>
+<li class="level1 nav-30-14 category-item"><a href="https://varus.ua/novorichni-tovari" ><span>Новогодние товары</span></a>
+<li class="level1 nav-30-15 category-item"><a href="https://varus.ua/sertifikaty" ><span>Сертификаты</span></a>
+<li class="level1 nav-30-16 category-item last"><a href="https://varus.ua/startovi-paketi" ><span>Стартовые пакеты и карты</span></a>
+<li class="level0 nav-31 category-item level-top parent"><a href="https://varus.ua/tovari-dlya-ditey" class="level-top" ><span>Товары для детей</span></a>
+<li class="level1 nav-31-1 category-item first parent"><a href="https://varus.ua/dityache-harchuvannya" ><span>Детское питание</span></a>
+<li class="level2 nav-31-1-1 category-item first"><a href="https://varus.ua/dityacha-kasha" ><span>Детская каша</span></a>
+<li class="level2 nav-31-1-2 category-item"><a href="https://varus.ua/dityache-pyure" ><span>Детское пюре</span></a>
+<li class="level2 nav-31-1-3 category-item last"><a href="https://varus.ua/molochni-sumishi" ><span>Молочные смеси</span></a>
+<li class="level1 nav-31-2 category-item"><a href="https://varus.ua/pidguzniki" ><span>Подгузники</span></a>
+<li class="level1 nav-31-3 category-item"><a href="https://varus.ua/zasobi-doglyadu-za-ditinoyu" ><span>Средства ухода за ребенком</span></a>
+<li class="level1 nav-31-4 category-item parent"><a href="https://varus.ua/goduvannya-ditini" ><span>Кормления ребенка</span></a>
+<li class="level2 nav-31-4-1 category-item first"><a href="https://varus.ua/plyashechki" ><span>Бутылочки</span></a>
+<li class="level2 nav-31-4-2 category-item"><a href="https://varus.ua/posud-dlya-ditey" ><span>Посуда для детей</span></a>
+<li class="level2 nav-31-4-3 category-item last"><a href="https://varus.ua/soski-ta-pustishki" ><span>Соски и пустышки</span></a>
+<li class="level1 nav-31-5 category-item"><a href="https://varus.ua/igrashki" ><span>Игрушки</span></a>
+<li class="level1 nav-31-6 category-item"><a href="https://varus.ua/detskie-tovary" ><span>Детские товары</span></a>
+<li class="level1 nav-31-7 category-item last parent"><a href="https://varus.ua/shkilni-tovari" ><span>Школьные товары</span></a>
+<li class="level2 nav-31-7-1 category-item first"><a href="https://varus.ua/albomi-dlya-malyuvannya" ><span>Альбомы для рисования</span></a>
+<li class="level2 nav-31-7-2 category-item"><a href="https://varus.ua/penali" ><span>Пеналы</span></a>
+<li class="level2 nav-31-7-3 category-item"><a href="https://varus.ua/zoshiti" ><span>Тетради</span></a>
+<li class="level2 nav-31-7-4 category-item"><a href="https://varus.ua/shkilni-ryukzaki" ><span>Школьные рюкзаки</span></a>
+<li class="level2 nav-31-7-5 category-item last"><a href="https://varus.ua/schodenniki" ><span>Дневники</span></a>
+<li class="level0 nav-32 last level-top"><a href="https://varus.ua/test1" class="level-top" ><span>Blog</span></a>

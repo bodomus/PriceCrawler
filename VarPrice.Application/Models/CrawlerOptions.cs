@@ -5,12 +5,13 @@ public sealed class CrawlerOptions
     /// <summary>Path to the JSON file that contains URL exclusion filters.</summary>
     public string UrlFilterFilePath { get; set; } = string.Empty;
 
+    public string DiscoveryMode { get; set; } = ProductUrlDiscoveryModes.CategorySeeds;
     public string CategorySeedUrlsFilePath { get; set; } = string.Empty;
     public string SitemapIndexUrl { get; set; } = string.Empty;
     public string VegetablesUrlContains { get; set; } = string.Empty;
     public int MaxProductsPerRun { get; set; } = 200;
     public int MaxUrls { get; set; } = 20_000;
-    public int MaxCategoryPagesPerSeed { get; set; } = 3;
+    public int MaxCategoryPagesPerSeed { get; set; } = 10;
     public int MaxConcurrency { get; set; } = 4;
     public double RequestsPerSecond { get; set; } = 2.0d;
     public int RequestTimeoutSeconds { get; set; } = 15;

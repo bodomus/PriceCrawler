@@ -115,6 +115,7 @@ public sealed class RunCrawlerUseCase(
         sourceKind switch
         {
             ProductUrlDiscoverySourceKind.CategorySeed => "category-seed",
+            ProductUrlDiscoverySourceKind.Api => "api",
             _ => "sitemap"
         };
 
