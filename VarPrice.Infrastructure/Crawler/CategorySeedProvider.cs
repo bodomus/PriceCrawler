@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
@@ -31,7 +32,7 @@ public sealed class CategorySeedProvider(
         CategorySeedConfig? config;
         try
         {
-            var json = await File.ReadAllTextAsync(path, ct);
+            var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct);
             config = JsonSerializer.Deserialize<CategorySeedConfig>(
                 json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

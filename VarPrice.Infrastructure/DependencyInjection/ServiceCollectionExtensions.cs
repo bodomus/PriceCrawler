@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 using VarPrice.Application.Abstractions;
+using VarPrice.Application.Models;
 using VarPrice.Domain.Interfaces;
 using VarPrice.Infrastructure.Crawler;
 using VarPrice.Infrastructure.Persistence;
@@ -48,7 +50,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<CategorySeedProductUrlDiscoveryStrategy>();
         services.AddScoped<ICategoryProductUrlDiscoverySource, CategoryProductUrlDiscoverySource>();
         services.AddSingleton<VarusRequestCoordinator>();
-        services.AddScoped<IProductCardExtractor, VarusProductCardExtractor>();
+        services.AddScoped<VarusProductCardExtractor>();
+        services.AddScoped<StubProductCardExtractor>();
+        services.AddScoped<IProductCardExtractor>(provider =>
+        {
+            var crawlerOptions = provider.GetRequiredService<IOptions<CrawlerOptions>>().Value;
+            return crawlerOptions.UseStubProductCardExtractor
+                ? provider.GetRequiredService<StubProductCardExtractor>()
+                : provider.GetRequiredService<VarusProductCardExtractor>();
+        });
 
         return services;
     }

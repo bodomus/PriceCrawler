@@ -79,12 +79,13 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCategorySeedUrlFileOptions(
         this IServiceCollection services,
         IConfiguration configuration,
-        string contentRootPath)
+        string primaryBasePath,
+        params string[] fallbackBasePaths)
     {
         var pathSetting = configuration.GetSection("Crawler").GetValue<string>("CategorySeedUrlsFilePath");
         var resolvedPath = string.IsNullOrWhiteSpace(pathSetting)
             ? string.Empty
-            : ResolveConfiguredPath(pathSetting, contentRootPath);
+            : ResolveConfiguredPath(pathSetting, primaryBasePath, fallbackBasePaths);
 
         services.AddSingleton<IOptions<CategorySeedUrlFileOptions>>(Options.Create(new CategorySeedUrlFileOptions
         {
@@ -94,26 +95,46 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static string ResolveConfiguredPath(string pathSetting, string contentRootPath)
+    private static string ResolveConfiguredPath(
+        string pathSetting,
+        string primaryBasePath,
+        params string[] fallbackBasePaths)
     {
         if (Path.IsPathRooted(pathSetting))
         {
             return pathSetting;
         }
 
-        var contentRootPathCandidate = Path.GetFullPath(Path.Combine(contentRootPath, pathSetting));
-        if (File.Exists(contentRootPathCandidate))
+        string? firstCandidate = null;
+        foreach (var basePath in GetCandidateBasePaths(primaryBasePath, fallbackBasePaths))
         {
-            return contentRootPathCandidate;
+            var candidate = Path.GetFullPath(Path.Combine(basePath, pathSetting));
+            firstCandidate ??= candidate;
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
         }
 
-        var parentDirectory = Directory.GetParent(contentRootPath)?.FullName;
-        if (string.IsNullOrWhiteSpace(parentDirectory))
-        {
-            return contentRootPathCandidate;
-        }
+        return firstCandidate ?? Path.GetFullPath(pathSetting);
+    }
 
-        var parentPathCandidate = Path.GetFullPath(Path.Combine(parentDirectory, pathSetting));
-        return File.Exists(parentPathCandidate) ? parentPathCandidate : contentRootPathCandidate;
+    private static IEnumerable<string> GetCandidateBasePaths(string primaryBasePath, params string[] fallbackBasePaths)
+    {
+        foreach (var basePath in new[] { primaryBasePath }.Concat(fallbackBasePaths))
+        {
+            if (string.IsNullOrWhiteSpace(basePath))
+            {
+                continue;
+            }
+
+            yield return basePath;
+
+            var parentDirectory = Directory.GetParent(basePath)?.FullName;
+            if (!string.IsNullOrWhiteSpace(parentDirectory))
+            {
+                yield return parentDirectory;
+            }
+        }
     }
 }

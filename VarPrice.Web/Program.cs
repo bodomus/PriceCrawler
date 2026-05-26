@@ -1,3 +1,5 @@
+using System.Text;
+
 using Microsoft.EntityFrameworkCore;
 
 using Serilog;
@@ -10,6 +12,9 @@ using VarPrice.Infrastructure.Persistence;
 using VarPrice.Web.Logging;
 
 using InfrastructureRuns = VarPrice.Infrastructure.Queries.Runs;
+
+Console.InputEncoding = Encoding.UTF8;
+Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +45,10 @@ builder.Services.AddScoped<IProductAnalysisService, InfrastructureRuns.ProductAn
 builder.Services.AddVarPriceApplication(builder.Configuration);
 builder.Services.AddVarPriceInfrastructure(builder.Configuration);
 builder.Services.AddUrlFilterOptionsFromFile(builder.Configuration, builder.Environment.ContentRootPath);
-builder.Services.AddCategorySeedUrlFileOptions(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddCategorySeedUrlFileOptions(
+    builder.Configuration,
+    AppContext.BaseDirectory,
+    builder.Environment.ContentRootPath);
 
 builder.Services.AddSingleton<ILoggingBootstrapper, LoggingBootstrapper>();
 
