@@ -16,6 +16,8 @@ namespace VarPrice.Web.Tests;
 
 public sealed class ProductUrlDiscoveryTests
 {
+    private const string WorkerCategorySeedUrlsFilePath = "VarPrice.Worker/config/category-seed-urls.varus.json";
+
     [Fact]
     public void CategorySeedUrlsFilePath_ResolvesRelativeToContentRoot()
     {
@@ -23,7 +25,7 @@ public sealed class ProductUrlDiscoveryTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Crawler:CategorySeedUrlsFilePath"] = "VarPrice.Worker/config/category-seed-urls.varus.json"
+                ["Crawler:CategorySeedUrlsFilePath"] = WorkerCategorySeedUrlsFilePath
             })
             .Build();
         var services = new ServiceCollection();
@@ -34,8 +36,41 @@ public sealed class ProductUrlDiscoveryTests
             .Value;
 
         Assert.Equal(
-            Path.GetFullPath(Path.Combine(contentRoot, "VarPrice.Worker/config/category-seed-urls.varus.json")),
+            Path.GetFullPath(Path.Combine(contentRoot, WorkerCategorySeedUrlsFilePath)),
             options.ResolvedPath);
+    }
+
+    [Fact]
+    public void CategorySeedUrlsFilePath_WhenContentRootIsWeb_ResolvesWorkerSeedFile()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var contentRoot = Path.Combine(repoRoot, "VarPrice.Web");
+        var expectedSeedPath = Path.Combine(repoRoot, "VarPrice.Worker", "config", "category-seed-urls.varus.json");
+        Directory.CreateDirectory(contentRoot);
+        Directory.CreateDirectory(Path.GetDirectoryName(expectedSeedPath)!);
+        File.WriteAllText(expectedSeedPath, "{}");
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Crawler:CategorySeedUrlsFilePath"] = WorkerCategorySeedUrlsFilePath
+            })
+            .Build();
+        var services = new ServiceCollection();
+
+        try
+        {
+            services.AddCategorySeedUrlFileOptions(configuration, contentRoot);
+            var options = services.BuildServiceProvider()
+                .GetRequiredService<IOptions<CategorySeedUrlFileOptions>>()
+                .Value;
+
+            Assert.Equal(WorkerCategorySeedUrlsFilePath, options.PathSetting);
+            Assert.Equal(Path.GetFullPath(expectedSeedPath), options.ResolvedPath);
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
     }
 
     [Fact]
@@ -58,6 +93,30 @@ public sealed class ProductUrlDiscoveryTests
         var strategy = factory.Create();
 
         Assert.Same(category.Strategy, strategy);
+    }
+
+    [Fact]
+    public void ProductUrlDiscoveryStrategyFactory_Api_SelectsApiStrategy()
+    {
+        using var category = CreateStrategyFactoryCategoryStrategy();
+        var api = new ApiProductUrlDiscoveryStrategy();
+        var factory = CreateStrategyFactory(ProductUrlDiscoveryModes.Api, category.Strategy, api);
+
+        var strategy = factory.Create();
+
+        Assert.Same(api, strategy);
+    }
+
+    [Fact]
+    public async Task ApiProductUrlDiscoveryStrategy_DiscoverAsync_ThrowsNotSupportedWithClearMessage()
+    {
+        var strategy = new ApiProductUrlDiscoveryStrategy();
+
+        var ex = await Assert.ThrowsAsync<NotSupportedException>(() =>
+            strategy.DiscoverAsync(CancellationToken.None));
+
+        Assert.Contains("Crawler:DiscoveryMode=Api", ex.Message);
+        Assert.Contains("not implemented yet", ex.Message);
     }
 
     [Fact]
@@ -409,13 +468,14 @@ public sealed class ProductUrlDiscoveryTests
 
     private static ProductUrlDiscoveryStrategyFactory CreateStrategyFactory(
         string? discoveryMode,
-        CategorySeedProductUrlDiscoveryStrategy categoryStrategy)
+        CategorySeedProductUrlDiscoveryStrategy categoryStrategy,
+        ApiProductUrlDiscoveryStrategy? apiStrategy = null)
     {
         var options = Options.Create(new CrawlerOptions
         {
             DiscoveryMode = discoveryMode ?? string.Empty
         });
-        var api = new ApiProductUrlDiscoveryStrategy();
+        var api = apiStrategy ?? new ApiProductUrlDiscoveryStrategy();
         var sitemap = new SitemapProductUrlDiscoveryStrategy(
             options,
             new EmptyProductUrlSource(),
