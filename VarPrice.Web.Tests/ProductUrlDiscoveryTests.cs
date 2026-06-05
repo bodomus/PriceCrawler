@@ -16,6 +16,8 @@ namespace VarPrice.Web.Tests;
 
 public sealed class ProductUrlDiscoveryTests
 {
+    private const string WorkerCategorySeedUrlsFilePath = "VarPrice.Worker/config/category-seed-urls.varus.json";
+
     [Fact]
     public void CategorySeedUrlsFilePath_ResolvesRelativeToContentRoot()
     {
@@ -23,7 +25,7 @@ public sealed class ProductUrlDiscoveryTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Crawler:CategorySeedUrlsFilePath"] = "config/category-seed-urls.varus.json"
+                ["Crawler:CategorySeedUrlsFilePath"] = WorkerCategorySeedUrlsFilePath
             })
             .Build();
         var services = new ServiceCollection();
@@ -34,8 +36,99 @@ public sealed class ProductUrlDiscoveryTests
             .Value;
 
         Assert.Equal(
-            Path.GetFullPath(Path.Combine(contentRoot, "config/category-seed-urls.varus.json")),
+            Path.GetFullPath(Path.Combine(contentRoot, WorkerCategorySeedUrlsFilePath)),
             options.ResolvedPath);
+    }
+
+    [Fact]
+    public void CategorySeedUrlsFilePath_WhenContentRootIsWeb_ResolvesWorkerSeedFile()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var contentRoot = Path.Combine(repoRoot, "VarPrice.Web");
+        var expectedSeedPath = Path.Combine(repoRoot, "VarPrice.Worker", "config", "category-seed-urls.varus.json");
+        Directory.CreateDirectory(contentRoot);
+        Directory.CreateDirectory(Path.GetDirectoryName(expectedSeedPath)!);
+        File.WriteAllText(expectedSeedPath, "{}");
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Crawler:CategorySeedUrlsFilePath"] = WorkerCategorySeedUrlsFilePath
+            })
+            .Build();
+        var services = new ServiceCollection();
+
+        try
+        {
+            services.AddCategorySeedUrlFileOptions(configuration, contentRoot);
+            var options = services.BuildServiceProvider()
+                .GetRequiredService<IOptions<CategorySeedUrlFileOptions>>()
+                .Value;
+
+            Assert.Equal(WorkerCategorySeedUrlsFilePath, options.PathSetting);
+            Assert.Equal(Path.GetFullPath(expectedSeedPath), options.ResolvedPath);
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ProductUrlDiscoveryStrategyFactory_MissingDiscoveryMode_SelectsCategorySeeds()
+    {
+        using var category = CreateStrategyFactoryCategoryStrategy();
+        var factory = CreateStrategyFactory(null, category.Strategy);
+
+        var strategy = factory.Create();
+
+        Assert.Same(category.Strategy, strategy);
+    }
+
+    [Fact]
+    public void ProductUrlDiscoveryStrategyFactory_CategorySeeds_SelectsCategorySeedStrategy()
+    {
+        using var category = CreateStrategyFactoryCategoryStrategy();
+        var factory = CreateStrategyFactory(ProductUrlDiscoveryModes.CategorySeeds, category.Strategy);
+
+        var strategy = factory.Create();
+
+        Assert.Same(category.Strategy, strategy);
+    }
+
+    [Fact]
+    public void ProductUrlDiscoveryStrategyFactory_Api_SelectsApiStrategy()
+    {
+        using var category = CreateStrategyFactoryCategoryStrategy();
+        var api = new ApiProductUrlDiscoveryStrategy();
+        var factory = CreateStrategyFactory(ProductUrlDiscoveryModes.Api, category.Strategy, api);
+
+        var strategy = factory.Create();
+
+        Assert.Same(api, strategy);
+    }
+
+    [Fact]
+    public async Task ApiProductUrlDiscoveryStrategy_DiscoverAsync_ThrowsNotSupportedWithClearMessage()
+    {
+        var strategy = new ApiProductUrlDiscoveryStrategy();
+
+        var ex = await Assert.ThrowsAsync<NotSupportedException>(() =>
+            strategy.DiscoverAsync(CancellationToken.None));
+
+        Assert.Contains("Crawler:DiscoveryMode=Api", ex.Message);
+        Assert.Contains("not implemented yet", ex.Message);
+    }
+
+    [Fact]
+    public void ProductUrlDiscoveryStrategyFactory_UnsupportedMode_ThrowsClearError()
+    {
+        using var category = CreateStrategyFactoryCategoryStrategy();
+        var factory = CreateStrategyFactory("LegacyFallback", category.Strategy);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => factory.Create());
+
+        Assert.Contains("Unsupported Crawler:DiscoveryMode", ex.Message);
+        Assert.Contains("CategorySeeds, Api, Sitemap", ex.Message);
     }
 
     [Fact]
@@ -82,28 +175,30 @@ public sealed class ProductUrlDiscoveryTests
     }
 
     [Fact]
-    public async Task CategorySeedSource_InvalidJson_ReturnsEmptyResult()
+    public async Task CategorySeedSource_InvalidJson_ThrowsClearError()
     {
         using var temp = new TempDirectory();
         var seedPath = temp.WriteSeedFile("{ invalid json");
 
         await using var source =
             CreateCategorySource(seedPath, CreateHttpClient(new Dictionary<string, HttpResponseMessage>()));
-        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            source.DiscoverProductUrlsAsync(CancellationToken.None));
 
-        Assert.Empty(result);
+        Assert.Contains("Invalid JSON in category seed URL file", ex.Message);
     }
 
     [Fact]
-    public async Task CategorySeedSource_MissingFile_ReturnsEmptyResult()
+    public async Task CategorySeedSource_MissingFile_ThrowsClearError()
     {
         var missingPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing.json");
 
         await using var source =
             CreateCategorySource(missingPath, CreateHttpClient(new Dictionary<string, HttpResponseMessage>()));
-        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+        var ex = await Assert.ThrowsAsync<FileNotFoundException>(() =>
+            source.DiscoverProductUrlsAsync(CancellationToken.None));
 
-        Assert.Empty(result);
+        Assert.Contains("Category seed URL file not found", ex.Message);
     }
 
     [Fact]
@@ -301,61 +396,42 @@ public sealed class ProductUrlDiscoveryTests
     }
 
     [Fact]
-    public async Task ProductUrlDiscoveryService_SitemapSuccess_SkipsCategoryFallback()
+    public async Task ProductUrlDiscoveryService_DefaultCategorySeedDiscovery_DoesNotCallSitemap()
     {
-        var sitemap = new FakeDiscoverySource([new Uri("https://varus.ua/from-sitemap")]);
-        var category = new FakeDiscoverySource([new Uri("https://varus.ua/from-category")]);
-        var service = CreateDiscoveryService(sitemap, category);
-
-        var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
-
-        Assert.Equal(ProductUrlDiscoverySourceKind.Sitemap, result.SourceKind);
-        Assert.Equal(["https://varus.ua/from-sitemap"], result.Urls);
-        Assert.Equal(1, sitemap.Calls);
-        Assert.Equal(0, category.Calls);
-    }
-
-    [Fact]
-    public async Task ProductUrlDiscoveryService_SitemapUnavailable_UsesCategoryFallback()
-    {
-        var sitemap = new FakeDiscoverySource(new SitemapUnavailableException("sitemap down"));
-        var category = new FakeDiscoverySource([new Uri("https://varus.ua/from-category")]);
-        var service = CreateDiscoveryService(sitemap, category);
+        var category = new FakeDiscoveryStrategy(
+            ProductUrlDiscoverySourceKind.CategorySeed,
+            "category-seed",
+            [new ProductDiscoveryItem("https://varus.ua/from-category")]);
+        var sitemap = new FakeDiscoveryStrategy(
+            ProductUrlDiscoverySourceKind.Sitemap,
+            "sitemap",
+            [new ProductDiscoveryItem("https://varus.ua/from-sitemap")]);
+        var service = CreateDiscoveryService(category);
 
         var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
 
         Assert.Equal(ProductUrlDiscoverySourceKind.CategorySeed, result.SourceKind);
         Assert.Equal(["https://varus.ua/from-category"], result.Urls);
         Assert.Equal(1, category.Calls);
+        Assert.Equal(0, sitemap.Calls);
     }
 
     [Fact]
-    public async Task ProductUrlDiscoveryService_EmptySitemap_UsesCategoryFallback()
+    public async Task ProductUrlDiscoveryService_EmptySelectedStrategy_ThrowsControlledFailure()
     {
-        var sitemap = new FakeDiscoverySource([]);
-        var category = new FakeDiscoverySource([new Uri("https://varus.ua/from-category")]);
-        var service = CreateDiscoveryService(sitemap, category);
-
-        var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
-
-        Assert.Equal(ProductUrlDiscoverySourceKind.CategorySeed, result.SourceKind);
-        Assert.Equal(["https://varus.ua/from-category"], result.Urls);
-        Assert.Equal(1, category.Calls);
-    }
-
-    [Fact]
-    public async Task ProductUrlDiscoveryService_AllSourcesEmpty_ThrowsControlledFailure()
-    {
-        var service = CreateDiscoveryService(new FakeDiscoverySource([]), new FakeDiscoverySource([]));
+        var service = CreateDiscoveryService(new FakeDiscoveryStrategy(
+            ProductUrlDiscoverySourceKind.CategorySeed,
+            "category-seed",
+            []));
 
         await Assert.ThrowsAsync<ProductUrlDiscoveryUnavailableException>(() =>
             service.DiscoverProductUrlsAsync(CancellationToken.None));
     }
 
-    private static ProductUrlDiscoveryService CreateDiscoveryService(
-        ISitemapProductUrlDiscoverySource sitemap,
-        ICategoryProductUrlDiscoverySource category)
-        => new(sitemap, category, new PassThroughProductUrlFilter(), NullLogger<ProductUrlDiscoveryService>.Instance);
+    private static ProductUrlDiscoveryService CreateDiscoveryService(IProductUrlDiscoveryStrategy strategy)
+        => new(new StaticDiscoveryStrategyFactory(strategy),
+            new PassThroughProductUrlFilter(),
+            NullLogger<ProductUrlDiscoveryService>.Instance);
 
     private static CategoryProductUrlDiscoverySourceHarness CreateCategorySource(
         string seedPath,
@@ -370,7 +446,7 @@ public sealed class ProductUrlDiscoveryTests
             RequestsPerSecond = 100d
         });
         var coordinator = new VarusRequestCoordinator(crawlerOptions, NullLogger<VarusRequestCoordinator>.Instance);
-        var source = new CategoryProductUrlDiscoverySource(
+        var source = new CategorySeedProductUrlDiscoveryStrategy(
             new CategorySeedProvider(
                 Options.Create(new CategorySeedUrlFileOptions
                 {
@@ -385,9 +461,34 @@ public sealed class ProductUrlDiscoveryTests
             new CategoryProductLinkExtractor(),
             new CategoryPaginationStrategy(),
             crawlerOptions,
-            NullLogger<CategoryProductUrlDiscoverySource>.Instance);
+            NullLogger<CategorySeedProductUrlDiscoveryStrategy>.Instance);
 
         return new CategoryProductUrlDiscoverySourceHarness(source, coordinator);
+    }
+
+    private static ProductUrlDiscoveryStrategyFactory CreateStrategyFactory(
+        string? discoveryMode,
+        CategorySeedProductUrlDiscoveryStrategy categoryStrategy,
+        ApiProductUrlDiscoveryStrategy? apiStrategy = null)
+    {
+        var options = Options.Create(new CrawlerOptions
+        {
+            DiscoveryMode = discoveryMode ?? string.Empty
+        });
+        var api = apiStrategy ?? new ApiProductUrlDiscoveryStrategy();
+        var sitemap = new SitemapProductUrlDiscoveryStrategy(
+            options,
+            new EmptyProductUrlSource(),
+            NullLogger<SitemapProductUrlDiscoveryStrategy>.Instance);
+
+        return new ProductUrlDiscoveryStrategyFactory(options, categoryStrategy, api, sitemap);
+    }
+
+    private static CategoryStrategyHarness CreateStrategyFactoryCategoryStrategy()
+    {
+        var client = CreateHttpClient(new Dictionary<string, HttpResponseMessage>());
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "category-seed-urls.varus.json");
+        return new CategoryStrategyHarness(CreateCategorySource(tempPath, client));
     }
 
     private static HttpClient CreateHttpClient(IReadOnlyDictionary<string, HttpResponseMessage> responses)
@@ -419,9 +520,11 @@ public sealed class ProductUrlDiscoveryTests
           """;
 
     private sealed class CategoryProductUrlDiscoverySourceHarness(
-        CategoryProductUrlDiscoverySource source,
+        CategorySeedProductUrlDiscoveryStrategy source,
         VarusRequestCoordinator coordinator) : ICategoryProductUrlDiscoverySource, IAsyncDisposable
     {
+        public CategorySeedProductUrlDiscoveryStrategy Strategy => source;
+
         public Task<IReadOnlyCollection<Uri>> DiscoverProductUrlsAsync(CancellationToken ct) =>
             source.DiscoverProductUrlsAsync(ct);
 
@@ -431,32 +534,43 @@ public sealed class ProductUrlDiscoveryTests
         }
     }
 
-    private sealed class FakeDiscoverySource : ISitemapProductUrlDiscoverySource, ICategoryProductUrlDiscoverySource
+    private sealed class FakeDiscoveryStrategy(
+        ProductUrlDiscoverySourceKind sourceKind,
+        string sourceName,
+        IReadOnlyCollection<ProductDiscoveryItem> items) : IProductUrlDiscoveryStrategy
     {
-        private readonly IReadOnlyCollection<Uri>? _urls;
-        private readonly Exception? _exception;
+        public ProductUrlDiscoverySourceKind SourceKind => sourceKind;
 
-        public FakeDiscoverySource(IReadOnlyCollection<Uri> urls)
-        {
-            _urls = urls;
-        }
-
-        public FakeDiscoverySource(Exception exception)
-        {
-            _exception = exception;
-        }
+        public string SourceName => sourceName;
 
         public int Calls { get; private set; }
 
-        public Task<IReadOnlyCollection<Uri>> DiscoverProductUrlsAsync(CancellationToken ct)
+        public Task<IReadOnlyCollection<ProductDiscoveryItem>> DiscoverAsync(CancellationToken ct)
         {
             Calls++;
-            if (_exception is not null)
-            {
-                throw _exception;
-            }
+            return Task.FromResult(items);
+        }
+    }
 
-            return Task.FromResult<IReadOnlyCollection<Uri>>(_urls ?? []);
+    private sealed class StaticDiscoveryStrategyFactory(IProductUrlDiscoveryStrategy strategy)
+        : IProductUrlDiscoveryStrategyFactory
+    {
+        public IProductUrlDiscoveryStrategy Create() => strategy;
+    }
+
+    private sealed class EmptyProductUrlSource : IProductUrlSource
+    {
+        public Task<IReadOnlyList<string>> GetProductUrlsAsync(string sitemapIndexUrl, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
+    }
+
+    private sealed class CategoryStrategyHarness(CategoryProductUrlDiscoverySourceHarness source) : IDisposable
+    {
+        public CategorySeedProductUrlDiscoveryStrategy Strategy => source.Strategy;
+
+        public void Dispose()
+        {
+            source.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
     }
 

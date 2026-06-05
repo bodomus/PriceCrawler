@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "CONTAINER_ID=4b3db4684be1"
+set "CONTAINER_ID=b9c59ecb00ef"
 set "DB_USER=var"
 set "DB_NAME=varprice"
 set "BACKUP_DIR=D:\Backups\Varus\Postgres"

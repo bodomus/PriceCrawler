@@ -90,6 +90,7 @@ public sealed class VarusProductCardExtractor(
 
         try
         {
+            //TODO: consider reading response as stream and applying incremental parsing to reduce memory usage and speed up time-to-first-byte for large pages. This would require refactoring TryParseCardAsync to work with a stream or incremental HTML parser.
             using var response =
                 await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
             httpStatus = (int)response.StatusCode;

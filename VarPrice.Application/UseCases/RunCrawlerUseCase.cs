@@ -115,6 +115,7 @@ public sealed class RunCrawlerUseCase(
         sourceKind switch
         {
             ProductUrlDiscoverySourceKind.CategorySeed => "category-seed",
+            ProductUrlDiscoverySourceKind.Api => "api",
             _ => "sitemap"
         };
 
@@ -173,6 +174,7 @@ public sealed class RunCrawlerUseCase(
     {
         try
         {
+            //TODO Mock extractor for tests without hitting Varus
             var extractResult = await extractor.ExtractAsync(item.Url, ct);
             if (!extractResult.HasCard || extractResult.Card is null)
             {

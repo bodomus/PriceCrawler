@@ -1,3 +1,5 @@
+using System.Text;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -9,16 +11,23 @@ using VarPrice.Application.DependencyInjection;
 using VarPrice.Infrastructure.DependencyInjection;
 using VarPrice.Infrastructure.Persistence;
 
+Console.InputEncoding = Encoding.UTF8;
+Console.OutputEncoding = Encoding.UTF8;
+
 var builder = Host.CreateApplicationBuilder(args);
 var executableDirectoryPath = AppContext.BaseDirectory;
 var logsDirectoryPath = Path.Combine(executableDirectoryPath, "logs");
 Directory.CreateDirectory(logsDirectoryPath);
 var logFilePath = Path.Combine(logsDirectoryPath, "varprice-worker.log");
+var logFileEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
 
 builder.Services.AddVarPriceApplication(builder.Configuration);
 builder.Services.AddVarPriceInfrastructure(builder.Configuration);
 builder.Services.AddUrlFilterOptionsFromFile(builder.Configuration, builder.Environment.ContentRootPath);
-builder.Services.AddCategorySeedUrlFileOptions(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddCategorySeedUrlFileOptions(
+    builder.Configuration,
+    executableDirectoryPath,
+    builder.Environment.ContentRootPath);
 
 builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
     .ReadFrom.Configuration(builder.Configuration)
@@ -30,7 +39,8 @@ builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfigurati
         fileSizeLimitBytes: 1 * 1024 * 1024,
         rollOnFileSizeLimit: true,
         retainedFileCountLimit: 10,
-        shared: true));
+        shared: true,
+        encoding: logFileEncoding));
 
 using var host = builder.Build();
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("VarPrice.Worker");

@@ -6,14 +6,27 @@ using VarPrice.Application.Models;
 
 namespace VarPrice.Infrastructure.Crawler;
 
-public sealed class CategoryProductUrlDiscoverySource(
+public sealed class CategorySeedProductUrlDiscoveryStrategy(
     ICategorySeedProvider seedProvider,
     ICategoryPageLoader pageLoader,
     ICategoryProductLinkExtractor linkExtractor,
     ICategoryPaginationStrategy paginationStrategy,
     IOptions<CrawlerOptions> crawlerOptions,
-    ILogger<CategoryProductUrlDiscoverySource> logger) : ICategoryProductUrlDiscoverySource
+    ILogger<CategorySeedProductUrlDiscoveryStrategy> logger)
+    : IProductUrlDiscoveryStrategy, ICategoryProductUrlDiscoverySource
 {
+    public ProductUrlDiscoverySourceKind SourceKind => ProductUrlDiscoverySourceKind.CategorySeed;
+
+    public string SourceName => "category-seed";
+
+    public async Task<IReadOnlyCollection<ProductDiscoveryItem>> DiscoverAsync(CancellationToken ct)
+    {
+        var urls = await DiscoverProductUrlsAsync(ct);
+        return urls
+            .Select(x => new ProductDiscoveryItem(x.AbsoluteUri, SourceName))
+            .ToList();
+    }
+
     public async Task<IReadOnlyCollection<Uri>> DiscoverProductUrlsAsync(CancellationToken ct)
     {
         var seeds = await seedProvider.GetSeedsAsync(ct);
@@ -32,7 +45,7 @@ public sealed class CategoryProductUrlDiscoverySource(
         }
 
         logger.LogInformation(
-            "Product URL candidates discovered using category seed fallback. SeedCategoryCount={SeedCategoryCount}; ProductUrlCount={ProductUrlCount}",
+            "Product URL candidates discovered using category seed strategy. SeedCategoryCount={SeedCategoryCount}; ProductUrlCount={ProductUrlCount}",
             seeds.Count,
             discoveredUrls.Count);
 
@@ -70,6 +83,7 @@ public sealed class CategoryProductUrlDiscoverySource(
                     pageNumber,
                     productUrlsFound: 0,
                     newProductUrls: 0,
+                    maxPagesPerSeed,
                     stopReason: page.FailureKind ?? CategoryDiscoveryStopReasons.PageUnavailable);
                 break;
             }
@@ -90,7 +104,7 @@ public sealed class CategoryProductUrlDiscoverySource(
                 nextPageUrl,
                 pageNumber,
                 maxPagesPerSeed);
-            LogCategoryPageProcessed(seed, pageUrl, pageNumber, extracted.Count, newUrls, stopReason);
+            LogCategoryPageProcessed(seed, pageUrl, pageNumber, extracted.Count, newUrls, maxPagesPerSeed, stopReason);
 
             if (stopReason is not null)
             {
@@ -108,15 +122,25 @@ public sealed class CategoryProductUrlDiscoverySource(
         int pageNumber,
         int productUrlsFound,
         int newProductUrls,
+        int maxPagesPerSeed,
         string? stopReason)
     {
         logger.LogInformation(
-            "Category seed page processed. SeedUrl={SeedUrl}; PageUrl={PageUrl}; PageNumber={PageNumber}; ProductUrlsFound={ProductUrlsFound}; NewProductUrls={NewProductUrls}; StopReason={StopReason}",
+            "Category seed page processed. SeedName={SeedName}; SeedUrl={SeedUrl}; PageUrl={PageUrl}; PageNumber={PageNumber}; ProductUrlsFound={ProductUrlsFound}; NewProductUrlsFound={NewProductUrlsFound}; MaxCategoryPagesPerSeed={MaxCategoryPagesPerSeed}; StopReason={StopReason}",
+            seed.Name,
             seed.Url,
             pageUrl,
             pageNumber,
             productUrlsFound,
             newProductUrls,
+            maxPagesPerSeed,
             stopReason ?? string.Empty);
     }
+}
+
+public sealed class CategoryProductUrlDiscoverySource(
+    CategorySeedProductUrlDiscoveryStrategy strategy) : ICategoryProductUrlDiscoverySource
+{
+    public Task<IReadOnlyCollection<Uri>> DiscoverProductUrlsAsync(CancellationToken ct) =>
+        strategy.DiscoverProductUrlsAsync(ct);
 }

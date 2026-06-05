@@ -186,11 +186,12 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 - `ConnectionStrings:Postgres`
 - `Crawler:SitemapIndexUrl`
+- `Crawler:DiscoveryMode` (default `CategorySeeds`; supported values: `CategorySeeds`, `Api`, `Sitemap`)
 - `Crawler:CategorySeedUrlsFilePath`
 - `Crawler:VegetablesUrlContains`
 - `Crawler:MaxProductsPerRun`
 - `Crawler:MaxUrls`
-- `Crawler:MaxCategoryPagesPerSeed` (default `3`)
+- `Crawler:MaxCategoryPagesPerSeed` (default `10`)
 - `Crawler:MaxConcurrency` (default `4`)
 - `Crawler:RequestsPerSecond` (default `2.0`)
 - `Crawler:RequestTimeoutSeconds` (default `15`)
@@ -207,10 +208,13 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Queue:RetryMaxDelayMs` (default `30000`)
 - `Queue:ReaperIntervalSeconds` (default `15`)
 
+Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed-urls.varus.json`.
+
 Переопределение через переменные окружения:
 
 - `ConnectionStrings__Postgres`
 - `Crawler__SitemapIndexUrl`
+- `Crawler__DiscoveryMode`
 - `Crawler__CategorySeedUrlsFilePath`
 - `Crawler__VegetablesUrlContains`
 - `Crawler__MaxProductsPerRun`

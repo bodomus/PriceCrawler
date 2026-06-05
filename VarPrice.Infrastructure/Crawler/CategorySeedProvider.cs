@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
@@ -25,27 +26,20 @@ public sealed class CategorySeedProvider(
 
         if (!File.Exists(path))
         {
-            logger.LogWarning(
-                "Category seed URL discovery unavailable. Reason=CategorySeedFileMissing; FilePath={FilePath}",
-                path);
-            return [];
+            throw new FileNotFoundException($"Category seed URL file not found: {path}", path);
         }
 
         CategorySeedConfig? config;
         try
         {
-            var json = await File.ReadAllTextAsync(path, ct);
+            var json = await File.ReadAllTextAsync(path, Encoding.UTF8, ct);
             config = JsonSerializer.Deserialize<CategorySeedConfig>(
                 json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(
-                ex,
-                "Category seed URL discovery unavailable. Reason=CategorySeedFileInvalid; FilePath={FilePath}",
-                path);
-            return [];
+            throw new InvalidOperationException($"Invalid JSON in category seed URL file: {path}", ex);
         }
 
         var entries = config?.Crawler?.CategorySeedUrls ?? [];

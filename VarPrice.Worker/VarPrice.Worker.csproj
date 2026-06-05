@@ -27,4 +27,10 @@
           <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </Content>
   </ItemGroup>
+    <ItemGroup>
+        <Content Include=".\config\category-seed-urls.varus.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <TargetPath>config\category-seed-urls.varus.json</TargetPath>
+        </Content>
+    </ItemGroup>
 </Project>

@@ -7,5 +7,6 @@ public sealed record ProductUrlDiscoveryResult(
 public enum ProductUrlDiscoverySourceKind
 {
     Sitemap,
-    CategorySeed
+    CategorySeed,
+    Api
 }
