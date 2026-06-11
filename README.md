@@ -261,6 +261,9 @@ Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed
 - `crawler_run` хранит именно журнал конкретных запусков crawler, а не справочник crawler-ов.
 - `crawler_run.status` хранится как `varchar(32)` со значениями `running`, `ok`, `error`.
 - `product` нормализован и использует внутренний PK `product.id`; внешний идентификатор хранится отдельно в `product.external_id`.
+- `product_catalog` хранит постоянный каталог обнаруженных товарных URL: `source`, исходный и нормализованный URL,
+  metadata discovery, активность, даты проверок и счетчик последовательных ошибок. В MPC-61 каталог не подключен к
+  runtime discovery и не заменяет `product`; он служит foundation для следующих этапов.
 - `price_snapshot` работает как append-only журнал значимых изменений состояния товара.
 - Новый `price_snapshot` создается только если изменилось хотя бы одно из полей:
   `price`, `old_price`, `promo_flag`, `in_stock`.
@@ -299,6 +302,9 @@ Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed
   `price_collect_queue_mark_succeeded`, `price_collect_queue_mark_retry`,
   `price_collect_queue_mark_dead`, `price_collect_queue_reap_expired`,
   `price_collect_queue_has_outstanding`, `price_collect_queue_get_run_stats`.
+- Для `product_catalog` через DB routines выполняются:
+  `product_catalog_upsert_discovered`, `product_catalog_get_by_id`,
+  `product_catalog_get_by_source_normalized_url`.
 - `price_observation_store` инкапсулирует единое доменное действие записи observation:
   поиск existing product, upsert `product`, чтение latest snapshot,
   проверку meaningful change, conditional insert `price_snapshot`

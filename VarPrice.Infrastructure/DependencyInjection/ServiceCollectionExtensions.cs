@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIngestionRunRepository, PgIngestionRunRepository>();
         services.AddScoped<IPriceSnapshotRepository, PgPriceSnapshotRepository>();
         services.AddScoped<IPriceCollectQueueRepository, PgPriceCollectQueueRepository>();
+        services.AddScoped<IProductCatalogRepository, PgProductCatalogRepository>();
 
         services.AddSingleton<ISitemapUrlProvider, SitemapUrlProvider>();
         services.AddSingleton<ISitemapHttpClient, SitemapHttpClient>();

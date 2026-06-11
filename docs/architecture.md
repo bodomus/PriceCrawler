@@ -3,9 +3,10 @@
 ## Layer responsibilities
 
 ### VarPrice.Domain
-- Core entities: `CrawlerRun`, `IngestionRun`, `Product`, `PriceSnapshot`, `CrawlError`.
+- Core entities: `CrawlerRun`, `IngestionRun`, `Product`, `ProductCatalogItem`, `PriceSnapshot`, `CrawlError`.
 - Domain enums/value objects: `RunStatus`, `ErrorInfo`.
-- Repository ports: `ICrawlerRunRepository`, `IIngestionRunRepository`, `IPriceCollectQueueRepository`, `IPriceSnapshotRepository`.
+- Repository ports: `ICrawlerRunRepository`, `IIngestionRunRepository`, `IPriceCollectQueueRepository`,
+  `IPriceSnapshotRepository`, `IProductCatalogRepository`.
 
 ### VarPrice.Application
 - `RunCrawlerUseCase` orchestrates:
@@ -21,11 +22,19 @@
 - On failure: ingestion receives `ErrorInfo`; crawler run is marked `Error`.
 
 ### VarPrice.Infrastructure
-- `PgCrawlerRunRepository`, `PgIngestionRunRepository`, `PgPriceSnapshotRepository`.
+- `PgCrawlerRunRepository`, `PgIngestionRunRepository`, `PgPriceSnapshotRepository`, `PgProductCatalogRepository`.
 - All write-side business operations now execute through DB routines instead of inline DML.
 - `crawler_run`, `ingestion_run`, and `crawl_error` are persisted through dedicated domain routines.
+- `product_catalog` stores the persistent discovered product URL catalog. It is distinct from `product`:
+  `product_catalog` owns discovery URL state, activity, and future scheduling metadata, while `product` remains the
+  normalized product entity created from extracted product cards and linked to `price_snapshot`.
+- Planned flow: Discovery -> `product_catalog` -> Price collection -> `product` / `price_snapshot`.
+- In MPC-61, `product_catalog` is not connected to runtime discovery or price collection yet; it only adds schema,
+  routines, domain contracts, repository implementation, and tests.
 - `PgPriceSnapshotRepository.StoreObservationAsync` calls `price_observation_store`, which performs product lookup/upsert,
   latest snapshot read, meaningful-change detection, conditional `price_snapshot` insert, and returns the write result.
+- `PgProductCatalogRepository.UpsertDiscoveredAsync` prepares discovered URLs in memory, removes invalid/duplicate input,
+  and sends the whole batch to `product_catalog_upsert_discovered` in one DB routine call.
 - `PgPriceCollectQueueRepository` executes queue enqueue/reserve/retry/dead/reap/stats through DB routines,
   preserving `FOR UPDATE SKIP LOCKED`, lease handling, and queue statistics semantics.
 - `SchemaBootstrapper` ensures required tables/indexes, applies versioned SQL routine scripts from `db/routines`,
