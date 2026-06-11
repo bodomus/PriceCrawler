@@ -13,10 +13,8 @@ namespace VarPrice.Web.Tests;
 
 public sealed class ProductCatalogRepositoryTests
 {
-    private const string ConnectionString =
-        "Host=localhost;Port=55432;Database=varprice;Username=var;Password=myPassword";
-
     [Fact]
+    [Trait("Category", "Unit")]
     public async Task UpsertDiscoveredAsync_EmptyInput_ReturnsZeroResult()
     {
         var sut = new PgProductCatalogRepository(new PgRoutineExecutor(new ThrowingConnectionFactory()));
@@ -27,6 +25,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void UpsertDiscoveredAsync_InvalidItems_AreSkipped()
     {
         var prepared = ProductCatalogBatchPreparer.Prepare(
@@ -43,6 +42,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void UpsertDiscoveredAsync_DuplicateSourceAndUrl_AreDeduplicated()
     {
         var prepared = ProductCatalogBatchPreparer.Prepare(
@@ -58,6 +58,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Unit")]
     public void UpsertDiscoveredAsync_TrimsStringValues()
     {
         var prepared = ProductCatalogBatchPreparer.Prepare(
@@ -79,7 +80,23 @@ public sealed class ProductCatalogRepositoryTests
         Assert.Equal("slug", item.Slug);
     }
 
+    private static DateTimeOffset Now(int day)
+        => new(2026, 06, day, 10, 0, 0, TimeSpan.Zero);
+
+    private sealed class ThrowingConnectionFactory : IPgConnectionFactory
+    {
+        public IDbConnection Create() => throw new InvalidOperationException("Database should not be touched.");
+    }
+}
+
+[Collection(PostgresIntegrationCollection.Name)]
+public sealed class ProductCatalogRepositoryIntegrationTests
+{
+    private const string ConnectionString =
+        "Host=localhost;Port=55432;Database=varprice;Username=var;Password=myPassword";
+
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task GetByIdAsync_ExistingRow_MapsAllFields()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -122,6 +139,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task GetByIdAsync_MissingRow_ReturnsNull()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -132,6 +150,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task UpsertDiscoveredAsync_NewUrl_InsertsCatalogItem()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -156,6 +175,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task UpsertDiscoveredAsync_ExistingUrl_UpdatesLastDiscoveredOnly()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -195,6 +215,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ProductCatalog_SameSourceAndNormalizedUrl_CannotDuplicate()
     {
         _ = await CreatePreparedRepositoryAsync();
@@ -218,6 +239,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ProductCatalog_SameNormalizedUrlDifferentSources_AreAllowed()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -232,6 +254,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task UpsertDiscoveredAsync_InactiveExistingItem_ReactivatesItem()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -253,6 +276,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task UpsertDiscoveredAsync_MultipleItems_InsertsInSingleBatch()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -273,6 +297,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task UpsertDiscoveredAsync_NullExternalIdAndSlug_DoNotEraseExistingValues()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -293,6 +318,7 @@ public sealed class ProductCatalogRepositoryTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task SchemaBootstrapper_ProductCatalogSchema_IsIdempotent()
     {
         await PrepareSchemaAsync();
@@ -369,10 +395,5 @@ public sealed class ProductCatalogRepositoryTests
         await using var cmd = new NpgsqlCommand(sql, conn);
         var value = await cmd.ExecuteScalarAsync();
         return DateTime.SpecifyKind(Convert.ToDateTime(value), DateTimeKind.Utc);
-    }
-
-    private sealed class ThrowingConnectionFactory : IPgConnectionFactory
-    {
-        public IDbConnection Create() => throw new InvalidOperationException("Database should not be touched.");
     }
 }

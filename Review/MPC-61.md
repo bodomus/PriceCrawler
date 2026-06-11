@@ -46,11 +46,10 @@
 
 - `dotnet restore` — завершился успешно, но NuGet vulnerability feed был недоступен и выдал существующие `NU1900` warnings.
 - `dotnet build --no-restore` — успешно, 0 ошибок; остались `NU1900` warnings из-за недоступного `https://api.nuget.org/v3/index.json`.
-- `dotnet test --no-build` — остановлен по таймауту через 184 секунды без вывода.
-- `dotnet test --no-build --filter ProductCatalogRepositoryTests --logger "console;verbosity=normal"` — остановлен по таймауту через 184 секунды, потому что PostgreSQL/Docker недоступны.
-- `docker ps` — не смог подключиться к Docker daemon.
-- Быстрые unit-тесты `ProductCatalogRepositoryTests` для empty/invalid/duplicate/trimming прошли: 4 passed.
-- `Test-NetConnection localhost:55432` — TCP connect к PostgreSQL test port не прошел.
+- `dotnet test --no-build --filter "Category=Unit"` — успешно, 4 passed.
+- `Test-NetConnection localhost:55432` — PostgreSQL test port доступен.
+- `dotnet test --no-build --filter "FullyQualifiedName~ProductCatalogRepositoryIntegrationTests"` — успешно, 10 passed.
+- `dotnet test --no-build` — успешно, 121 passed.
 
 ## Architecture notes
 
@@ -62,7 +61,5 @@
 
 ## Risks and limitations
 
-- PostgreSQL integration tests добавлены, но не были фактически выполнены в этом окружении из-за недоступного Docker/PostgreSQL на `localhost:55432`.
-- Ручные SQL-проверки `select * from product_catalog order by id;` не выполнены по той же причине.
-- Перед merge желательно поднять test database и выполнить полный `dotnet test --no-build`.
-
+- Интеграционные тесты MPC-61 используют реальную PostgreSQL test database на `localhost:55432` и очищают данные через `truncate`.
+- Для предотвращения гонок вокруг общей test database добавлена непараллельная xUnit collection `Postgres integration`.
