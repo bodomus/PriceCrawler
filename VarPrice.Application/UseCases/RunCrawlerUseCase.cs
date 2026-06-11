@@ -22,6 +22,7 @@ public sealed class RunCrawlerUseCase(
     IIngestionRunRepository ingestionRunRepository,
     IPriceCollectQueueRepository queueRepository,
     IPriceSnapshotRepository priceSnapshotRepository,
+    ICrawlerProgressReporter progressReporter,
     ILogger<RunCrawlerUseCase> logger) : IRunCrawlerUseCase
 {
     public async Task<CrawlerRunResult> RunVegetablesAsync(CancellationToken ct)
@@ -32,7 +33,9 @@ public sealed class RunCrawlerUseCase(
 
         try
         {
+            progressReporter.SetCurrentStage("Обнаружение товаров");
             discovery = await productUrlDiscoveryService.DiscoverProductUrlsAsync(ct);
+            progressReporter.SetTotalDiscovered(discovery.Urls.Count);
         }
         catch (ProductUrlDiscoveryUnavailableException ex)
         {
@@ -55,6 +58,9 @@ public sealed class RunCrawlerUseCase(
                 .Select(url => new QueueEnqueueItem(url, BuildIdempotencyKey(runId, url)))
                 .ToList();
             var enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
+            progressReporter.SetNewProducts(enqueued);
+            progressReporter.SetUpdatedProducts(Math.Max(0, queueItems.Count - enqueued));
+            progressReporter.SetSelectedForCheck(enqueued);
 
             logger.LogInformation(
                 "Queue seeded run_id={RunId} urls_total={UrlsTotal} enqueued={Enqueued} max_attempts={MaxAttempts}",
@@ -63,6 +69,7 @@ public sealed class RunCrawlerUseCase(
                 enqueued,
                 Math.Max(1, queueOpt.MaxAttempts));
 
+            progressReporter.SetCurrentStage("Проверка товаров");
             await DrainQueueAsync(runId, opt, queueOpt, ct);
 
             var stats = await queueRepository.GetRunStatsAsync(runId, ct);
@@ -70,6 +77,8 @@ public sealed class RunCrawlerUseCase(
             var note =
                 $"queued={queueItems.Count}, enqueued={enqueued}, succeeded={stats.Succeeded}, dead={stats.Dead}, pending={stats.Pending}, retry={stats.Retry}";
             logger.LogInformation("Crawler finished run_id={RunId} status={Status} {Note}", runId, runStatus, note);
+            progressReporter.SetCurrentStage("Завершено");
+            progressReporter.SetCurrentItem(string.Empty);
 
             await ingestionRunRepository.FinishAsync(ingestionRunId, runStatus, null, ct);
             await crawlerRunRepository.FinishAsync(runId, runStatus, note, ct);
@@ -83,6 +92,8 @@ public sealed class RunCrawlerUseCase(
         }
         catch (Exception ex)
         {
+            progressReporter.SetCurrentStage("Ошибка");
+            progressReporter.SetCurrentItem(string.Empty);
             var errorInfo = new ErrorInfo("crawler_failed", ex.Message);
             await ingestionRunRepository.FinishAsync(ingestionRunId, RunStatus.Error, errorInfo, ct);
             await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, ex.Message, ct);
@@ -98,6 +109,8 @@ public sealed class RunCrawlerUseCase(
     private async Task<CrawlerRunResult> FinishDiscoveryFailureAsync(string errorCode, string message,
         CancellationToken ct)
     {
+        progressReporter.SetCurrentStage("Ошибка обнаружения");
+        progressReporter.IncrementFailed();
         var runId = await crawlerRunRepository.StartAsync("discovery", ct);
         var ingestionRunId = await ingestionRunRepository.StartAsync(runId, ct);
         var errorInfo = new ErrorInfo(errorCode, message);
@@ -174,12 +187,13 @@ public sealed class RunCrawlerUseCase(
     {
         try
         {
+            progressReporter.SetCurrentItem(item.Url);
             //TODO Mock extractor for tests without hitting Varus
             var extractResult = await extractor.ExtractAsync(item.Url, ct);
             if (!extractResult.HasCard || extractResult.Card is null)
             {
                 var issue = NormalizeIssue(extractResult.Issue, isCritical: true);
-                await FinalizeFailedItemAsync(
+                var finalFailure = await FinalizeFailedItemAsync(
                     runId,
                     item,
                     issue,
@@ -194,6 +208,12 @@ public sealed class RunCrawlerUseCase(
                     issue.ErrorCode,
                     issue.HttpStatus,
                     issue.IsTransient);
+                if (finalFailure)
+                {
+                    progressReporter.IncrementChecked();
+                    progressReporter.IncrementFailed();
+                }
+
                 return;
             }
 
@@ -234,6 +254,8 @@ public sealed class RunCrawlerUseCase(
             }
 
             await queueRepository.MarkSucceededAsync(item.Id, ct);
+            progressReporter.IncrementChecked();
+            progressReporter.IncrementSuccessful();
 
             logger.LogInformation(
                 "Queue item succeeded run_id={RunId} queue_id={QueueId} external_id={ExternalId} latency_ms={LatencyMs} http_status={HttpStatus}",
@@ -259,12 +281,17 @@ public sealed class RunCrawlerUseCase(
                 true);
             try
             {
-                await FinalizeFailedItemAsync(
+                var finalFailure = await FinalizeFailedItemAsync(
                     runId,
                     item,
                     issue,
                     queueOpt,
                     ct);
+                if (finalFailure)
+                {
+                    progressReporter.IncrementChecked();
+                    progressReporter.IncrementFailed();
+                }
             }
             catch (Exception persistEx)
             {
@@ -280,7 +307,7 @@ public sealed class RunCrawlerUseCase(
         }
     }
 
-    private async Task FinalizeFailedItemAsync(
+    private async Task<bool> FinalizeFailedItemAsync(
         long runId,
         ReservedQueueItem item,
         ProductExtractIssue issue,
@@ -307,7 +334,7 @@ public sealed class RunCrawlerUseCase(
 
             await queueRepository.MarkRetryAsync(item.Id, issue.ErrorCode, issue.HttpStatus, issue.Message,
                 DateTimeOffset.UtcNow.Add(delay), ct);
-            return;
+            return false;
         }
 
         await priceSnapshotRepository.InsertCrawlErrorAsync(
@@ -323,6 +350,7 @@ public sealed class RunCrawlerUseCase(
             ct);
 
         await queueRepository.MarkDeadAsync(item.Id, issue.ErrorCode, issue.HttpStatus, issue.Message, ct);
+        return true;
     }
 
     private static string BuildWorkerId()

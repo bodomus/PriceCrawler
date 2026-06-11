@@ -661,6 +661,7 @@ public sealed class WorkerIntegrationTests
             CreateIngestionRunRepository(factory),
             CreatePriceCollectQueueRepository(factory),
             CreatePriceSnapshotRepository(factory),
+            new CrawlerProgressState(),
             NullLogger<RunCrawlerUseCase>.Instance);
 
     private static ProductObservation CreateObservation(

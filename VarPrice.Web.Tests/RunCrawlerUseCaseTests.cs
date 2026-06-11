@@ -207,6 +207,7 @@ public sealed class RunCrawlerUseCaseTests
             ingestion,
             queue,
             snapshot,
+            new CrawlerProgressState(),
             NullLogger<RunCrawlerUseCase>.Instance);
     }
 

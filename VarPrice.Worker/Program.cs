@@ -8,8 +8,10 @@ using Serilog;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.DependencyInjection;
+using VarPrice.Application.Models;
 using VarPrice.Infrastructure.DependencyInjection;
 using VarPrice.Infrastructure.Persistence;
+using VarPrice.Worker;
 
 Console.InputEncoding = Encoding.UTF8;
 Console.OutputEncoding = Encoding.UTF8;
@@ -28,6 +30,9 @@ builder.Services.AddCategorySeedUrlFileOptions(
     builder.Configuration,
     executableDirectoryPath,
     builder.Environment.ContentRootPath);
+builder.Services.AddSingleton<CrawlerProgressState>();
+builder.Services.AddSingleton<ICrawlerProgressReporter>(provider =>
+    provider.GetRequiredService<CrawlerProgressState>());
 
 builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
     .ReadFrom.Configuration(builder.Configuration)
@@ -63,7 +68,30 @@ if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase))
 
 using var runScope = host.Services.CreateScope();
 var useCase = runScope.ServiceProvider.GetRequiredService<IRunCrawlerUseCase>();
-var result = await useCase.RunVegetablesAsync(CancellationToken.None);
+var progressState = runScope.ServiceProvider.GetRequiredService<CrawlerProgressState>();
+var dashboard = new CrawlerConsoleDashboard(progressState, TimeSpan.FromMilliseconds(200));
+using var cancellation = new CancellationTokenSource();
+Console.CancelKeyPress += (_, eventArgs) =>
+{
+    eventArgs.Cancel = true;
+    cancellation.Cancel();
+};
+
+CrawlerRunResult result;
+dashboard.Start();
+try
+{
+    result = await useCase.RunVegetablesAsync(cancellation.Token);
+}
+catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+{
+    logger.LogWarning("Crawler run was cancelled.");
+    return 1;
+}
+finally
+{
+    await dashboard.StopAsync();
+}
 
 logger.LogInformation(
     "run_id={RunId}; status={Status}; processed={Processed}; errors={Errors}",

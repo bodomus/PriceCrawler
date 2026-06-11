@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 using VarPrice.Application.Abstractions;
@@ -22,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ApiProductUrlDiscoveryStrategy>();
         services.AddScoped<ISitemapProductUrlDiscoverySource, SitemapProductUrlDiscoverySource>();
         services.AddScoped<IProductUrlDiscoveryService, ProductUrlDiscoveryService>();
+        services.TryAddSingleton<ICrawlerProgressReporter, NoopCrawlerProgressReporter>();
         services.AddScoped<RunCrawlerUseCase>();
         services.AddScoped<IRunCrawlerUseCase>(provider => provider.GetRequiredService<RunCrawlerUseCase>());
         return services;
