@@ -92,9 +92,6 @@ public sealed class ProductCatalogRepositoryTests
 [Collection(PostgresIntegrationCollection.Name)]
 public sealed class ProductCatalogRepositoryIntegrationTests
 {
-    private const string ConnectionString =
-        "Host=localhost;Port=55432;Database=varprice;Username=var;Password=myPassword";
-
     [Fact]
     [Trait("Category", "Integration")]
     public async Task GetByIdAsync_ExistingRow_MapsAllFields()
@@ -108,7 +105,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
                 discoveredAt)
         ], CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         await ExecuteAsync(
             conn,
@@ -163,7 +160,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
         ], CancellationToken.None);
 
         Assert.Equal(new ProductCatalogUpsertResult(1, 1, 0), result);
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         Assert.Equal(1, await ScalarLongAsync(conn, "select count(*) from product_catalog;"));
         Assert.Equal(0, await ScalarLongAsync(conn, "select consecutive_errors from product_catalog limit 1;"));
@@ -187,7 +184,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
             new ProductCatalogUpsertItem("varus", "https://example/a", "https://example/a", "sku", "slug", first)
         ], CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         await ExecuteAsync(
             conn,
@@ -219,7 +216,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
     public async Task ProductCatalog_SameSourceAndNormalizedUrl_CannotDuplicate()
     {
         _ = await CreatePreparedRepositoryAsync();
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         await ExecuteAsync(
@@ -263,7 +260,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
             new ProductCatalogUpsertItem("varus", "https://example/a", "https://example/a", null, null, Now(1))
         ], CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         await ExecuteAsync(conn, "update product_catalog set is_active = false;");
 
@@ -324,7 +321,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
         await PrepareSchemaAsync();
         await PrepareSchemaAsync();
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         Assert.Equal(1,
             await ScalarLongAsync(conn,
@@ -343,7 +340,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
         var schema = new SchemaBootstrapper(dbContext, NullLogger<SchemaBootstrapper>.Instance);
         await schema.EnsureSchemaAsync();
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         await ExecuteAsync(
             conn,
@@ -354,7 +351,8 @@ public sealed class ProductCatalogRepositoryIntegrationTests
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(
-                new Dictionary<string, string?> { ["ConnectionStrings:Postgres"] = ConnectionString })
+                new Dictionary<string, string?>
+                    { ["ConnectionStrings:Postgres"] = PostgresIntegrationFixture.ConnectionString })
             .Build();
         return new PgConnectionFactory(config);
     }
@@ -362,7 +360,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
     private static VarPriceDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<VarPriceDbContext>()
-            .UseNpgsql(ConnectionString)
+            .UseNpgsql(PostgresIntegrationFixture.ConnectionString)
             .Options;
         return new VarPriceDbContext(options);
     }

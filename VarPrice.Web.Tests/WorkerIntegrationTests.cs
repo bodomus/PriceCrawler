@@ -17,9 +17,6 @@ namespace VarPrice.Web.Tests;
 
 public sealed class WorkerIntegrationTests
 {
-    private const string ConnectionString =
-        "Host=localhost;Port=55432;Database=varprice;Username=var;Password=myPassword";
-
     [Fact]
     public async Task RunCrawlerUseCase_PersistsRunAndSnapshots_AndDrainsQueue()
     {
@@ -41,7 +38,7 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(1, result.ProductsProcessed);
         Assert.Equal(0, result.Errors);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run"));
@@ -72,7 +69,7 @@ public sealed class WorkerIntegrationTests
 
         Assert.True(result.SnapshotCreated);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product"));
@@ -106,7 +103,7 @@ public sealed class WorkerIntegrationTests
 
         Assert.False(second.SnapshotCreated);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
@@ -140,7 +137,7 @@ public sealed class WorkerIntegrationTests
 
         Assert.True(second.SnapshotCreated);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_snapshot"));
@@ -173,7 +170,7 @@ public sealed class WorkerIntegrationTests
 
         Assert.True(second.SnapshotCreated);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_snapshot"));
@@ -212,7 +209,7 @@ public sealed class WorkerIntegrationTests
         Assert.True(result.SnapshotCreated);
         Assert.NotNull(result.PriceSnapshotId);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(64,
@@ -249,7 +246,7 @@ public sealed class WorkerIntegrationTests
         var result = await useCase.RunVegetablesAsync(CancellationToken.None);
         Assert.Equal("ok", result.Status);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
@@ -350,7 +347,7 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(0, result.ProductsProcessed);
         Assert.Equal(1, result.Errors);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_collect_queue where status='dead'"));
@@ -379,7 +376,7 @@ public sealed class WorkerIntegrationTests
         var result = await useCase.RunVegetablesAsync(CancellationToken.None);
         Assert.Equal("error", result.Status);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status='error'"));
@@ -391,7 +388,7 @@ public sealed class WorkerIntegrationTests
     {
         await PrepareSchemaAsync();
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         const string scriptName = "001__routine_support_text.sql";
@@ -428,7 +425,7 @@ public sealed class WorkerIntegrationTests
         var runId = await crawlerRepo.StartAsync($"   {new string('s', 80)}   ", CancellationToken.None);
         await crawlerRepo.FinishAsync(runId, RunStatus.Error, $"   {new string('n', 300)}   ", CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(64, await ScalarAsync(conn, $"select length(source) from crawler_run where id={runId}"));
@@ -455,7 +452,7 @@ public sealed class WorkerIntegrationTests
             new ErrorInfo($"   {new string('E', 140)}   ", $"   {new string('M', 530)}   "),
             CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal("error",
@@ -494,7 +491,7 @@ public sealed class WorkerIntegrationTests
                 ErrorMessage: $"   {new string('x', 600)}   "),
             CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal("unknown",
@@ -568,7 +565,7 @@ public sealed class WorkerIntegrationTests
         var stats = await queueRepo.GetRunStatsAsync(runId, CancellationToken.None);
         Assert.Equal(new QueueRunStats(0, 0, 0, 1, 2), stats);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1024, await ScalarAsync(conn, "select length(url) from price_collect_queue order by id limit 1"));
@@ -687,7 +684,8 @@ public sealed class WorkerIntegrationTests
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(
-                new Dictionary<string, string?> { ["ConnectionStrings:Postgres"] = ConnectionString })
+                new Dictionary<string, string?>
+                    { ["ConnectionStrings:Postgres"] = PostgresIntegrationFixture.ConnectionString })
             .Build();
         return new PgConnectionFactory(config);
     }
@@ -710,7 +708,7 @@ public sealed class WorkerIntegrationTests
         var schema = new SchemaBootstrapper(dbContext, NullLogger<SchemaBootstrapper>.Instance);
         await schema.EnsureSchemaAsync();
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
             "truncate table crawl_error, price_snapshot, price_collect_queue, product, ingestion_run, crawler_run restart identity cascade;",
@@ -721,7 +719,7 @@ public sealed class WorkerIntegrationTests
     private static VarPriceDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<VarPriceDbContext>()
-            .UseNpgsql(ConnectionString)
+            .UseNpgsql(PostgresIntegrationFixture.ConnectionString)
             .Options;
         return new VarPriceDbContext(options);
     }
