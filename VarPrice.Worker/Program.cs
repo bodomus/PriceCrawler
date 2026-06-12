@@ -72,9 +72,6 @@ if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase) &&
 }
 
 using var runScope = host.Services.CreateScope();
-var useCase = runScope.ServiceProvider.GetRequiredService<IRunCrawlerUseCase>();
-var progressState = runScope.ServiceProvider.GetRequiredService<CrawlerProgressState>();
-var dashboard = new CrawlerConsoleDashboard(progressState, TimeSpan.FromMilliseconds(200));
 using var cancellation = new CancellationTokenSource();
 Console.CancelKeyPress += (_, eventArgs) =>
 {
@@ -98,7 +95,7 @@ if (string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase))
             refreshResult.InsertedCount,
             refreshResult.UpdatedCount,
             refreshResult.SkippedCount);
-        return string.Equals(refreshResult.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+        return refreshResult.Status == RefreshProductCatalogStatus.Ok ? 0 : 1;
     }
     catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
     {
@@ -107,6 +104,9 @@ if (string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase))
     }
 }
 
+var useCase = runScope.ServiceProvider.GetRequiredService<IRunCrawlerUseCase>();
+var progressState = runScope.ServiceProvider.GetRequiredService<CrawlerProgressState>();
+var dashboard = new CrawlerConsoleDashboard(progressState, TimeSpan.FromMilliseconds(200));
 CrawlerRunResult result;
 dashboard.Start();
 try

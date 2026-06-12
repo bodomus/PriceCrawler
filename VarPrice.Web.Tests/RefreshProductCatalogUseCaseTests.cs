@@ -25,7 +25,7 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         var result = await sut.ExecuteAsync(CancellationToken.None);
 
-        Assert.Equal("ok", result.Status);
+        Assert.Equal(RefreshProductCatalogStatus.Ok, result.Status);
         Assert.Equal(42, result.RunId);
         Assert.Equal(2, result.DiscoveredCount);
         Assert.Equal(2, result.AcceptedCount);
@@ -82,6 +82,26 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         Assert.Equal(expected, result.Source);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_UnsupportedDiscoverySource_DoesNotMapToSitemap()
+    {
+        var catalog = new FakeProductCatalogRepository([]);
+        var crawler = new FakeCrawlerRunRepository([]);
+        var sut = CreateUseCase(
+            new FakeDiscoveryService([], ["https://varus.ua/product-a"], (ProductUrlDiscoverySourceKind)999),
+            catalog,
+            crawler);
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
+        Assert.Equal("catalog_discovery_source_unsupported", result.ErrorCode);
+        Assert.Equal("discovery", result.Source);
+        Assert.Equal(0, catalog.CallCount);
+        Assert.Equal(RunStatus.Error, crawler.LastStatus);
+    }
+
 
     [Fact]
     public async Task ExecuteAsync_UsesSameDiscoveredAtForAllItems()
@@ -154,7 +174,7 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         var result = await sut.ExecuteAsync(CancellationToken.None);
 
-        Assert.Equal("error", result.Status);
+        Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
         Assert.Equal(CrawlerErrorCodes.ProductUrlDiscoveryUnavailable, result.ErrorCode);
         Assert.Equal(RunStatus.Error, crawler.LastStatus);
         Assert.Equal(0, catalog.CallCount);
@@ -173,7 +193,7 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         var result = await sut.ExecuteAsync(CancellationToken.None);
 
-        Assert.Equal("error", result.Status);
+        Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
         Assert.Equal("catalog_discovery_failed", result.ErrorCode);
         Assert.Equal(RunStatus.Error, crawler.LastStatus);
     }
@@ -190,11 +210,39 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         var result = await sut.ExecuteAsync(CancellationToken.None);
 
-        Assert.Equal("error", result.Status);
+        Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
         Assert.Equal("catalog_upsert_failed", result.ErrorCode);
         Assert.Equal(2, result.DiscoveredCount);
         Assert.Equal(2, result.SkippedCount);
         Assert.Equal(RunStatus.Error, crawler.LastStatus);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UpsertSucceedsButFinishRunFails_DoesNotReportUpsertFailure()
+    {
+        var calls = new List<string>();
+        var crawler = new FakeCrawlerRunRepository(calls) { ThrowOnFinish = true };
+        var catalog = new FakeProductCatalogRepository(calls)
+        {
+            Result = new ProductCatalogUpsertResult(2, 1, 1)
+        };
+        var sut = CreateUseCase(
+            new FakeDiscoveryService(calls, ["https://varus.ua/product-a", "https://varus.ua/product-b"]),
+            catalog,
+            crawler);
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
+        Assert.Equal("catalog_run_finish_failed", result.ErrorCode);
+        Assert.Equal(2, result.DiscoveredCount);
+        Assert.Equal(2, result.AcceptedCount);
+        Assert.Equal(1, result.InsertedCount);
+        Assert.Equal(1, result.UpdatedCount);
+        Assert.Equal(0, result.SkippedCount);
+        Assert.Equal(1, catalog.CallCount);
+        Assert.Equal(1, crawler.FinishCallCount);
+        Assert.Equal(["start", "discover", "upsert", "finish"], calls);
     }
 
     [Fact]
@@ -207,18 +255,6 @@ public sealed class RefreshProductCatalogUseCaseTests
         await Assert.ThrowsAsync<OperationCanceledException>(() => sut.ExecuteAsync(cts.Token));
 
         Assert.Equal(RunStatus.Error, crawler.LastStatus);
-    }
-
-    [Fact]
-    public async Task RefreshProductCatalog_MaxUrlsIs1000_UpsertsAtMost1000Items()
-    {
-        var catalog = new FakeProductCatalogRepository([]);
-        var urls = Enumerable.Range(1, 1000).Select(i => $"https://varus.ua/product-{i}").ToList();
-        var sut = CreateUseCase(new FakeDiscoveryService([], urls), catalog, new FakeCrawlerRunRepository([]));
-
-        await sut.ExecuteAsync(CancellationToken.None);
-
-        Assert.Equal(1000, catalog.LastItems.Count);
     }
 
     private static RefreshProductCatalogUseCase CreateUseCase(
@@ -305,6 +341,10 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         public string LastSource { get; private set; } = string.Empty;
 
+        public bool ThrowOnFinish { get; init; }
+
+        public int FinishCallCount { get; private set; }
+
         public Task<long> StartAsync(string source, CancellationToken ct)
         {
             calls.Add("start");
@@ -315,6 +355,12 @@ public sealed class RefreshProductCatalogUseCaseTests
         public Task FinishAsync(long runId, RunStatus status, string? note, CancellationToken ct)
         {
             calls.Add("finish");
+            FinishCallCount++;
+            if (ThrowOnFinish)
+            {
+                throw new InvalidOperationException("finish failed");
+            }
+
             LastStatus = status;
             return Task.CompletedTask;
         }

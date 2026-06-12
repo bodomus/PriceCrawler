@@ -1,0 +1,5 @@
+Кодекс сделал MPC-62 
+Тикет https://bodomus.youtrack.cloud/issue/MPC-62/MPC-62-Dobavit-RefreshProductCatalogUseCase
+Ветка https://github.com/bodomus/PriceCrawler/tree/Codex/MPC-62
+Сделай Review Выводы ? 
+Критикуй смело если есть ошибки, не надо всегда соглашаться, нам надо делать качественно.

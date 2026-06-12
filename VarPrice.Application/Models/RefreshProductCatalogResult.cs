@@ -2,7 +2,7 @@ namespace VarPrice.Application.Models;
 
 public sealed record RefreshProductCatalogResult(
     long RunId,
-    string Status,
+    RefreshProductCatalogStatus Status,
     string Source,
     int DiscoveredCount,
     int AcceptedCount,
@@ -11,3 +11,9 @@ public sealed record RefreshProductCatalogResult(
     int SkippedCount,
     string? ErrorCode,
     string? Message);
+
+public enum RefreshProductCatalogStatus
+{
+    Ok,
+    Error
+}

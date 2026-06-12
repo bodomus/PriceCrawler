@@ -64,7 +64,7 @@ public sealed class WorkerIntegrationTests
 
         var result = await useCase.ExecuteAsync(CancellationToken.None);
 
-        Assert.Equal("ok", result.Status);
+        Assert.Equal(RefreshProductCatalogStatus.Ok, result.Status);
         Assert.Equal("category-seed", result.Source);
         Assert.Equal(2, result.DiscoveredCount);
         Assert.Equal(2, result.AcceptedCount);
@@ -95,7 +95,7 @@ public sealed class WorkerIntegrationTests
         await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
-        Assert.Equal("ok", secondResult.Status);
+        Assert.Equal(RefreshProductCatalogStatus.Ok, secondResult.Status);
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product_catalog"));
         Assert.Equal(2, await ScalarAsync(conn, "select count(*) from crawler_run where status='ok'"));
         Assert.Equal(firstDiscovered, await TimestampAsync(conn, "select first_discovered_at from product_catalog"));
@@ -116,7 +116,7 @@ public sealed class WorkerIntegrationTests
         await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
-        Assert.Equal("ok", result.Status);
+        Assert.Equal(RefreshProductCatalogStatus.Ok, result.Status);
         Assert.Equal(0,
             await ScalarAsync(conn, $"select count(*) from price_collect_queue where run_id={result.RunId}"));
         Assert.Equal(0, await ScalarAsync(conn, "select count(*) from price_snapshot"));

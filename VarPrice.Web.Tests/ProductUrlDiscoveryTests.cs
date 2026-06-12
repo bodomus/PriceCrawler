@@ -463,6 +463,30 @@ public sealed class ProductUrlDiscoveryTests
     }
 
     [Fact]
+    public async Task DiscoverProductUrlsAsync_MaxUrlsIs1000_ReturnsAtMost1000Urls()
+    {
+        var urls = Enumerable.Range(1, 1_250)
+            .Select(i => new ProductDiscoveryItem($"https://varus.ua/product-{i}"))
+            .ToList();
+        var strategy = new FakeDiscoveryStrategy(ProductUrlDiscoverySourceKind.CategorySeed, "category-seed", urls);
+        var filter = CreateProductUrlFilter(new CrawlerOptions
+        {
+            MaxProductsPerRun = 200,
+            MaxUrls = 1_000
+        });
+        var service = new ProductUrlDiscoveryService(
+            Options.Create(new CrawlerOptions { MaxProductsPerRun = 200, MaxUrls = 1_000 }),
+            new StaticDiscoveryStrategyFactory(strategy),
+            filter,
+            NullLogger<ProductUrlDiscoveryService>.Instance);
+
+        var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(1_000, result.Urls.Count);
+        Assert.Equal("https://varus.ua/product-1000", result.Urls[^1]);
+    }
+
+    [Fact]
     public void ProductUrlFilter_EmptyVegetablesFilter_DoesNotExcludeValidUrls()
     {
         var filter = CreateProductUrlFilter(new CrawlerOptions { VegetablesUrlContains = "", MaxUrls = 10 });
