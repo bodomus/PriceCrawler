@@ -19,7 +19,7 @@ public sealed class SchemaBootstrapper(VarPriceDbContext dbContext, ILogger<Sche
             ct.ThrowIfCancellationRequested();
             try
             {
-                await using var connection = dbContext.Database.GetDbConnection();
+                var connection = dbContext.Database.GetDbConnection();
                 if (connection.State != ConnectionState.Open)
                 {
                     await connection.OpenAsync(ct);

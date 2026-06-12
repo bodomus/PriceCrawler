@@ -75,9 +75,11 @@ public sealed class VarPriceDbContext(DbContextOptions<VarPriceDbContext> option
             entity.HasIndex(x => new { x.Status, x.NextAttemptAtUtc, x.Id })
                 .HasDatabaseName("ix_price_collect_queue_pick");
             entity.HasIndex(x => new { x.Status, x.LeaseUntilUtc }).HasDatabaseName("ix_price_collect_queue_lease");
+            entity.HasIndex(x => x.ProductCatalogId).HasDatabaseName("ix_price_collect_queue_product_catalog_id");
 
             entity.Property(x => x.Id).HasColumnName("id");
             entity.Property(x => x.RunId).HasColumnName("run_id");
+            entity.Property(x => x.ProductCatalogId).HasColumnName("product_catalog_id");
             entity.Property(x => x.Url).HasColumnName("url").HasMaxLength(1024);
             entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(32);
             entity.Property(x => x.Attempt).HasColumnName("attempt");
@@ -190,6 +192,8 @@ public sealed class PriceCollectQueueEntity
     public long Id { get; set; }
 
     public long RunId { get; set; }
+
+    public long? ProductCatalogId { get; set; }
 
     public string Url { get; set; } = string.Empty;
 

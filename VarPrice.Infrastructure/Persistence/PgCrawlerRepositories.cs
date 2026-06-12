@@ -112,12 +112,14 @@ public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecu
 
         var urls = items.Select(x => Truncate(x.Url, 1024)).ToArray();
         var idempotencyKeys = items.Select(x => Truncate(x.IdempotencyKey, 128)).ToArray();
+        var productCatalogIds = items.Select(x => x.ProductCatalogId).ToArray();
         return await routineExecutor.ExecuteScalarAsync<int?>(
                    DbRoutineCall.ScalarFunction("price_collect_queue_enqueue")
                        .AddParameter("p_run_id", runId)
                        .AddParameter("p_urls", urls)
                        .AddParameter("p_idempotency_keys", idempotencyKeys)
-                       .AddParameter("p_max_attempts", Math.Max(1, maxAttempts)),
+                       .AddParameter("p_max_attempts", Math.Max(1, maxAttempts))
+                       .AddParameter("p_product_catalog_ids", productCatalogIds),
                    ct)
                ?? 0;
     }
@@ -143,7 +145,8 @@ public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecu
                 reader.GetString(1),
                 reader.GetInt32(2),
                 reader.GetInt32(3),
-                reader.GetString(4)),
+                reader.GetString(4),
+                reader.IsDBNull(5) ? null : reader.GetInt64(5)),
             ct);
     }
 
@@ -209,17 +212,6 @@ public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecu
         if (string.IsNullOrWhiteSpace(value))
         {
             return string.Empty;
-        }
-
-        var trimmed = value.Trim();
-        return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
-    }
-
-    private static string? TruncateNullable(string? value, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
         }
 
         var trimmed = value.Trim();

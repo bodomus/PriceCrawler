@@ -53,6 +53,30 @@ public sealed class CrawlerOptions
     public int MaxProductsPerRun { get; set; } = 200;
 
     /// <summary>
+    /// Lease duration for catalog rows reserved by price collection, in seconds.
+    /// Values below 30 are normalized by the use case.
+    /// </summary>
+    public int CatalogLeaseSeconds { get; set; } = 1800;
+
+    /// <summary>
+    /// Successful catalog item check interval, in hours.
+    /// Values below 1 are normalized by the use case.
+    /// </summary>
+    public int SuccessfulCheckIntervalHours { get; set; } = 24;
+
+    /// <summary>
+    /// Base delay for catalog-level final failure backoff, in minutes.
+    /// Values below 1 are normalized by the use case.
+    /// </summary>
+    public int CatalogFailureBaseDelayMinutes { get; set; } = 60;
+
+    /// <summary>
+    /// Maximum delay for catalog-level final failure backoff, in hours.
+    /// Values below 1 are normalized by the use case.
+    /// </summary>
+    public int CatalogFailureMaxDelayHours { get; set; } = 24;
+
+    /// <summary>
     /// Максимальное количество URL-кандидатов, которое discovery может собрать или передать дальше.
     /// Используется как общий верхний предел для sitemap/category discovery и дополнительно ограничивает итоговый набор вместе с `MaxProductsPerRun`.
     /// Увеличение позволяет обрабатывать больше каталога, но повышает длительность discovery и размер очереди.

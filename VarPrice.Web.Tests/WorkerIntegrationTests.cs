@@ -706,33 +706,46 @@ public sealed class WorkerIntegrationTests
         IProductUrlDiscoveryService source,
         IProductCardExtractor extractor,
         QueueOptions? queueOptions = null)
-        => new(
-            Options.Create(new CrawlerOptions
-            {
-                SitemapIndexUrl = "unused",
-                VegetablesUrlContains = "ovochi",
-                MaxProductsPerRun = 10,
-                MaxUrls = 10,
-                MaxConcurrency = 2
-            }),
-            Options.Create(queueOptions ?? new QueueOptions
-            {
-                BatchSize = 4,
-                PollDelayMs = 1,
-                LeaseSeconds = 10,
-                MaxAttempts = 3,
-                RetryBaseDelayMs = 1,
-                RetryMaxDelayMs = 10,
-                ReaperIntervalSeconds = 1
-            }),
-            source,
+    {
+        var crawlerOptions = Options.Create(new CrawlerOptions
+        {
+            SitemapIndexUrl = "unused",
+            VegetablesUrlContains = "ovochi",
+            MaxProductsPerRun = 10,
+            MaxUrls = 10,
+            MaxConcurrency = 2
+        });
+        var queueOptionsValue = Options.Create(queueOptions ?? new QueueOptions
+        {
+            BatchSize = 4,
+            PollDelayMs = 1,
+            LeaseSeconds = 10,
+            MaxAttempts = 3,
+            RetryBaseDelayMs = 1,
+            RetryMaxDelayMs = 10,
+            ReaperIntervalSeconds = 1
+        });
+        var queueRepository = CreatePriceCollectQueueRepository(factory);
+        var snapshotRepository = CreatePriceSnapshotRepository(factory);
+        var progress = new CrawlerProgressState();
+        var processor = new PriceCollectionQueueProcessor(
+            queueRepository,
+            snapshotRepository,
             extractor,
+            progress,
+            NullLogger<PriceCollectionQueueProcessor>.Instance);
+
+        return new RunCrawlerUseCase(
+            crawlerOptions,
+            queueOptionsValue,
+            source,
             CreateCrawlerRunRepository(factory),
             CreateIngestionRunRepository(factory),
-            CreatePriceCollectQueueRepository(factory),
-            CreatePriceSnapshotRepository(factory),
-            new CrawlerProgressState(),
+            queueRepository,
+            processor,
+            progress,
             NullLogger<RunCrawlerUseCase>.Instance);
+    }
 
     private static RefreshProductCatalogUseCase CreateCatalogRefreshUseCase(
         IPgConnectionFactory factory,

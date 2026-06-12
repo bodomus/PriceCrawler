@@ -8,6 +8,21 @@ public interface IProductCatalogRepository
         IReadOnlyCollection<ProductCatalogUpsertItem> items,
         CancellationToken ct);
 
+    Task<IReadOnlyList<ProductCatalogItem>> GetDueProductsAsync(
+        int limit,
+        DateTimeOffset nowUtc,
+        TimeSpan leaseDuration,
+        string workerId,
+        CancellationToken ct);
+
+    Task MarkCheckedAsync(
+        ProductCatalogCheckSuccess success,
+        CancellationToken ct);
+
+    Task MarkFailedAsync(
+        ProductCatalogCheckFailure failure,
+        CancellationToken ct);
+
     Task<ProductCatalogItem?> GetByIdAsync(
         long id,
         CancellationToken ct);

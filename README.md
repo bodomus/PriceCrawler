@@ -111,6 +111,12 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 dotnet run --project VarPrice.Worker -- catalog-refresh
 ```
 
+Для ежедневного сбора цен из постоянного каталога без discovery:
+
+```bash
+dotnet run --project VarPrice.Worker -- --collect-prices
+```
+
 В интерактивной консоли Worker показывает фиксированную верхнюю панель прогресса:
 обнаружено, новых, обновлено, выбрано на проверку, проверено, успешно, ошибок,
 текущий этап, текущий товар и процент выполнения. Нижняя часть консоли продолжает
@@ -151,6 +157,7 @@ dotnet run --project VarPrice.Worker -- catalog-refresh
 - `--once`
 - `--job <name>`
 - позиционная команда `catalog-refresh`
+- команда `--collect-prices` / `collect-prices`
 
 ### `--once`
 
@@ -179,7 +186,7 @@ var jobIndex = Array.IndexOf(args, "--job");
 
 - если `--job` передан и после него есть значение, берется это значение
 - если не передан, используется значение по умолчанию: `vegetables`
-- поддерживаемые значения: `vegetables`, `catalog-refresh`
+- поддерживаемые значения: `vegetables`, `catalog-refresh`, `collect-prices`
 - если значение не поддерживается, Worker пишет `Unsupported job: <name>` и завершается с кодом `2`
 
 ### `catalog-refresh`
@@ -198,6 +205,33 @@ dotnet run --project VarPrice.Worker -- catalog-refresh
 - не создает `ingestion_run`, `price_collect_queue`, `price_snapshot` и `product`;
 - завершает процесс с кодом `0` при `status=ok` и `1` при ошибке.
 
+### `collect-prices`
+
+Команда:
+
+```bash
+dotnet run --project VarPrice.Worker -- --collect-prices
+```
+
+Поведение:
+
+- создает `crawler_run` с source `price-collection`;
+- создает связанный `ingestion_run`;
+- выбирает due-товары из `product_catalog` по oldest-first;
+- ставит выбранные URL в `price_collect_queue` вместе с `product_catalog_id`;
+- обрабатывает очередь через текущий `IProductCardExtractor`;
+- пишет `product`, `price_snapshot`, `crawl_error` через существующий observation flow;
+- обновляет scheduling state `product_catalog` после финального success/dead;
+- не запускает discovery, category seed или catalog upsert.
+
+Oldest-first порядок:
+
+1. `last_checked_at is null`;
+2. самый старый `last_checked_at`;
+3. стабильный tie-breaker по `id`.
+
+Inactive rows, future `next_check_at` и rows с активным `reserved_until` не выбираются. Истекший catalog lease снова делает row доступной для выбора.
+
 Примеры:
 
 ```bash
@@ -207,6 +241,7 @@ dotnet run --project VarPrice.Worker -- --job vegetables
 dotnet run --project VarPrice.Worker -- --once --job vegetables
 dotnet run --project VarPrice.Worker -- --job catalog-refresh
 dotnet run --project VarPrice.Worker -- catalog-refresh
+dotnet run --project VarPrice.Worker -- --collect-prices
 ```
 
 ## Коды завершения Worker
@@ -225,6 +260,10 @@ dotnet run --project VarPrice.Worker -- catalog-refresh
 - `Crawler:CategorySeedUrlsFilePath`
 - `Crawler:VegetablesUrlContains`
 - `Crawler:MaxProductsPerRun`
+- `Crawler:CatalogLeaseSeconds` (default `1800`)
+- `Crawler:SuccessfulCheckIntervalHours` (default `24`)
+- `Crawler:CatalogFailureBaseDelayMinutes` (default `60`)
+- `Crawler:CatalogFailureMaxDelayHours` (default `24`)
 - `Crawler:MaxUrls`
 - `Crawler:MaxCategoryPagesPerSeed` (default `10`)
 - `Crawler:MaxConcurrency` (default `4`)
@@ -248,8 +287,8 @@ Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed
 Limit semantics:
 
 - `Crawler:MaxUrls` limits discovery and catalog refresh size.
-- `Crawler:MaxProductsPerRun` limits only how many discovered URLs the price crawler enqueues into
-  `price_collect_queue`.
+- `Crawler:MaxProductsPerRun` limits price collection batch size. In legacy `vegetables` mode it limits discovered URLs
+  enqueued into `price_collect_queue`; in `collect-prices` mode it limits due `product_catalog` rows selected.
 - `Crawler:VegetablesUrlContains` is still respected by discovery; use an empty value for a full catalog refresh.
 
 Переопределение через переменные окружения:
@@ -260,6 +299,10 @@ Limit semantics:
 - `Crawler__CategorySeedUrlsFilePath`
 - `Crawler__VegetablesUrlContains`
 - `Crawler__MaxProductsPerRun`
+- `Crawler__CatalogLeaseSeconds`
+- `Crawler__SuccessfulCheckIntervalHours`
+- `Crawler__CatalogFailureBaseDelayMinutes`
+- `Crawler__CatalogFailureMaxDelayHours`
 - `Crawler__MaxUrls`
 - `Crawler__MaxCategoryPagesPerSeed`
 - `Crawler__MaxConcurrency`
@@ -295,8 +338,10 @@ Limit semantics:
 - `crawler_run.status` хранится как `varchar(32)` со значениями `running`, `ok`, `error`.
 - `product` нормализован и использует внутренний PK `product.id`; внешний идентификатор хранится отдельно в `product.external_id`.
 - `product_catalog` хранит постоянный каталог обнаруженных товарных URL: `source`, исходный и нормализованный URL,
-  metadata discovery, активность, даты проверок и счетчик последовательных ошибок. В MPC-61 каталог не подключен к
-  runtime discovery и не заменяет `product`; он служит foundation для следующих этапов.
+  metadata discovery, активность, даты проверок, reservation/lease поля и счетчик последовательных ошибок.
+  `collect-prices` выбирает активные due rows по oldest-first и обновляет `last_checked_at`, `next_check_at`,
+  `consecutive_errors`, `external_id` и `slug` после финального результата обработки.
+- `price_collect_queue.product_catalog_id` связывает queue item с исходной записью каталога для scheduling updates.
 - `price_snapshot` работает как append-only журнал значимых изменений состояния товара.
 - Новый `price_snapshot` создается только если изменилось хотя бы одно из полей:
   `price`, `old_price`, `promo_flag`, `in_stock`.
@@ -311,6 +356,34 @@ Limit semantics:
 - При некритической ошибке и валидном состоянии товара может быть создан и snapshot, и связанная запись
   в `crawl_error`.
 - При критической ошибке без валидного состояния snapshot не создается, сохраняется только `crawl_error`.
+
+## Catalog price collection SQL checks
+
+```sql
+select
+    id,
+    normalized_url,
+    last_checked_at,
+    next_check_at,
+    consecutive_errors,
+    reserved_until
+from product_catalog
+order by last_checked_at nulls first, id
+limit 50;
+```
+
+```sql
+select
+    id,
+    run_id,
+    product_catalog_id,
+    status,
+    attempt,
+    max_attempts
+from price_collect_queue
+where run_id = :run_id
+order by id;
+```
 
 ## DB routine scripts
 

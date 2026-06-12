@@ -316,6 +316,153 @@ public sealed class ProductCatalogRepositoryIntegrationTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    public async Task GetDueProductsAsync_ReturnsOldestFirstAndExcludesInactiveFutureRows()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        await SeedCatalogRowsAsync();
+
+        var due = await repo.GetDueProductsAsync(
+            3,
+            new DateTimeOffset(2026, 06, 12, 10, 0, 0, TimeSpan.Zero),
+            TimeSpan.FromMinutes(30),
+            "test-worker",
+            CancellationToken.None);
+
+        Assert.Equal(["https://example/a", "https://example/b", "https://example/c"],
+            due.Select(x => x.NormalizedUrl).ToArray());
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task GetDueProductsAsync_ActiveReservationIsSkippedAndExpiredReservationIsReused()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        await SeedCatalogRowsAsync();
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        await ExecuteAsync(
+            conn,
+            """
+            update product_catalog
+            set reserved_until = '2026-06-12T11:00:00Z'
+            where normalized_url = 'https://example/a';
+
+            update product_catalog
+            set reserved_until = '2026-06-12T09:00:00Z'
+            where normalized_url = 'https://example/b';
+            """);
+
+        var due = await repo.GetDueProductsAsync(
+            2,
+            new DateTimeOffset(2026, 06, 12, 10, 0, 0, TimeSpan.Zero),
+            TimeSpan.FromMinutes(30),
+            "test-worker",
+            CancellationToken.None);
+
+        Assert.Equal(["https://example/b", "https://example/c"], due.Select(x => x.NormalizedUrl).ToArray());
+        Assert.All(due, item => Assert.NotEqual("https://example/a", item.NormalizedUrl));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task GetDueProductsAsync_SequentialWorkersDoNotReceiveSameCatalogItems()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        await SeedCatalogRowsAsync();
+        var now = new DateTimeOffset(2026, 06, 12, 10, 0, 0, TimeSpan.Zero);
+
+        var first = await repo.GetDueProductsAsync(2, now, TimeSpan.FromMinutes(30), "worker-1",
+            CancellationToken.None);
+        var second =
+            await repo.GetDueProductsAsync(2, now, TimeSpan.FromMinutes(30), "worker-2", CancellationToken.None);
+
+        Assert.Empty(first.Select(x => x.Id).Intersect(second.Select(x => x.Id)));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task MarkCheckedAsync_UpdatesSchedulingStateAndClearsReservation()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        await SeedCatalogRowsAsync();
+        var selected = Assert.Single(await repo.GetDueProductsAsync(
+            1,
+            new DateTimeOffset(2026, 06, 12, 10, 0, 0, TimeSpan.Zero),
+            TimeSpan.FromMinutes(30),
+            "test-worker",
+            CancellationToken.None));
+
+        await repo.MarkCheckedAsync(
+            new ProductCatalogCheckSuccess(
+                selected.Id,
+                new DateTimeOffset(2026, 06, 12, 10, 5, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 06, 13, 10, 5, 0, TimeSpan.Zero),
+                "sku-new",
+                "slug-new"),
+            CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        Assert.Equal(0, await ScalarLongAsync(conn, "select consecutive_errors from product_catalog where id = 1;"));
+        Assert.Equal("sku-new", await ScalarStringAsync(conn, "select external_id from product_catalog where id = 1;"));
+        Assert.Equal(1, await ScalarLongAsync(conn,
+            "select count(*) from product_catalog where id = 1 and reserved_at is null and reserved_until is null and reserved_by is null;"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task MarkFailedAsync_IncrementsErrorsSchedulesRetryAndClearsReservation()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        await SeedCatalogRowsAsync();
+        var selected = Assert.Single(await repo.GetDueProductsAsync(
+            1,
+            new DateTimeOffset(2026, 06, 12, 10, 0, 0, TimeSpan.Zero),
+            TimeSpan.FromMinutes(30),
+            "test-worker",
+            CancellationToken.None));
+
+        await repo.MarkFailedAsync(
+            new ProductCatalogCheckFailure(
+                selected.Id,
+                new DateTimeOffset(2026, 06, 12, 10, 5, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 06, 12, 11, 5, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        Assert.Equal(1, await ScalarLongAsync(conn, "select consecutive_errors from product_catalog where id = 1;"));
+        Assert.Equal(1, await ScalarLongAsync(conn,
+            "select count(*) from product_catalog where id = 1 and reserved_at is null and reserved_until is null and reserved_by is null;"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task PriceCollectQueue_StoresProductCatalogId()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        await repo.UpsertDiscoveredAsync(
+        [
+            new ProductCatalogUpsertItem("varus", "https://example/a", "https://example/a", null, null, Now(1))
+        ], CancellationToken.None);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        await ExecuteAsync(conn, "insert into crawler_run(status, source) values('running', 'test');");
+        var catalogId = await ScalarLongAsync(conn, "select id from product_catalog limit 1;");
+        var queueRepo = new PgPriceCollectQueueRepository(new PgRoutineExecutor(CreateFactory()));
+
+        await queueRepo.EnqueueAsync(
+            1,
+            [new QueueEnqueueItem("https://example/a", "test-key", catalogId)],
+            3,
+            CancellationToken.None);
+
+        Assert.Equal(catalogId,
+            await ScalarLongAsync(conn, "select product_catalog_id from price_collect_queue limit 1;"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task SchemaBootstrapper_ProductCatalogSchema_IsIdempotent()
     {
         await PrepareSchemaAsync();
@@ -345,6 +492,23 @@ public sealed class ProductCatalogRepositoryIntegrationTests
         await ExecuteAsync(
             conn,
             "truncate table crawl_error, price_snapshot, price_collect_queue, product_catalog, product, ingestion_run, crawler_run restart identity cascade;");
+    }
+
+    private static async Task SeedCatalogRowsAsync()
+    {
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        await ExecuteAsync(
+            conn,
+            """
+            insert into product_catalog(source, url, normalized_url, first_discovered_at, last_discovered_at, last_checked_at, next_check_at, is_active)
+            values
+                ('varus', 'https://example/a', 'https://example/a', now(), now(), null, null, true),
+                ('varus', 'https://example/b', 'https://example/b', now(), now(), '2026-06-02T10:00:00Z', null, true),
+                ('varus', 'https://example/c', 'https://example/c', now(), now(), '2026-06-11T10:00:00Z', null, true),
+                ('varus', 'https://example/d', 'https://example/d', now(), now(), '2026-06-01T10:00:00Z', null, false),
+                ('varus', 'https://example/e', 'https://example/e', now(), now(), null, '2026-06-13T10:00:00Z', true);
+            """);
     }
 
     private static PgConnectionFactory CreateFactory()
@@ -386,6 +550,13 @@ public sealed class ProductCatalogRepositoryIntegrationTests
         await using var cmd = new NpgsqlCommand(sql, conn);
         var value = await cmd.ExecuteScalarAsync();
         return Convert.ToBoolean(value);
+    }
+
+    private static async Task<string?> ScalarStringAsync(NpgsqlConnection conn, string sql)
+    {
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        var value = await cmd.ExecuteScalarAsync();
+        return value is null or DBNull ? null : Convert.ToString(value);
     }
 
     private static async Task<DateTime> TimestampAsync(NpgsqlConnection conn, string sql)

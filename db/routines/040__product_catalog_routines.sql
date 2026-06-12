@@ -160,3 +160,118 @@ where catalog.source = routine_support_trim_required(p_source
     , 1024);
 $$;
 
+create
+or replace function product_catalog_get_due(
+    p_limit integer,
+    p_now timestamptz,
+    p_lease_seconds integer,
+    p_worker_id text)
+returns table(
+    id bigint,
+    source varchar(50),
+    url varchar(1024),
+    normalized_url varchar(1024),
+    external_id varchar(200),
+    slug varchar(300),
+    first_discovered_at timestamptz,
+    last_discovered_at timestamptz,
+    last_checked_at timestamptz,
+    next_check_at timestamptz,
+    is_active boolean,
+    consecutive_errors integer)
+language sql
+as $$
+    with candidates as (
+        select catalog.id
+        from product_catalog catalog
+        where catalog.is_active = true
+          and (catalog.next_check_at is null or catalog.next_check_at <= p_now)
+          and (catalog.reserved_until is null or catalog.reserved_until <= p_now)
+        order by catalog.last_checked_at nulls first,
+                 catalog.next_check_at nulls first,
+                 catalog.id
+        limit greatest(coalesce(p_limit, 0), 1)
+        for update skip locked
+    ),
+    reserved as (
+        update product_catalog catalog
+        set reserved_at = p_now,
+            reserved_until = p_now + (greatest(coalesce(p_lease_seconds, 0), 30) * interval '1 second'),
+            reserved_by = routine_support_trim_nullable(p_worker_id, 200),
+            updated_at = now()
+        from candidates
+        where catalog.id = candidates.id
+        returning catalog.id,
+                  catalog.source,
+                  catalog.url,
+                  catalog.normalized_url,
+                  catalog.external_id,
+                  catalog.slug,
+                  catalog.first_discovered_at,
+                  catalog.last_discovered_at,
+                  catalog.last_checked_at,
+                  catalog.next_check_at,
+                  catalog.is_active,
+                  catalog.consecutive_errors
+    )
+select reserved.id,
+       reserved.source,
+       reserved.url,
+       reserved.normalized_url,
+       reserved.external_id,
+       reserved.slug,
+       reserved.first_discovered_at,
+       reserved.last_discovered_at,
+       reserved.last_checked_at,
+       reserved.next_check_at,
+       reserved.is_active,
+       reserved.consecutive_errors
+from reserved
+order by reserved.last_checked_at nulls first,
+         reserved.next_check_at nulls first,
+         reserved.id;
+$$;
+
+create
+or replace procedure product_catalog_mark_checked(
+    p_catalog_item_id bigint,
+    p_checked_at timestamptz,
+    p_next_check_at timestamptz,
+    p_external_id text,
+    p_slug text)
+language plpgsql
+as $$
+begin
+update product_catalog
+set last_checked_at    = p_checked_at,
+    next_check_at      = p_next_check_at,
+    consecutive_errors = 0,
+    external_id        = coalesce(nullif(routine_support_trim_nullable(p_external_id, 200), ''), external_id),
+    slug               = coalesce(nullif(routine_support_trim_nullable(p_slug, 300), ''), slug),
+    reserved_at        = null,
+    reserved_until     = null,
+    reserved_by        = null,
+    updated_at         = now()
+where id = p_catalog_item_id;
+end;
+$$;
+
+create
+or replace procedure product_catalog_mark_failed(
+    p_catalog_item_id bigint,
+    p_attempted_at timestamptz,
+    p_next_check_at timestamptz)
+language plpgsql
+as $$
+begin
+update product_catalog
+set last_checked_at    = p_attempted_at,
+    next_check_at      = p_next_check_at,
+    consecutive_errors = consecutive_errors + 1,
+    reserved_at        = null,
+    reserved_until     = null,
+    reserved_by        = null,
+    updated_at         = now()
+where id = p_catalog_item_id;
+end;
+$$;

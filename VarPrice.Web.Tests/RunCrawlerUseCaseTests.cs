@@ -216,16 +216,23 @@ public sealed class RunCrawlerUseCaseTests
             RetryMaxDelayMs = 20,
             ReaperIntervalSeconds = 1
         });
+        var progress = new CrawlerProgressState();
+        var processor = new PriceCollectionQueueProcessor(
+            queue,
+            snapshot,
+            extractor,
+            progress,
+            NullLogger<PriceCollectionQueueProcessor>.Instance);
+
         return new RunCrawlerUseCase(
             crawlerOptions,
             queueOptions,
             source,
-            extractor,
             crawler,
             ingestion,
             queue,
-            snapshot,
-            new CrawlerProgressState(),
+            processor,
+            progress,
             NullLogger<RunCrawlerUseCase>.Instance);
     }
 

@@ -64,8 +64,15 @@ if (args.Any(arg => string.Equals(arg, "catalog-refresh", StringComparison.Ordin
     job = "catalog-refresh";
 }
 
+if (args.Any(arg => string.Equals(arg, "--collect-prices", StringComparison.OrdinalIgnoreCase)) ||
+    args.Any(arg => string.Equals(arg, "collect-prices", StringComparison.OrdinalIgnoreCase)))
+{
+    job = "collect-prices";
+}
+
 if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase) &&
-    !string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase))
+    !string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase) &&
+    !string.Equals(job, "collect-prices", StringComparison.OrdinalIgnoreCase))
 {
     logger.LogError("Unsupported job: {Job}", job);
     return 2;
@@ -100,6 +107,30 @@ if (string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase))
     catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
     {
         logger.LogWarning("Catalog refresh was cancelled.");
+        return 1;
+    }
+}
+
+if (string.Equals(job, "collect-prices", StringComparison.OrdinalIgnoreCase))
+{
+    var collectUseCase = runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>();
+    try
+    {
+        var collectResult = await collectUseCase.ExecuteAsync(cancellation.Token);
+        logger.LogInformation(
+            "collect_prices run_id={RunId}; status={Status}; selected={Selected}; enqueued={Enqueued}; succeeded={Succeeded}; retry={Retry}; dead={Dead}",
+            collectResult.RunId,
+            collectResult.Status,
+            collectResult.SelectedCount,
+            collectResult.EnqueuedCount,
+            collectResult.SucceededCount,
+            collectResult.RetryCount,
+            collectResult.DeadCount);
+        return string.Equals(collectResult.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+    {
+        logger.LogWarning("Price collection was cancelled.");
         return 1;
     }
 }

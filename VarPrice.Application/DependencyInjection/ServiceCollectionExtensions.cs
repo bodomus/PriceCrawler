@@ -25,8 +25,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductUrlDiscoveryService, ProductUrlDiscoveryService>();
         services.TryAddSingleton<ICrawlerProgressReporter, NoopCrawlerProgressReporter>();
         services.AddScoped<RunCrawlerUseCase>();
+        services.AddScoped<PriceCollectionQueueProcessor>();
         services.AddScoped<IRunCrawlerUseCase>(provider => provider.GetRequiredService<RunCrawlerUseCase>());
         services.AddScoped<IRefreshProductCatalogUseCase, RefreshProductCatalogUseCase>();
+        services.AddScoped<ICollectProductPricesUseCase, CollectProductPricesUseCase>();
         return services;
     }
 

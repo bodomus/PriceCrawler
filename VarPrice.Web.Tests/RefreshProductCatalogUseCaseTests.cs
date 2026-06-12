@@ -328,6 +328,20 @@ public sealed class RefreshProductCatalogUseCaseTests
         public Task<ProductCatalogItem?> GetByIdAsync(long id, CancellationToken ct) =>
             Task.FromResult<ProductCatalogItem?>(null);
 
+        public Task<IReadOnlyList<ProductCatalogItem>> GetDueProductsAsync(
+            int limit,
+            DateTimeOffset nowUtc,
+            TimeSpan leaseDuration,
+            string workerId,
+            CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<ProductCatalogItem>>([]);
+
+        public Task MarkCheckedAsync(ProductCatalogCheckSuccess success, CancellationToken ct) =>
+            Task.CompletedTask;
+
+        public Task MarkFailedAsync(ProductCatalogCheckFailure failure, CancellationToken ct) =>
+            Task.CompletedTask;
+
         public Task<ProductCatalogItem?> GetBySourceAndNormalizedUrlAsync(
             string source,
             string normalizedUrl,

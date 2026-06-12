@@ -53,6 +53,39 @@ public sealed class PgProductCatalogRepository(PgRoutineExecutor routineExecutor
             MapItem,
             ct);
 
+    public async Task<IReadOnlyList<ProductCatalogItem>> GetDueProductsAsync(
+        int limit,
+        DateTimeOffset nowUtc,
+        TimeSpan leaseDuration,
+        string workerId,
+        CancellationToken ct)
+        => await routineExecutor.QueryAsync(
+            DbRoutineCall.SetReturningFunction("product_catalog_get_due")
+                .AddParameter("p_limit", Math.Max(1, limit))
+                .AddParameter("p_now", nowUtc.UtcDateTime)
+                .AddParameter("p_lease_seconds", Math.Max(30, (int)Math.Ceiling(leaseDuration.TotalSeconds)))
+                .AddParameter("p_worker_id", workerId),
+            MapItem,
+            ct);
+
+    public async Task MarkCheckedAsync(ProductCatalogCheckSuccess success, CancellationToken ct)
+        => await routineExecutor.ExecuteAsync(
+            DbRoutineCall.Procedure("product_catalog_mark_checked")
+                .AddParameter("p_catalog_item_id", success.CatalogItemId)
+                .AddParameter("p_checked_at", success.CheckedAtUtc.UtcDateTime)
+                .AddParameter("p_next_check_at", success.NextCheckAtUtc.UtcDateTime)
+                .AddParameter("p_external_id", success.ExternalId)
+                .AddParameter("p_slug", success.Slug),
+            ct);
+
+    public async Task MarkFailedAsync(ProductCatalogCheckFailure failure, CancellationToken ct)
+        => await routineExecutor.ExecuteAsync(
+            DbRoutineCall.Procedure("product_catalog_mark_failed")
+                .AddParameter("p_catalog_item_id", failure.CatalogItemId)
+                .AddParameter("p_attempted_at", failure.AttemptedAtUtc.UtcDateTime)
+                .AddParameter("p_next_check_at", failure.NextCheckAtUtc.UtcDateTime),
+            ct);
+
     public async Task<ProductCatalogItem?> GetBySourceAndNormalizedUrlAsync(
         string source,
         string normalizedUrl,
