@@ -174,6 +174,24 @@ public sealed class RunCrawlerUseCaseTests
         Assert.Equal(RunStatus.Error, ingestionRepo.LastStatus);
     }
 
+    [Fact]
+    public async Task RunVegetablesAsync_DiscoveryReturnsMoreThanMaxProductsPerRun_EnqueuesOnlyMaxProductsPerRun()
+    {
+        var crawlerRepo = new FakeCrawlerRunRepository();
+        var ingestionRepo = new FakeIngestionRunRepository();
+        var queueRepo = new FakeQueueRepository();
+        var snapshotRepo = new FakePriceSnapshotRepository();
+        var source = new FakeDiscoveryService(
+            Enumerable.Range(1, 5).Select(i => $"https://example/ovochi/{i}").ToList());
+        var extractor = new FakeExtractor(ProductExtractResult.Success(
+            new ProductCard("1", "name", "url", "item", 10m, 12m, true, true, null, null), 200, 10, 1.0d));
+
+        var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor);
+        await sut.RunVegetablesAsync(CancellationToken.None);
+
+        Assert.Equal(2, queueRepo.TotalEnqueued);
+    }
+
     private static RunCrawlerUseCase CreateUseCase(
         ICrawlerRunRepository crawler,
         IIngestionRunRepository ingestion,
@@ -322,6 +340,8 @@ public sealed class RunCrawlerUseCaseTests
 
             return Task.FromResult(added);
         }
+
+        public int TotalEnqueued => _rows.Count;
 
         public Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(long runId, int batchSize, string workerId,
             TimeSpan leaseDuration, CancellationToken ct)

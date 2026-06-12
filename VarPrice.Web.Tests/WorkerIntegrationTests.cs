@@ -52,6 +52,79 @@ public sealed class WorkerIntegrationTests
     }
 
     [Fact]
+    public async Task RefreshProductCatalogUseCase_NewUrls_PersistsCatalogItems()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+        var useCase = CreateCatalogRefreshUseCase(
+            factory,
+            new StaticSource(
+                ["https://varus.ua/product-a", "https://varus.ua/product-b"],
+                ProductUrlDiscoverySourceKind.CategorySeed));
+
+        var result = await useCase.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Equal("category-seed", result.Source);
+        Assert.Equal(2, result.DiscoveredCount);
+        Assert.Equal(2, result.AcceptedCount);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status='ok'"));
+        Assert.Equal(2, await ScalarAsync(conn, "select count(*) from product_catalog"));
+        Assert.Equal(2, await ScalarAsync(conn, "select count(*) from product_catalog where source='varus'"));
+    }
+
+    [Fact]
+    public async Task RefreshProductCatalogUseCase_RepeatedUrls_UpdateExistingCatalogRows()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+        var useCase = CreateCatalogRefreshUseCase(
+            factory,
+            new StaticSource(["https://varus.ua/product-a"], ProductUrlDiscoverySourceKind.CategorySeed));
+
+        await useCase.ExecuteAsync(CancellationToken.None);
+        var firstDiscovered = await ReadCatalogTimestampAsync("first_discovered_at");
+
+        await Task.Delay(20);
+        var secondResult = await useCase.ExecuteAsync(CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal("ok", secondResult.Status);
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product_catalog"));
+        Assert.Equal(2, await ScalarAsync(conn, "select count(*) from crawler_run where status='ok'"));
+        Assert.Equal(firstDiscovered, await TimestampAsync(conn, "select first_discovered_at from product_catalog"));
+        Assert.True(await TimestampAsync(conn, "select last_discovered_at from product_catalog") >= firstDiscovered);
+    }
+
+    [Fact]
+    public async Task RefreshProductCatalogUseCase_DoesNotCreatePriceCollectionData()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+        var useCase = CreateCatalogRefreshUseCase(
+            factory,
+            new StaticSource(["https://varus.ua/product-a"], ProductUrlDiscoverySourceKind.CategorySeed));
+
+        var result = await useCase.ExecuteAsync(CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal("ok", result.Status);
+        Assert.Equal(0,
+            await ScalarAsync(conn, $"select count(*) from price_collect_queue where run_id={result.RunId}"));
+        Assert.Equal(0, await ScalarAsync(conn, "select count(*) from price_snapshot"));
+        Assert.Equal(0, await ScalarAsync(conn, "select count(*) from product"));
+        Assert.Equal(0, await ScalarAsync(conn, "select count(*) from ingestion_run"));
+    }
+
+    [Fact]
     public async Task StoreObservation_NewProduct_CreatesSnapshotAndUpdatesProductTimestamp()
     {
         var factory = CreateFactory();
@@ -661,6 +734,15 @@ public sealed class WorkerIntegrationTests
             new CrawlerProgressState(),
             NullLogger<RunCrawlerUseCase>.Instance);
 
+    private static RefreshProductCatalogUseCase CreateCatalogRefreshUseCase(
+        IPgConnectionFactory factory,
+        IProductUrlDiscoveryService source)
+        => new(
+            source,
+            CreateProductCatalogRepository(factory),
+            CreateCrawlerRunRepository(factory),
+            NullLogger<RefreshProductCatalogUseCase>.Instance);
+
     private static ProductObservation CreateObservation(
         decimal? oldPrice,
         decimal? price,
@@ -702,6 +784,9 @@ public sealed class WorkerIntegrationTests
     private static PgPriceCollectQueueRepository CreatePriceCollectQueueRepository(IPgConnectionFactory factory)
         => new(new PgRoutineExecutor(factory));
 
+    private static PgProductCatalogRepository CreateProductCatalogRepository(IPgConnectionFactory factory)
+        => new(new PgRoutineExecutor(factory));
+
     private static async Task PrepareSchemaAsync()
     {
         await using var dbContext = CreateDbContext();
@@ -711,9 +796,16 @@ public sealed class WorkerIntegrationTests
         await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
-            "truncate table crawl_error, price_snapshot, price_collect_queue, product, ingestion_run, crawler_run restart identity cascade;",
+            "truncate table crawl_error, price_snapshot, price_collect_queue, product_catalog, product, ingestion_run, crawler_run restart identity cascade;",
             conn);
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    private static async Task<DateTime> ReadCatalogTimestampAsync(string column)
+    {
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        return await TimestampAsync(conn, $"select {column} from product_catalog limit 1");
     }
 
     private static VarPriceDbContext CreateDbContext()
@@ -752,10 +844,12 @@ public sealed class WorkerIntegrationTests
         return Convert.ToDateTime(value);
     }
 
-    private sealed class StaticSource(IReadOnlyList<string> urls) : IProductUrlDiscoveryService
+    private sealed class StaticSource(
+        IReadOnlyList<string> urls,
+        ProductUrlDiscoverySourceKind sourceKind = ProductUrlDiscoverySourceKind.Sitemap) : IProductUrlDiscoveryService
     {
         public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct) =>
-            Task.FromResult(new ProductUrlDiscoveryResult(ProductUrlDiscoverySourceKind.Sitemap, urls));
+            Task.FromResult(new ProductUrlDiscoveryResult(sourceKind, urls));
     }
 
     private sealed class ThrowingSource : IProductUrlDiscoveryService

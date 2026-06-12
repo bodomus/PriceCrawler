@@ -59,8 +59,13 @@ using (var scope = host.Services.CreateScope())
 var once = args.Contains("--once");
 var jobIndex = Array.IndexOf(args, "--job");
 var job = jobIndex >= 0 && jobIndex + 1 < args.Length ? args[jobIndex + 1] : "vegetables";
+if (args.Any(arg => string.Equals(arg, "catalog-refresh", StringComparison.OrdinalIgnoreCase)))
+{
+    job = "catalog-refresh";
+}
 
-if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase))
+if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase) &&
+    !string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase))
 {
     logger.LogError("Unsupported job: {Job}", job);
     return 2;
@@ -76,6 +81,31 @@ Console.CancelKeyPress += (_, eventArgs) =>
     eventArgs.Cancel = true;
     cancellation.Cancel();
 };
+
+if (string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase))
+{
+    var refreshUseCase = runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>();
+    try
+    {
+        var refreshResult = await refreshUseCase.ExecuteAsync(cancellation.Token);
+        logger.LogInformation(
+            "catalog_refresh run_id={RunId}; status={Status}; source={Source}; discovered={Discovered}; accepted={Accepted}; inserted={Inserted}; updated={Updated}; skipped={Skipped}",
+            refreshResult.RunId,
+            refreshResult.Status,
+            refreshResult.Source,
+            refreshResult.DiscoveredCount,
+            refreshResult.AcceptedCount,
+            refreshResult.InsertedCount,
+            refreshResult.UpdatedCount,
+            refreshResult.SkippedCount);
+        return string.Equals(refreshResult.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+    {
+        logger.LogWarning("Catalog refresh was cancelled.");
+        return 1;
+    }
+}
 
 CrawlerRunResult result;
 dashboard.Start();

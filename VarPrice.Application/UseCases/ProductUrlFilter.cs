@@ -11,13 +11,13 @@ public sealed class ProductUrlFilter(
     IOptions<UrlFilterOptions> urlFilterOptions,
     ILogger<ProductUrlFilter> logger) : IProductUrlFilter
 {
-    public IReadOnlyList<string> Apply(IEnumerable<Uri> urls, string sourceName)
+    public IReadOnlyList<string> Apply(IEnumerable<Uri> urls, string sourceName, int maxResults)
     {
         var opt = crawlerOptions.Value;
         var excluded = urlFilterOptions.Value.ExcludedUrlSubstrings;
         var results = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var limit = Math.Min(Math.Max(1, opt.MaxProductsPerRun), Math.Max(1, opt.MaxUrls));
+        var limit = Math.Max(1, maxResults);
 
         foreach (var uri in urls)
         {

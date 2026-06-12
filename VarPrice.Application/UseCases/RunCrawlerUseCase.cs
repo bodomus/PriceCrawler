@@ -54,7 +54,10 @@ public sealed class RunCrawlerUseCase(
 
         try
         {
-            var queueItems = discovery.Urls
+            var selectedUrls = discovery.Urls
+                .Take(Math.Max(1, opt.MaxProductsPerRun))
+                .ToList();
+            var queueItems = selectedUrls
                 .Select(url => new QueueEnqueueItem(url, BuildIdempotencyKey(runId, url)))
                 .ToList();
             var enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);

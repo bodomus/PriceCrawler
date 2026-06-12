@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ICrawlerProgressReporter, NoopCrawlerProgressReporter>();
         services.AddScoped<RunCrawlerUseCase>();
         services.AddScoped<IRunCrawlerUseCase>(provider => provider.GetRequiredService<RunCrawlerUseCase>());
+        services.AddScoped<IRefreshProductCatalogUseCase, RefreshProductCatalogUseCase>();
         return services;
     }
 

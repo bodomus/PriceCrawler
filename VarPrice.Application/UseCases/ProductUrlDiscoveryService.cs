@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
@@ -6,6 +7,7 @@ using VarPrice.Application.Models;
 namespace VarPrice.Application.UseCases;
 
 public sealed class ProductUrlDiscoveryService(
+    IOptions<CrawlerOptions> crawlerOptions,
     IProductUrlDiscoveryStrategyFactory strategyFactory,
     IProductUrlFilter productUrlFilter,
     ILogger<ProductUrlDiscoveryService> logger) : IProductUrlDiscoveryService
@@ -18,7 +20,7 @@ public sealed class ProductUrlDiscoveryService(
             .Select(x => x.Url)
             .Where(x => Uri.TryCreate(x, UriKind.Absolute, out _))
             .Select(x => new Uri(x));
-        var urls = productUrlFilter.Apply(candidateUrls, strategy.SourceName);
+        var urls = productUrlFilter.Apply(candidateUrls, strategy.SourceName, crawlerOptions.Value.MaxUrls);
         if (urls.Count > 0)
         {
             logger.LogInformation(

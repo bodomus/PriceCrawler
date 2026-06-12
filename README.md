@@ -105,6 +105,12 @@ Health endpoint: `http://localhost:8080/health` (в Docker) или локаль�
 dotnet run --project VarPrice.Worker -- --once --job vegetables
 ```
 
+Для ручного обновления постоянного каталога товаров без сбора цен:
+
+```bash
+dotnet run --project VarPrice.Worker -- catalog-refresh
+```
+
 В интерактивной консоли Worker показывает фиксированную верхнюю панель прогресса:
 обнаружено, новых, обновлено, выбрано на проверку, проверено, успешно, ошибок,
 текущий этап, текущий товар и процент выполнения. Нижняя часть консоли продолжает
@@ -144,6 +150,7 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 - `--once`
 - `--job <name>`
+- позиционная команда `catalog-refresh`
 
 ### `--once`
 
@@ -172,7 +179,24 @@ var jobIndex = Array.IndexOf(args, "--job");
 
 - если `--job` передан и после него есть значение, берется это значение
 - если не передан, используется значение по умолчанию: `vegetables`
-- если значение не `vegetables`, Worker пишет `Unsupported job: <name>` и завершается с кодом `2`
+- поддерживаемые значения: `vegetables`, `catalog-refresh`
+- если значение не поддерживается, Worker пишет `Unsupported job: <name>` и завершается с кодом `2`
+
+### `catalog-refresh`
+
+Команда:
+
+```bash
+dotnet run --project VarPrice.Worker -- catalog-refresh
+```
+
+Поведение:
+
+- создает `crawler_run` с source `catalog-refresh` до discovery;
+- запускает `IProductUrlDiscoveryService`;
+- выполняет один batch upsert в `product_catalog` с catalog source `varus`;
+- не создает `ingestion_run`, `price_collect_queue`, `price_snapshot` и `product`;
+- завершает процесс с кодом `0` при `status=ok` и `1` при ошибке.
 
 Примеры:
 
@@ -181,6 +205,8 @@ dotnet run --project VarPrice.Worker
 dotnet run --project VarPrice.Worker -- --once
 dotnet run --project VarPrice.Worker -- --job vegetables
 dotnet run --project VarPrice.Worker -- --once --job vegetables
+dotnet run --project VarPrice.Worker -- --job catalog-refresh
+dotnet run --project VarPrice.Worker -- catalog-refresh
 ```
 
 ## Коды завершения Worker
@@ -218,6 +244,13 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Queue:ReaperIntervalSeconds` (default `15`)
 
 Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed-urls.varus.json`.
+
+Limit semantics:
+
+- `Crawler:MaxUrls` limits discovery and catalog refresh size.
+- `Crawler:MaxProductsPerRun` limits only how many discovered URLs the price crawler enqueues into
+  `price_collect_queue`.
+- `Crawler:VegetablesUrlContains` is still respected by discovery; use an empty value for a full catalog refresh.
 
 Переопределение через переменные окружения:
 
