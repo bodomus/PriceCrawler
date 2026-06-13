@@ -21,7 +21,7 @@ public sealed class ProductCatalogRepositoryTests
 
         var result = await sut.UpsertDiscoveredAsync([], CancellationToken.None);
 
-        Assert.Equal(new ProductCatalogUpsertResult(0, 0, 0), result);
+        Assert.Equal(new ProductCatalogUpsertResult(0, 0, 0, 0), result);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
                 discoveredAt)
         ], CancellationToken.None);
 
-        Assert.Equal(new ProductCatalogUpsertResult(1, 1, 0), result);
+        Assert.Equal(new ProductCatalogUpsertResult(1, 1, 0, 0), result);
         await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         Assert.Equal(1, await ScalarLongAsync(conn, "select count(*) from product_catalog;"));
@@ -200,7 +200,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
             new ProductCatalogUpsertItem("varus", "https://example/a-new", "https://example/a", null, null, second)
         ], CancellationToken.None);
 
-        Assert.Equal(new ProductCatalogUpsertResult(1, 0, 1), result);
+        Assert.Equal(new ProductCatalogUpsertResult(1, 0, 1, 0), result);
         Assert.Equal(1, await ScalarLongAsync(conn, "select count(*) from product_catalog;"));
         Assert.Equal(first.UtcDateTime,
             await TimestampAsync(conn, "select first_discovered_at from product_catalog limit 1;"));
@@ -247,7 +247,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
             new ProductCatalogUpsertItem("other", "https://example/a", "https://example/a", null, null, Now(1))
         ], CancellationToken.None);
 
-        Assert.Equal(new ProductCatalogUpsertResult(2, 2, 0), result);
+        Assert.Equal(new ProductCatalogUpsertResult(2, 2, 0, 0), result);
     }
 
     [Fact]
@@ -274,6 +274,132 @@ public sealed class ProductCatalogRepositoryIntegrationTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    public async Task UpsertDiscoveredAsync_SetsLastSeenRefreshId()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        var refresh = await CreatePreparedRefreshRepositoryAsync(skipTruncate: true);
+        var refreshId = await refresh.StartAsync("varus", "category-seed", Now(1), CancellationToken.None);
+
+        await repo.UpsertDiscoveredAsync(
+            refreshId,
+            [new ProductCatalogUpsertItem("varus", "https://example/a", "https://example/a", null, null, Now(1))],
+            CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        Assert.Equal(refreshId,
+            await ScalarLongAsync(conn, "select last_seen_refresh_id from product_catalog limit 1;"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task UpsertDiscoveredAsync_InactiveItem_ReactivatesAndClearsDeactivatedAt()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        var refresh = await CreatePreparedRefreshRepositoryAsync(skipTruncate: true);
+        var firstRefreshId = await refresh.StartAsync("varus", "category-seed", Now(1), CancellationToken.None);
+        await repo.UpsertDiscoveredAsync(
+            firstRefreshId,
+            [new ProductCatalogUpsertItem("varus", "https://example/a", "https://example/a", null, null, Now(1))],
+            CancellationToken.None);
+        await refresh.CompleteAsync(
+            firstRefreshId,
+            new ProductCatalogRefreshCompletion(1, 1, 1, 0, 0, 0, Now(1)),
+            CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        await ExecuteAsync(conn,
+            """
+            update product_catalog
+            set is_active = false,
+                deactivated_at = '2026-06-02T10:00:00Z',
+                next_check_at = '2026-06-03T10:00:00Z'
+            where normalized_url = 'https://example/a';
+            """);
+
+        var secondRefreshId = await refresh.StartAsync("varus", "category-seed", Now(4), CancellationToken.None);
+        var result = await repo.UpsertDiscoveredAsync(
+            secondRefreshId,
+            [new ProductCatalogUpsertItem("varus", "https://example/a", "https://example/a", null, null, Now(4))],
+            CancellationToken.None);
+
+        Assert.Equal(new ProductCatalogUpsertResult(1, 0, 0, 1), result);
+        Assert.True(await ScalarBoolAsync(conn, "select is_active from product_catalog limit 1;"));
+        Assert.Equal(1, await ScalarLongAsync(conn,
+            "select count(*) from product_catalog where deactivated_at is null and next_check_at is null and reactivated_at is not null;"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task DeactivateMissingAsync_DeactivatesOnlyEligibleRows()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        var refresh = await CreatePreparedRefreshRepositoryAsync(skipTruncate: true);
+        var refreshId = await refresh.StartAsync("varus", "category-seed", Now(12), CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        await ExecuteAsync(conn,
+            $"""
+             insert into product_catalog(source, url, normalized_url, first_discovered_at, last_discovered_at, last_seen_refresh_id, is_active)
+             values
+                 ('varus', 'https://example/a', 'https://example/a', '2026-05-01T10:00:00Z', '2026-05-01T10:00:00Z', {refreshId}, true),
+                 ('varus', 'https://example/b', 'https://example/b', '2026-05-01T10:00:00Z', '2026-05-01T10:00:00Z', null, true),
+                 ('varus', 'https://example/c', 'https://example/c', '2026-06-10T10:00:00Z', '2026-06-10T10:00:00Z', null, true),
+                 ('varus', 'https://example/d', 'https://example/d', '2026-05-01T10:00:00Z', '2026-05-01T10:00:00Z', null, false),
+                 ('other', 'https://example/e', 'https://example/e', '2026-05-01T10:00:00Z', '2026-05-01T10:00:00Z', null, true);
+             """);
+
+        var count = await repo.DeactivateMissingAsync(
+            "varus",
+            refreshId,
+            new DateTimeOffset(2026, 06, 01, 10, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2026, 06, 12, 10, 0, 0, TimeSpan.Zero),
+            CancellationToken.None);
+
+        Assert.Equal(1, count);
+        Assert.False(await ScalarBoolAsync(conn,
+            "select is_active from product_catalog where normalized_url = 'https://example/b';"));
+        Assert.True(await ScalarBoolAsync(conn,
+            "select is_active from product_catalog where normalized_url = 'https://example/a';"));
+        Assert.True(await ScalarBoolAsync(conn,
+            "select is_active from product_catalog where normalized_url = 'https://example/c';"));
+        Assert.False(await ScalarBoolAsync(conn,
+            "select is_active from product_catalog where normalized_url = 'https://example/d';"));
+        Assert.True(await ScalarBoolAsync(conn,
+            "select is_active from product_catalog where normalized_url = 'https://example/e';"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task DeactivateMissingAsync_ActiveLease_IsNotDeactivated()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        var refresh = await CreatePreparedRefreshRepositoryAsync(skipTruncate: true);
+        var refreshId = await refresh.StartAsync("varus", "category-seed", Now(12), CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        await ExecuteAsync(conn,
+            """
+            insert into product_catalog(source, url, normalized_url, first_discovered_at, last_discovered_at, reserved_until, is_active)
+            values('varus', 'https://example/a', 'https://example/a', '2026-05-01T10:00:00Z', '2026-05-01T10:00:00Z', '2026-06-12T11:00:00Z', true);
+            """);
+
+        var count = await repo.DeactivateMissingAsync(
+            "varus",
+            refreshId,
+            new DateTimeOffset(2026, 06, 01, 10, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2026, 06, 12, 10, 0, 0, TimeSpan.Zero),
+            CancellationToken.None);
+
+        Assert.Equal(0, count);
+        Assert.True(await ScalarBoolAsync(conn, "select is_active from product_catalog limit 1;"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task UpsertDiscoveredAsync_MultipleItems_InsertsInSingleBatch()
     {
         var repo = await CreatePreparedRepositoryAsync();
@@ -290,7 +416,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
             new ProductCatalogUpsertItem("varus", "https://example/c", "https://example/c", null, null, Now(2))
         ], CancellationToken.None);
 
-        Assert.Equal(new ProductCatalogUpsertResult(3, 2, 1), result);
+        Assert.Equal(new ProductCatalogUpsertResult(3, 2, 1, 0), result);
     }
 
     [Fact]
@@ -502,10 +628,97 @@ public sealed class ProductCatalogRepositoryIntegrationTests
                 "select count(*) from db_routine_script where script_name = '040__product_catalog_routines.sql';"));
     }
 
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ProductCatalogRefresh_Start_CreatesRunningSession()
+    {
+        var repo = await CreatePreparedRefreshRepositoryAsync();
+
+        var refreshId = await repo.StartAsync("varus", "category-seed", Now(1), CancellationToken.None);
+        var session = await repo.GetByIdAsync(refreshId, CancellationToken.None);
+
+        Assert.True(refreshId > 0);
+        Assert.NotNull(session);
+        Assert.Equal("running", session.Status);
+        Assert.Equal("varus", session.Source);
+        Assert.Equal("category-seed", session.DiscoverySource);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ProductCatalogRefresh_Complete_StoresAllCounters()
+    {
+        var repo = await CreatePreparedRefreshRepositoryAsync();
+        var refreshId = await repo.StartAsync("varus", "category-seed", Now(1), CancellationToken.None);
+
+        await repo.CompleteAsync(
+            refreshId,
+            new ProductCatalogRefreshCompletion(10, 9, 4, 3, 1, 2, Now(2)),
+            CancellationToken.None);
+
+        var session = await repo.GetByIdAsync(refreshId, CancellationToken.None);
+
+        Assert.NotNull(session);
+        Assert.Equal("ok", session.Status);
+        Assert.Equal(10, session.DiscoveredCount);
+        Assert.Equal(9, session.AcceptedCount);
+        Assert.Equal(4, session.InsertedCount);
+        Assert.Equal(3, session.UpdatedCount);
+        Assert.Equal(1, session.DeactivatedCount);
+        Assert.Equal(2, session.ReactivatedCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ProductCatalogRefresh_Fail_StoresStableErrorData()
+    {
+        var repo = await CreatePreparedRefreshRepositoryAsync();
+        var refreshId = await repo.StartAsync("varus", "category-seed", Now(1), CancellationToken.None);
+
+        await repo.FailAsync(
+            refreshId,
+            "error",
+            "catalog_refresh_below_minimum",
+            "too few urls",
+            Now(2),
+            CancellationToken.None);
+
+        var session = await repo.GetByIdAsync(refreshId, CancellationToken.None);
+
+        Assert.NotNull(session);
+        Assert.Equal("error", session.Status);
+        Assert.Equal("catalog_refresh_below_minimum", session.ErrorCode);
+        Assert.Equal("too few urls", session.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task CatalogRefresh_ConcurrentRuns_OnlyOneCanProceed()
+    {
+        var repo = await CreatePreparedRefreshRepositoryAsync();
+
+        var first = await repo.StartAsync("varus", "category-seed", Now(1), CancellationToken.None);
+        var second = await repo.StartAsync("varus", "category-seed", Now(1), CancellationToken.None);
+
+        Assert.True(first > 0);
+        Assert.Equal(0, second);
+    }
+
     private static async Task<PgProductCatalogRepository> CreatePreparedRepositoryAsync()
     {
         await PrepareSchemaAsync();
         return new PgProductCatalogRepository(new PgRoutineExecutor(CreateFactory()));
+    }
+
+    private static async Task<PgProductCatalogRefreshRepository> CreatePreparedRefreshRepositoryAsync(
+        bool skipTruncate = false)
+    {
+        if (!skipTruncate)
+        {
+            await PrepareSchemaAsync();
+        }
+
+        return new PgProductCatalogRefreshRepository(new PgRoutineExecutor(CreateFactory()));
     }
 
     private static async Task PrepareSchemaAsync()
@@ -518,7 +731,7 @@ public sealed class ProductCatalogRepositoryIntegrationTests
         await conn.OpenAsync();
         await ExecuteAsync(
             conn,
-            "truncate table crawl_error, price_snapshot, price_collect_queue, product_catalog, product, ingestion_run, crawler_run restart identity cascade;");
+            "truncate table crawl_error, price_snapshot, price_collect_queue, product_catalog, product_catalog_refresh, product, ingestion_run, crawler_run restart identity cascade;");
     }
 
     private static async Task SeedCatalogRowsAsync()

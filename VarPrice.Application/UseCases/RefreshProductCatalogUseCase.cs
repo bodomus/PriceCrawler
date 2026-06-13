@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
@@ -11,7 +12,9 @@ namespace VarPrice.Application.UseCases;
 public sealed class RefreshProductCatalogUseCase(
     IProductUrlDiscoveryService productUrlDiscoveryService,
     IProductCatalogRepository productCatalogRepository,
+    IProductCatalogRefreshRepository refreshRepository,
     ICrawlerRunRepository crawlerRunRepository,
+    IOptions<CrawlerOptions> crawlerOptions,
     ILogger<RefreshProductCatalogUseCase> logger) : IRefreshProductCatalogUseCase
 {
     private const string CatalogRunSource = "catalog-refresh";
@@ -19,184 +22,356 @@ public sealed class RefreshProductCatalogUseCase(
 
     public async Task<RefreshProductCatalogResult> ExecuteAsync(CancellationToken ct)
     {
+        var options = crawlerOptions.Value;
         var runId = await crawlerRunRepository.StartAsync(CatalogRunSource, ct);
-        var discoverySource = "discovery";
+        var discoverySource = ToConfiguredDiscoverySource(options.DiscoveryMode);
+        var refreshId = 0L;
         var discoveredCount = 0;
+        var acceptedCount = 0;
+        var insertedCount = 0;
+        var updatedCount = 0;
+        var reactivatedCount = 0;
+        var deactivatedCount = 0;
+        var skippedCount = 0;
 
         logger.LogInformation("Product catalog refresh started. RunId={RunId}", runId);
 
-        ProductUrlDiscoveryResult discovery;
         try
         {
-            discovery = await productUrlDiscoveryService.DiscoverProductUrlsAsync(ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            await TryFinishFailedRunAsync(runId, "catalog refresh cancelled");
-            throw;
-        }
-        catch (ProductUrlDiscoveryUnavailableException ex)
-        {
-            return await FinishFailureAsync(
-                runId,
-                CrawlerErrorCodes.ProductUrlDiscoveryUnavailable,
-                discoverySource,
-                0,
-                "product URL discovery unavailable",
-                ex,
-                ct);
-        }
-        catch (Exception ex)
-        {
-            return await FinishFailureAsync(
-                runId,
-                "catalog_discovery_failed",
-                discoverySource,
-                0,
-                $"catalog discovery failed: {TrimMessage(ex.Message)}",
-                ex,
-                ct);
-        }
-
-        discoveredCount = discovery.Urls.Count;
-        try
-        {
-            discoverySource = ToDiscoverySource(discovery.SourceKind);
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            return await FinishFailureAsync(
-                runId,
-                "catalog_discovery_source_unsupported",
-                discoverySource,
-                discoveredCount,
-                $"unsupported discovery source: {discovery.SourceKind}",
-                ex,
-                ct);
-        }
-
-        logger.LogInformation(
-            "Product catalog discovery completed. RunId={RunId}; DiscoverySource={DiscoverySource}; Discovered={Discovered}",
-            runId,
-            discoverySource,
-            discoveredCount);
-
-        var discoveredAt = DateTimeOffset.UtcNow;
-        var items = discovery.Urls
-            .Select(url => url.Trim())
-            .Where(url => !string.IsNullOrWhiteSpace(url))
-            .Select(url => new ProductCatalogUpsertItem(
+            refreshId = await refreshRepository.StartAsync(
                 ProductCatalogSource,
-                url,
-                url,
-                null,
-                TryExtractSlug(url),
-                discoveredAt))
-            .ToList();
-
-        ProductCatalogUpsertResult upsertResult;
-        try
-        {
-            upsertResult = await productCatalogRepository.UpsertDiscoveredAsync(items, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            await TryFinishFailedRunAsync(runId, "catalog refresh cancelled");
-            throw;
-        }
-        catch (Exception ex)
-        {
-            return await FinishFailureAsync(
-                runId,
-                "catalog_upsert_failed",
                 discoverySource,
-                discoveredCount,
-                $"catalog upsert failed: {TrimMessage(ex.Message)}",
-                ex,
+                DateTimeOffset.UtcNow,
                 ct);
-        }
 
-        var acceptedCount = upsertResult.ReceivedCount;
-        var skippedCount = Math.Max(0, discoveredCount - acceptedCount);
-        var note = BuildSuccessNote(
-            discoverySource,
-            discoveredCount,
-            acceptedCount,
-            upsertResult.InsertedCount,
-            upsertResult.UpdatedCount,
-            skippedCount);
+            if (refreshId <= 0)
+            {
+                return await FinishFailureAsync(
+                    runId,
+                    refreshId,
+                    "catalog_refresh_already_running",
+                    discoverySource,
+                    discoveredCount,
+                    acceptedCount,
+                    insertedCount,
+                    updatedCount,
+                    reactivatedCount,
+                    deactivatedCount,
+                    skippedCount,
+                    "catalog refresh already running",
+                    null,
+                    ct);
+            }
 
-        try
-        {
-            await crawlerRunRepository.FinishAsync(runId, RunStatus.Ok, note, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            await TryFinishFailedRunAsync(runId, "catalog refresh cancelled");
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Product catalog refresh failed to finish successful crawler run. RunId={RunId}; DiscoverySource={DiscoverySource}; Discovered={Discovered}; Accepted={Accepted}; Inserted={Inserted}; Updated={Updated}; Skipped={Skipped}",
+            logger.LogInformation(
+                "Product catalog refresh session started. RunId={RunId}; RefreshId={RefreshId}; Source={Source}; DiscoverySource={DiscoverySource}",
                 runId,
+                refreshId,
+                ProductCatalogSource,
+                discoverySource);
+
+            var activeCountBefore = await productCatalogRepository.GetActiveCountAsync(ProductCatalogSource, ct);
+
+            ProductUrlDiscoveryResult discovery;
+            try
+            {
+                discovery = await productUrlDiscoveryService.DiscoverProductUrlsAsync(ct);
+            }
+            catch (ProductUrlDiscoveryUnavailableException ex)
+            {
+                return await FinishFailureAsync(
+                    runId,
+                    refreshId,
+                    CrawlerErrorCodes.ProductUrlDiscoveryUnavailable,
+                    discoverySource,
+                    discoveredCount,
+                    acceptedCount,
+                    insertedCount,
+                    updatedCount,
+                    reactivatedCount,
+                    deactivatedCount,
+                    skippedCount,
+                    "product URL discovery unavailable",
+                    ex,
+                    ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return await FinishFailureAsync(
+                    runId,
+                    refreshId,
+                    "catalog_discovery_failed",
+                    discoverySource,
+                    discoveredCount,
+                    acceptedCount,
+                    insertedCount,
+                    updatedCount,
+                    reactivatedCount,
+                    deactivatedCount,
+                    skippedCount,
+                    $"catalog discovery failed: {TrimMessage(ex.Message)}",
+                    ex,
+                    ct);
+            }
+
+            discoveredCount = discovery.Urls.Count;
+            try
+            {
+                discoverySource = ToDiscoverySource(discovery.SourceKind);
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                return await FinishFailureAsync(
+                    runId,
+                    refreshId,
+                    "catalog_discovery_source_unsupported",
+                    discoverySource,
+                    discoveredCount,
+                    acceptedCount,
+                    insertedCount,
+                    updatedCount,
+                    reactivatedCount,
+                    deactivatedCount,
+                    Math.Max(0, discoveredCount),
+                    $"unsupported discovery source: {discovery.SourceKind}",
+                    ex,
+                    ct);
+            }
+
+            logger.LogInformation(
+                "Product catalog discovery completed. RunId={RunId}; RefreshId={RefreshId}; Discovered={Discovered}",
+                runId,
+                refreshId,
+                discoveredCount);
+
+            var discoveredAt = DateTimeOffset.UtcNow;
+            var items = discovery.Urls
+                .Select(url => url.Trim())
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Select(url => new ProductCatalogUpsertItem(
+                    ProductCatalogSource,
+                    url,
+                    url,
+                    null,
+                    TryExtractSlug(url),
+                    discoveredAt))
+                .ToList();
+
+            ProductCatalogUpsertResult upsertResult;
+            try
+            {
+                upsertResult = await productCatalogRepository.UpsertDiscoveredAsync(refreshId, items, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return await FinishFailureAsync(
+                    runId,
+                    refreshId,
+                    "catalog_upsert_failed",
+                    discoverySource,
+                    discoveredCount,
+                    acceptedCount,
+                    insertedCount,
+                    updatedCount,
+                    reactivatedCount,
+                    deactivatedCount,
+                    Math.Max(0, discoveredCount),
+                    $"catalog upsert failed: {TrimMessage(ex.Message)}",
+                    ex,
+                    ct);
+            }
+
+            acceptedCount = upsertResult.ReceivedCount;
+            insertedCount = upsertResult.InsertedCount;
+            updatedCount = upsertResult.UpdatedCount;
+            reactivatedCount = upsertResult.ReactivatedCount;
+            skippedCount = Math.Max(0, discoveredCount - acceptedCount);
+
+            var safety = CatalogRefreshSafetyPolicy.Evaluate(new CatalogRefreshSafetyInput(
                 discoverySource,
+                acceptedCount,
+                activeCountBefore,
+                options));
+
+            logger.LogInformation(
+                "Product catalog refresh safety check. RefreshId={RefreshId}; ActiveBefore={ActiveBefore}; Accepted={Accepted}; MinimumExpected={MinimumExpected}; MinimumRatio={MinimumRatio}; IsSafe={IsSafe}",
+                refreshId,
+                activeCountBefore,
+                acceptedCount,
+                CatalogRefreshSafetyPolicy.NormalizeMinimumExpected(options.CatalogMinimumExpectedUrls),
+                CatalogRefreshSafetyPolicy.NormalizePreviousRatio(options.CatalogMinimumPreviousRatio),
+                !safety.IsError);
+
+            if (safety.IsError)
+            {
+                return await FinishFailureAsync(
+                    runId,
+                    refreshId,
+                    safety.ErrorCode ?? "catalog_refresh_safety_failed",
+                    discoverySource,
+                    discoveredCount,
+                    acceptedCount,
+                    insertedCount,
+                    updatedCount,
+                    reactivatedCount,
+                    deactivatedCount,
+                    skippedCount,
+                    safety.Reason ?? "catalog refresh safety check failed",
+                    null,
+                    ct);
+            }
+
+            if (safety.CanDeactivate)
+            {
+                var deactivatedAt = DateTimeOffset.UtcNow;
+                var cutoff = deactivatedAt.AddDays(-CatalogRefreshSafetyPolicy.NormalizeGracePeriodDays(
+                    options.CatalogMissingGracePeriodDays));
+
+                try
+                {
+                    deactivatedCount = await productCatalogRepository.DeactivateMissingAsync(
+                        ProductCatalogSource,
+                        refreshId,
+                        cutoff,
+                        deactivatedAt,
+                        ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    return await FinishFailureAsync(
+                        runId,
+                        refreshId,
+                        "catalog_deactivation_failed",
+                        discoverySource,
+                        discoveredCount,
+                        acceptedCount,
+                        insertedCount,
+                        updatedCount,
+                        reactivatedCount,
+                        deactivatedCount,
+                        skippedCount,
+                        $"catalog deactivation failed: {TrimMessage(ex.Message)}",
+                        ex,
+                        ct);
+                }
+            }
+            else
+            {
+                logger.LogInformation(
+                    "Product catalog deactivation skipped. RefreshId={RefreshId}; Reason={Reason}",
+                    refreshId,
+                    safety.Reason);
+            }
+
+            await refreshRepository.CompleteAsync(
+                refreshId,
+                new ProductCatalogRefreshCompletion(
+                    discoveredCount,
+                    acceptedCount,
+                    insertedCount,
+                    updatedCount,
+                    deactivatedCount,
+                    reactivatedCount,
+                    DateTimeOffset.UtcNow),
+                ct);
+
+            var note = BuildNote(
+                discoverySource,
+                refreshId,
                 discoveredCount,
                 acceptedCount,
-                upsertResult.InsertedCount,
-                upsertResult.UpdatedCount,
-                skippedCount);
+                insertedCount,
+                updatedCount,
+                reactivatedCount,
+                deactivatedCount,
+                skippedCount,
+                safety.CanDeactivate,
+                safety.Reason,
+                null);
 
-            var failureNote =
-                $"{note}, error_code=catalog_run_finish_failed, message={TrimMessage(ex.Message)}";
+            await crawlerRunRepository.FinishAsync(runId, RunStatus.Ok, note, ct);
+
+            logger.LogInformation(
+                "Product catalog refresh completed. RunId={RunId}; RefreshId={RefreshId}; Inserted={Inserted}; Updated={Updated}; Reactivated={Reactivated}; Deactivated={Deactivated}",
+                runId,
+                refreshId,
+                insertedCount,
+                updatedCount,
+                reactivatedCount,
+                deactivatedCount);
+
             return new RefreshProductCatalogResult(
                 runId,
-                RefreshProductCatalogStatus.Error,
+                refreshId,
+                RefreshProductCatalogStatus.Ok,
                 discoverySource,
                 discoveredCount,
                 acceptedCount,
-                upsertResult.InsertedCount,
-                upsertResult.UpdatedCount,
+                insertedCount,
+                updatedCount,
+                reactivatedCount,
+                deactivatedCount,
                 skippedCount,
-                "catalog_run_finish_failed",
-                failureNote);
+                safety.CanDeactivate,
+                safety.Reason,
+                null,
+                note);
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            if (refreshId > 0)
+            {
+                await TryFailRefreshAsync(
+                    refreshId,
+                    ProductCatalogRefreshStatuses.Cancelled,
+                    "catalog_refresh_cancelled",
+                    "catalog refresh cancelled");
+            }
 
-        logger.LogInformation(
-            "Product catalog refresh completed. RunId={RunId}; DiscoverySource={DiscoverySource}; Discovered={Discovered}; Accepted={Accepted}; Inserted={Inserted}; Updated={Updated}; Skipped={Skipped}",
-            runId,
-            discoverySource,
-            discoveredCount,
-            acceptedCount,
-            upsertResult.InsertedCount,
-            upsertResult.UpdatedCount,
-            skippedCount);
-
-        return new RefreshProductCatalogResult(
-            runId,
-            RefreshProductCatalogStatus.Ok,
-            discoverySource,
-            discoveredCount,
-            acceptedCount,
-            upsertResult.InsertedCount,
-            upsertResult.UpdatedCount,
-            skippedCount,
-            null,
-            note);
+            await TryFinishFailedRunAsync(runId, "catalog refresh cancelled");
+            throw;
+        }
     }
 
     private async Task<RefreshProductCatalogResult> FinishFailureAsync(
         long runId,
+        long refreshId,
         string errorCode,
         string discoverySource,
         int discoveredCount,
+        int acceptedCount,
+        int insertedCount,
+        int updatedCount,
+        int reactivatedCount,
+        int deactivatedCount,
+        int skippedCount,
         string message,
-        Exception exception,
+        Exception? exception,
         CancellationToken ct)
     {
-        var note =
-            $"discovery_source={discoverySource}, discovered={discoveredCount}, error_code={errorCode}, message={TrimMessage(message)}";
+        if (refreshId > 0)
+        {
+            await TryFailRefreshAsync(
+                refreshId,
+                ProductCatalogRefreshStatuses.Error,
+                errorCode,
+                message);
+        }
+
+        var note = BuildNote(
+            discoverySource,
+            refreshId,
+            discoveredCount,
+            acceptedCount,
+            insertedCount,
+            updatedCount,
+            reactivatedCount,
+            deactivatedCount,
+            skippedCount,
+            false,
+            errorCode,
+            errorCode);
+
         try
         {
             await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, note, ct);
@@ -210,25 +385,66 @@ public sealed class RefreshProductCatalogUseCase(
                 errorCode);
         }
 
-        logger.LogError(
-            exception,
-            "Product catalog refresh failed. RunId={RunId}; ErrorCode={ErrorCode}; DiscoverySource={DiscoverySource}; Discovered={Discovered}",
-            runId,
-            errorCode,
-            discoverySource,
-            discoveredCount);
+        if (exception is null)
+        {
+            logger.LogWarning(
+                "Product catalog refresh failed. RunId={RunId}; RefreshId={RefreshId}; ErrorCode={ErrorCode}",
+                runId,
+                refreshId,
+                errorCode);
+        }
+        else
+        {
+            logger.LogError(
+                exception,
+                "Product catalog refresh failed. RunId={RunId}; RefreshId={RefreshId}; ErrorCode={ErrorCode}",
+                runId,
+                refreshId,
+                errorCode);
+        }
 
         return new RefreshProductCatalogResult(
             runId,
+            refreshId,
             RefreshProductCatalogStatus.Error,
             discoverySource,
             discoveredCount,
-            0,
-            0,
-            0,
-            Math.Max(0, discoveredCount),
+            acceptedCount,
+            insertedCount,
+            updatedCount,
+            reactivatedCount,
+            deactivatedCount,
+            skippedCount,
+            false,
+            errorCode,
             errorCode,
             note);
+    }
+
+    private async Task TryFailRefreshAsync(
+        long refreshId,
+        string status,
+        string errorCode,
+        string? errorMessage)
+    {
+        try
+        {
+            await refreshRepository.FailAsync(
+                refreshId,
+                status,
+                errorCode,
+                TrimMessage(errorMessage),
+                DateTimeOffset.UtcNow,
+                CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Product catalog refresh failed to update refresh session. RefreshId={RefreshId}; ErrorCode={ErrorCode}",
+                refreshId,
+                errorCode);
+        }
     }
 
     private async Task TryFinishFailedRunAsync(long runId, string note)
@@ -243,14 +459,27 @@ public sealed class RefreshProductCatalogUseCase(
         }
     }
 
-    private static string BuildSuccessNote(
+    private static string BuildNote(
         string discoverySource,
+        long refreshId,
         int discoveredCount,
         int acceptedCount,
         int insertedCount,
         int updatedCount,
-        int skippedCount) =>
-        $"discovery_source={discoverySource}, discovered={discoveredCount}, accepted={acceptedCount}, inserted={insertedCount}, updated={updatedCount}, skipped={skippedCount}";
+        int reactivatedCount,
+        int deactivatedCount,
+        int skippedCount,
+        bool deactivationExecuted,
+        string? deactivationSkipReason,
+        string? errorCode) =>
+        $"refresh_id={refreshId}, discovery_source={discoverySource}, discovered={discoveredCount}, accepted={acceptedCount}, inserted={insertedCount}, updated={updatedCount}, reactivated={reactivatedCount}, deactivated={deactivatedCount}, skipped={skippedCount}, deactivation_executed={deactivationExecuted.ToString().ToLowerInvariant()}, deactivation_skip_reason={deactivationSkipReason ?? ""}, error_code={errorCode ?? ""}";
+
+    private static string ToConfiguredDiscoverySource(string? discoveryMode) =>
+        string.Equals(discoveryMode, ProductUrlDiscoveryModes.Api, StringComparison.OrdinalIgnoreCase)
+            ? "api"
+            : string.Equals(discoveryMode, ProductUrlDiscoveryModes.Sitemap, StringComparison.OrdinalIgnoreCase)
+                ? "sitemap"
+                : "category-seed";
 
     private static string ToDiscoverySource(ProductUrlDiscoverySourceKind sourceKind) =>
         sourceKind switch

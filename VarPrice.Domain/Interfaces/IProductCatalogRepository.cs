@@ -5,7 +5,19 @@ namespace VarPrice.Domain.Interfaces;
 public interface IProductCatalogRepository
 {
     Task<ProductCatalogUpsertResult> UpsertDiscoveredAsync(
+        long refreshId,
         IReadOnlyCollection<ProductCatalogUpsertItem> items,
+        CancellationToken ct);
+
+    Task<int> GetActiveCountAsync(
+        string source,
+        CancellationToken ct);
+
+    Task<int> DeactivateMissingAsync(
+        string source,
+        long currentRefreshId,
+        DateTimeOffset notSeenSinceUtc,
+        DateTimeOffset deactivatedAtUtc,
         CancellationToken ct);
 
     Task<IReadOnlyList<ProductCatalogItem>> GetDueProductsAsync(

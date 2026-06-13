@@ -6,7 +6,7 @@
 - Core entities: `CrawlerRun`, `IngestionRun`, `Product`, `ProductCatalogItem`, `PriceSnapshot`, `CrawlError`.
 - Domain enums/value objects: `RunStatus`, `ErrorInfo`.
 - Repository ports: `ICrawlerRunRepository`, `IIngestionRunRepository`, `IPriceCollectQueueRepository`,
-  `IPriceSnapshotRepository`, `IProductCatalogRepository`.
+  `IPriceSnapshotRepository`, `IProductCatalogRepository`, `IProductCatalogRefreshRepository`.
 
 ### VarPrice.Application
 - `RunCrawlerUseCase` orchestrates:
@@ -22,10 +22,14 @@
 - On failure: ingestion receives `ErrorInfo`; crawler run is marked `Error`.
 - `RefreshProductCatalogUseCase` orchestrates catalog refresh:
   1. Start `crawler_run` with source `catalog-refresh` before discovery.
-  2. Run `IProductUrlDiscoveryService`.
-  3. Convert discovered URLs to `ProductCatalogUpsertItem` with product source `varus`.
-  4. Call `IProductCatalogRepository.UpsertDiscoveredAsync` once for the batch.
-  5. Finish `crawler_run` with aggregated counters.
+  2. Start `product_catalog_refresh` session with source `varus`.
+  3. Read active catalog count before discovery.
+  4. Run `IProductUrlDiscoveryService`.
+  5. Convert discovered URLs to `ProductCatalogUpsertItem` with product source `varus`.
+  6. Call `IProductCatalogRepository.UpsertDiscoveredAsync(refreshId, items)` once for the batch.
+  7. Run safety checks and optionally soft-deactivate missing old rows.
+  8. Complete or fail the refresh session.
+  9. Finish `crawler_run` with aggregated counters.
 - Catalog refresh flow:
 
 ```text
@@ -44,6 +48,9 @@ product_catalog
 
 - Catalog refresh does not collect prices and does not create `ingestion_run`, `price_collect_queue`,
   `price_snapshot`, or `product` rows.
+- Catalog row lifecycle is `discovered -> active -> missing during refresh -> grace period -> inactive -> discovered again -> reactivated`.
+- `is_active = false` is a soft deactivation only. It does not delete `product_catalog`, `product`, queue history, or price snapshots.
+- Deactivation is allowed only for full `category-seed` discovery with no scoped `VegetablesUrlContains` filter, after minimum URL and previous active ratio checks pass.
 - `Crawler:MaxUrls` limits discovery/catalog refresh. `Crawler:MaxProductsPerRun` limits only price collection queue
   size.
 - Discovery source (`category-seed`, `sitemap`, `api`) is reported in result/logs; catalog item source remains `varus`.
@@ -72,7 +79,8 @@ product_catalog
   become selectable again.
 
 ### VarPrice.Infrastructure
-- `PgCrawlerRunRepository`, `PgIngestionRunRepository`, `PgPriceSnapshotRepository`, `PgProductCatalogRepository`.
+- `PgCrawlerRunRepository`, `PgIngestionRunRepository`, `PgPriceSnapshotRepository`, `PgProductCatalogRepository`,
+  `PgProductCatalogRefreshRepository`.
 - All write-side business operations now execute through DB routines instead of inline DML.
 - `crawler_run`, `ingestion_run`, and `crawl_error` are persisted through dedicated domain routines.
 - `product_catalog` stores the persistent discovered product URL catalog. It is distinct from `product`:
@@ -80,6 +88,9 @@ product_catalog
   normalized product entity created from extracted product cards and linked to `price_snapshot`.
 - Runtime catalog refresh connects discovery to `product_catalog`; `collect-prices` reads scheduled due rows from
   `product_catalog` and does not run discovery.
+- `product_catalog_refresh` records full refresh sessions and stores discovered/accepted/inserted/updated/reactivated/deactivated counters plus stable error details.
+- `product_catalog.last_seen_refresh_id` links rows to the latest refresh that observed them. `deactivated_at` and
+  `reactivated_at` preserve soft state transitions.
 - `PgPriceSnapshotRepository.StoreObservationAsync` calls `price_observation_store`, which performs product lookup/upsert,
   latest snapshot read, meaningful-change detection, conditional `price_snapshot` insert, and returns the write result.
 - `PgProductCatalogRepository.UpsertDiscoveredAsync` prepares discovered URLs in memory, removes invalid/duplicate input,
@@ -111,8 +122,8 @@ product_catalog
 
 - `VarPrice.Web.Tests/WorkerIntegrationTests` covers the key DB routine flows:
   runs start/finish, observation writes, crawl errors, queue lifecycle, reaper, stats, and end-to-end crawler execution.
-- Catalog refresh integration tests cover `crawler_run`, `product_catalog` insert/update behavior, and absence of price
-  queue/snapshot/product/ingestion writes.
+- Catalog refresh integration tests cover refresh sessions, `product_catalog` insert/update/reactivation/deactivation
+  behavior, concurrent running refresh protection, schema idempotency, and absence of price queue/snapshot/product/ingestion writes.
 
 ## Composition
 

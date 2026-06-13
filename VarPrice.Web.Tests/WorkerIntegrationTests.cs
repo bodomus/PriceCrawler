@@ -753,7 +753,13 @@ public sealed class WorkerIntegrationTests
         => new(
             source,
             CreateProductCatalogRepository(factory),
+            CreateProductCatalogRefreshRepository(factory),
             CreateCrawlerRunRepository(factory),
+            Options.Create(new CrawlerOptions
+            {
+                CatalogMinimumExpectedUrls = 1,
+                CatalogMinimumPreviousRatio = 0.5d
+            }),
             NullLogger<RefreshProductCatalogUseCase>.Instance);
 
     private static ProductObservation CreateObservation(
@@ -786,6 +792,9 @@ public sealed class WorkerIntegrationTests
     }
 
     private static PgCrawlerRunRepository CreateCrawlerRunRepository(IPgConnectionFactory factory)
+        => new(new PgRoutineExecutor(factory));
+
+    private static PgProductCatalogRefreshRepository CreateProductCatalogRefreshRepository(IPgConnectionFactory factory)
         => new(new PgRoutineExecutor(factory));
 
     private static PgIngestionRunRepository CreateIngestionRunRepository(IPgConnectionFactory factory)

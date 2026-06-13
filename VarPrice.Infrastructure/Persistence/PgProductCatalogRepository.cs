@@ -14,14 +14,20 @@ public sealed class PgProductCatalogRepository(PgRoutineExecutor routineExecutor
         DefaultIgnoreCondition = JsonIgnoreCondition.Never
     };
 
+    public Task<ProductCatalogUpsertResult> UpsertDiscoveredAsync(
+        IReadOnlyCollection<ProductCatalogUpsertItem> items,
+        CancellationToken ct) =>
+        UpsertDiscoveredAsync(0, items, ct);
+
     public async Task<ProductCatalogUpsertResult> UpsertDiscoveredAsync(
+        long refreshId,
         IReadOnlyCollection<ProductCatalogUpsertItem> items,
         CancellationToken ct)
     {
         var prepared = ProductCatalogBatchPreparer.Prepare(items);
         if (prepared.Count == 0)
         {
-            return new ProductCatalogUpsertResult(0, 0, 0);
+            return new ProductCatalogUpsertResult(0, 0, 0, 0);
         }
 
         var payload = JsonSerializer.Serialize(
@@ -36,15 +42,39 @@ public sealed class PgProductCatalogRepository(PgRoutineExecutor routineExecutor
 
         var result = await routineExecutor.QuerySingleOrDefaultAsync(
             DbRoutineCall.SetReturningFunction("product_catalog_upsert_discovered")
+                .AddParameter("p_refresh_id", refreshId)
                 .AddParameter("p_items", payload),
             reader => new ProductCatalogUpsertResult(
                 reader.GetInt32(0),
                 reader.GetInt32(1),
-                reader.GetInt32(2)),
+                reader.GetInt32(2),
+                reader.GetInt32(3)),
             ct);
 
-        return result ?? new ProductCatalogUpsertResult(prepared.Count, 0, 0);
+        return result ?? new ProductCatalogUpsertResult(prepared.Count, 0, 0, 0);
     }
+
+    public async Task<int> GetActiveCountAsync(string source, CancellationToken ct)
+        => await routineExecutor.ExecuteScalarAsync<int?>(
+               DbRoutineCall.ScalarFunction("product_catalog_get_active_count")
+                   .AddParameter("p_source", source),
+               ct)
+           ?? 0;
+
+    public async Task<int> DeactivateMissingAsync(
+        string source,
+        long currentRefreshId,
+        DateTimeOffset notSeenSinceUtc,
+        DateTimeOffset deactivatedAtUtc,
+        CancellationToken ct)
+        => await routineExecutor.ExecuteScalarAsync<int?>(
+               DbRoutineCall.ScalarFunction("product_catalog_deactivate_missing")
+                   .AddParameter("p_source", source)
+                   .AddParameter("p_current_refresh_id", currentRefreshId)
+                   .AddParameter("p_not_seen_since", notSeenSinceUtc.UtcDateTime)
+                   .AddParameter("p_deactivated_at", deactivatedAtUtc.UtcDateTime),
+               ct)
+           ?? 0;
 
     public async Task<ProductCatalogItem?> GetByIdAsync(long id, CancellationToken ct)
         => await routineExecutor.QuerySingleOrDefaultAsync(

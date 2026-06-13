@@ -1,10 +1,143 @@
 create
+or replace function product_catalog_refresh_start(
+    p_source text,
+    p_discovery_source text,
+    p_started_at timestamptz)
+returns bigint
+language plpgsql
+as $$
+declare
+v_id bigint;
+begin
+if
+exists (
+    select 1
+    from product_catalog_refresh
+    where source = routine_support_trim_required(p_source, 50)
+      and status = 'running'
+) then
+    return 0;
+end if;
+
+insert into product_catalog_refresh(source,
+                                    discovery_source,
+                                    started_at,
+                                    status,
+                                    created_at,
+                                    updated_at)
+values (routine_support_trim_required(p_source, 50),
+        routine_support_trim_required(p_discovery_source, 50),
+        coalesce(p_started_at, now()),
+        'running',
+        now(),
+        now()) returning id
+into v_id;
+
+return v_id;
+end;
+$$;
+
+create
+or replace procedure product_catalog_refresh_complete(
+    p_refresh_id bigint,
+    p_discovered_count integer,
+    p_accepted_count integer,
+    p_inserted_count integer,
+    p_updated_count integer,
+    p_deactivated_count integer,
+    p_reactivated_count integer,
+    p_finished_at timestamptz)
+language plpgsql
+as $$
+begin
+update product_catalog_refresh
+set finished_at       = p_finished_at,
+    status            = 'ok',
+    discovered_count  = greatest(coalesce(p_discovered_count, 0), 0),
+    accepted_count    = greatest(coalesce(p_accepted_count, 0), 0),
+    inserted_count    = greatest(coalesce(p_inserted_count, 0), 0),
+    updated_count     = greatest(coalesce(p_updated_count, 0), 0),
+    deactivated_count = greatest(coalesce(p_deactivated_count, 0), 0),
+    reactivated_count = greatest(coalesce(p_reactivated_count, 0), 0),
+    error_code        = null,
+    error_message     = null,
+    updated_at        = now()
+where id = p_refresh_id
+  and status = 'running';
+end;
+$$;
+
+create
+or replace procedure product_catalog_refresh_fail(
+    p_refresh_id bigint,
+    p_status text,
+    p_error_code text,
+    p_error_message text,
+    p_finished_at timestamptz)
+language plpgsql
+as $$
+begin
+update product_catalog_refresh
+set finished_at   = p_finished_at,
+    status        = case
+                        when routine_support_trim_required(p_status, 20) = 'cancelled' then 'cancelled'
+                        else 'error'
+        end,
+    error_code    = routine_support_trim_required(p_error_code, 100),
+    error_message = routine_support_trim_nullable(p_error_message, 1000),
+    updated_at    = now()
+where id = p_refresh_id
+  and status = 'running';
+end;
+$$;
+
+create
+or replace function product_catalog_refresh_get_by_id(
+    p_refresh_id bigint)
+returns table(
+    id bigint,
+    source varchar(50),
+    discovery_source varchar(50),
+    started_at timestamptz,
+    finished_at timestamptz,
+    status varchar(20),
+    discovered_count integer,
+    accepted_count integer,
+    inserted_count integer,
+    updated_count integer,
+    deactivated_count integer,
+    reactivated_count integer,
+    error_code varchar(100),
+    error_message varchar(1000))
+language sql
+as $$
+select refresh.id,
+       refresh.source,
+       refresh.discovery_source,
+       refresh.started_at,
+       refresh.finished_at,
+       refresh.status,
+       refresh.discovered_count,
+       refresh.accepted_count,
+       refresh.inserted_count,
+       refresh.updated_count,
+       refresh.deactivated_count,
+       refresh.reactivated_count,
+       refresh.error_code,
+       refresh.error_message
+from product_catalog_refresh refresh
+where refresh.id = p_refresh_id;
+$$;
+
+create
 or replace function product_catalog_upsert_discovered(
+    p_refresh_id bigint,
     p_items text)
 returns table(
     received_count integer,
     inserted_count integer,
-    updated_count integer)
+    updated_count integer,
+    reactivated_count integer)
 language plpgsql
 as $$
 begin
@@ -32,7 +165,7 @@ return query with incoming as (
           and normalized_url <> ''
     ),
     existing as (
-        select catalog.source, catalog.normalized_url
+        select catalog.source, catalog.normalized_url, catalog.is_active
         from product_catalog catalog
         join valid
           on catalog.source = valid.source
@@ -49,6 +182,7 @@ return query with incoming as (
             last_discovered_at,
             is_active,
             consecutive_errors,
+            last_seen_refresh_id,
             created_at,
             updated_at)
         select
@@ -61,6 +195,7 @@ return query with incoming as (
             discovered_at,
             true,
             0,
+            nullif(p_refresh_id, 0),
             now(),
             now()
         from valid
@@ -70,6 +205,16 @@ return query with incoming as (
             external_id = coalesce(nullif(excluded.external_id, ''), product_catalog.external_id),
             slug = coalesce(nullif(excluded.slug, ''), product_catalog.slug),
             last_discovered_at = excluded.last_discovered_at,
+            last_seen_refresh_id = nullif(p_refresh_id, 0),
+            deactivated_at = null,
+            reactivated_at = case
+                when product_catalog.is_active = false then excluded.last_discovered_at
+                else product_catalog.reactivated_at
+            end,
+            next_check_at = case
+                when product_catalog.is_active = false then null
+                else product_catalog.next_check_at
+            end,
             is_active = true,
             updated_at = now()
         returning product_catalog.source, product_catalog.normalized_url
@@ -84,7 +229,61 @@ select (select count(*) from valid)::integer as received_count, (select count(*)
                                                                                                                                                                           where exists (select 1
                                                                                                                                                                                         from existing
                                                                                                                                                                                         where existing.source = upserted.source
-                                                                                                                                                                                          and existing.normalized_url = upserted.normalized_url)) ::integer as updated_count;
+                                                                                                                                                                                          and existing.normalized_url = upserted.normalized_url
+                                                                                                                                                                                          and existing.is_active = true)) ::integer as updated_count, (select count(*)
+                                                                                                                                                                                                                                                       from upserted
+                                                                                                                                                                                                                                                       where exists (select 1
+                                                                                                                                                                                                                                                                     from existing
+                                                                                                                                                                                                                                                                     where existing.source = upserted.source
+                                                                                                                                                                                                                                                                       and existing.normalized_url = upserted.normalized_url
+                                                                                                                                                                                                                                                                       and existing.is_active = false)) ::integer as reactivated_count;
+end;
+$$;
+
+create
+or replace function product_catalog_get_active_count(
+    p_source text)
+returns integer
+language sql
+as $$
+select count(*) ::integer
+from product_catalog catalog
+where catalog.source = routine_support_trim_required(p_source
+    , 50)
+  and catalog.is_active = true;
+$$;
+
+create
+or replace function product_catalog_deactivate_missing(
+    p_source text,
+    p_current_refresh_id bigint,
+    p_not_seen_since timestamptz,
+    p_deactivated_at timestamptz)
+returns integer
+language plpgsql
+as $$
+declare
+v_count integer;
+begin
+with deactivated as (
+update product_catalog catalog
+set is_active = false, deactivated_at = p_deactivated_at, next_check_at = null, reserved_at = null, reserved_until = null, reserved_by = null, updated_at = now()
+where catalog.source = routine_support_trim_required(p_source
+    , 50)
+  and catalog.is_active = true
+  and coalesce (catalog.last_seen_refresh_id
+    , 0) <> p_current_refresh_id
+  and catalog.last_discovered_at
+    < p_not_seen_since
+  and (catalog.reserved_until is null
+   or catalog.reserved_until <= p_deactivated_at)
+    returning 1
+    )
+select count(*)
+into v_count
+from deactivated;
+
+return coalesce(v_count, 0);
 end;
 $$;
 

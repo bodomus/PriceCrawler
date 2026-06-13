@@ -64,3 +64,45 @@
 - Для тестовых запусков использовать небольшие значения `MaxProductsPerRun`, `MaxUrls` и `MaxCategoryPagesPerSeed`.
 - Настройки retry, throttling и circuit breaker связаны между собой: агрессивные retry при высоком RPS могут усилить rate limit.
 - `UseStubProductCardExtractor=true` отключает только загрузку карточек товаров; discovery категорий или sitemap может по-прежнему делать сетевые запросы.
+
+## Catalog deactivation options
+
+These keys are used by `RefreshProductCatalogUseCase` after catalog discovery/upsert:
+
+| Field | Type | Default | Description |
+|---|---:|---:|---|
+| `CatalogDeactivationEnabled` | `bool` | `true` | Enables soft deactivation after a safe full refresh. When disabled, upsert and reactivation still run and skip reason is `deactivation_disabled`. |
+| `CatalogMissingGracePeriodDays` | `int` | `14` | Missing active rows are deactivated only when `last_discovered_at < now - grace period`; values below `1` become `1`. |
+| `CatalogMinimumExpectedUrls` | `int` | `1000` | Absolute accepted URL threshold required before deactivation; values below `1` become `1`. |
+| `CatalogMinimumPreviousRatio` | `double` | `0.5` | Accepted/current-active ratio threshold. Valid range is `0.0 < value <= 1.0`; invalid values become `0.5`. |
+
+Example:
+
+```json
+{
+  "Crawler": {
+    "CatalogDeactivationEnabled": true,
+    "CatalogMissingGracePeriodDays": 14,
+    "CatalogMinimumExpectedUrls": 1000,
+    "CatalogMinimumPreviousRatio": 0.5
+  }
+}
+```
+
+Deactivation runs only after a full `CategorySeeds` refresh with empty `VegetablesUrlContains`, successful discovery/upsert, and passing safety thresholds. `Api` and `Sitemap` discovery modes currently skip deactivation because their full-catalog completeness is not confirmed.
+
+Useful SQL checks:
+
+```sql
+select is_active, count(*) from product_catalog group by is_active;
+
+select id, normalized_url, last_discovered_at, last_seen_refresh_id, is_active, deactivated_at, reactivated_at
+from product_catalog
+order by updated_at desc
+limit 100;
+
+select *
+from product_catalog_refresh
+order by id desc
+limit 20;
+```

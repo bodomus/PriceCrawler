@@ -76,6 +76,14 @@ public sealed class CrawlerOptions
     /// </summary>
     public int CatalogFailureMaxDelayHours { get; set; } = 24;
 
+    public int CatalogMissingGracePeriodDays { get; set; } = 14;
+
+    public int CatalogMinimumExpectedUrls { get; set; } = 1000;
+
+    public double CatalogMinimumPreviousRatio { get; set; } = 0.5d;
+
+    public bool CatalogDeactivationEnabled { get; set; } = true;
+
     /// <summary>
     /// Максимальное количество URL-кандидатов, которое discovery может собрать или передать дальше.
     /// Используется как общий верхний предел для sitemap/category discovery и дополнительно ограничивает итоговый набор вместе с `MaxProductsPerRun`.

@@ -200,10 +200,35 @@ dotnet run --project VarPrice.Worker -- catalog-refresh
 Поведение:
 
 - создает `crawler_run` с source `catalog-refresh` до discovery;
+- создает `product_catalog_refresh` session;
 - запускает `IProductUrlDiscoveryService`;
-- выполняет один batch upsert в `product_catalog` с catalog source `varus`;
+- выполняет один batch upsert в `product_catalog` с catalog source `varus` и текущим refresh id;
+- после безопасного полного refresh soft-деактивирует активные товары, которые давно не встречались;
+- inactive товар автоматически реактивируется при повторном discovery;
 - не создает `ingestion_run`, `price_collect_queue`, `price_snapshot` и `product`;
 - завершает процесс с кодом `0` при `status=ok` и `1` при ошибке.
+
+Runtime flow:
+
+```text
+crawler_run_start
+-> refresh_session_start
+-> active_count
+-> discovery
+-> catalog_upsert
+-> safety_check
+-> deactivate_missing
+-> refresh_session_complete
+-> crawler_run_finish
+```
+
+Soft deactivation lifecycle:
+
+```text
+discovered -> active -> missing during refresh -> grace period -> inactive -> discovered again -> reactivated
+```
+
+`is_active = false` does not physically delete catalog rows, products, queue history, or price snapshots.
 
 ### `collect-prices`
 
@@ -264,6 +289,10 @@ dotnet run --project VarPrice.Worker -- --collect-prices
 - `Crawler:SuccessfulCheckIntervalHours` (default `24`)
 - `Crawler:CatalogFailureBaseDelayMinutes` (default `60`)
 - `Crawler:CatalogFailureMaxDelayHours` (default `24`)
+- `Crawler:CatalogDeactivationEnabled` (default `true`)
+- `Crawler:CatalogMissingGracePeriodDays` (default `14`)
+- `Crawler:CatalogMinimumExpectedUrls` (default `1000`)
+- `Crawler:CatalogMinimumPreviousRatio` (default `0.5`)
 - `Crawler:MaxUrls`
 - `Crawler:MaxCategoryPagesPerSeed` (default `10`)
 - `Crawler:MaxConcurrency` (default `4`)
@@ -290,6 +319,26 @@ Limit semantics:
 - `Crawler:MaxProductsPerRun` limits price collection batch size. In legacy `vegetables` mode it limits discovered URLs
   enqueued into `price_collect_queue`; in `collect-prices` mode it limits due `product_catalog` rows selected.
 - `Crawler:VegetablesUrlContains` is still respected by discovery; use an empty value for a full catalog refresh.
+- Catalog deactivation safety guards: grace period, absolute minimum accepted URL count, accepted/current-active ratio,
+  empty scoped filter, supported full discovery mode (`CategorySeeds`), and a single running refresh per source.
+- `Api` and `Sitemap` discovery do not automatically allow deactivation because their full-catalog completeness is not
+  confirmed.
+
+Catalog SQL checks:
+
+```sql
+select is_active, count(*) from product_catalog group by is_active;
+
+select id, normalized_url, last_discovered_at, last_seen_refresh_id, is_active, deactivated_at, reactivated_at
+from product_catalog
+order by updated_at desc
+limit 100;
+
+select *
+from product_catalog_refresh
+order by id desc
+limit 20;
+```
 
 Переопределение через переменные окружения:
 
@@ -303,6 +352,10 @@ Limit semantics:
 - `Crawler__SuccessfulCheckIntervalHours`
 - `Crawler__CatalogFailureBaseDelayMinutes`
 - `Crawler__CatalogFailureMaxDelayHours`
+- `Crawler__CatalogDeactivationEnabled`
+- `Crawler__CatalogMissingGracePeriodDays`
+- `Crawler__CatalogMinimumExpectedUrls`
+- `Crawler__CatalogMinimumPreviousRatio`
 - `Crawler__MaxUrls`
 - `Crawler__MaxCategoryPagesPerSeed`
 - `Crawler__MaxConcurrency`

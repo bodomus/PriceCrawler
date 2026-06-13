@@ -255,9 +255,20 @@ public sealed class CollectProductPricesUseCaseTests
         public int LastLimit { get; private set; }
 
         public Task<ProductCatalogUpsertResult> UpsertDiscoveredAsync(
+            long refreshId,
             IReadOnlyCollection<ProductCatalogUpsertItem> items,
             CancellationToken ct) =>
-            Task.FromResult(new ProductCatalogUpsertResult(0, 0, 0));
+            Task.FromResult(new ProductCatalogUpsertResult(0, 0, 0, 0));
+
+        public Task<int> GetActiveCountAsync(string source, CancellationToken ct) => Task.FromResult(0);
+
+        public Task<int> DeactivateMissingAsync(
+            string source,
+            long currentRefreshId,
+            DateTimeOffset notSeenSinceUtc,
+            DateTimeOffset deactivatedAtUtc,
+            CancellationToken ct) =>
+            Task.FromResult(0);
 
         public Task<IReadOnlyList<ProductCatalogItem>> GetDueProductsAsync(
             int limit,
