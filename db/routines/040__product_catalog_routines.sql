@@ -275,3 +275,30 @@ set last_checked_at    = p_attempted_at,
 where id = p_catalog_item_id;
 end;
 $$;
+
+create
+or replace function product_catalog_release_reservations(
+    p_catalog_item_ids bigint[])
+returns integer
+language plpgsql
+as $$
+declare
+v_count integer;
+begin
+with released as (
+update product_catalog catalog
+set reserved_at = null, reserved_until = null, reserved_by = null, updated_at = now()
+where catalog.id = any (coalesce (p_catalog_item_ids
+    , array[]::bigint[]))
+  and (catalog.reserved_at is not null
+   or catalog.reserved_until is not null
+   or catalog.reserved_by is not null)
+    returning 1
+    )
+select count(*)
+into v_count
+from released;
+
+return coalesce(v_count, 0);
+end;
+$$;

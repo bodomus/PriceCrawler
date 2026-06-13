@@ -342,6 +342,9 @@ public sealed class RefreshProductCatalogUseCaseTests
         public Task MarkFailedAsync(ProductCatalogCheckFailure failure, CancellationToken ct) =>
             Task.CompletedTask;
 
+        public Task<int> ReleaseReservationsAsync(IReadOnlyCollection<long> catalogItemIds, CancellationToken ct) =>
+            Task.FromResult(0);
+
         public Task<ProductCatalogItem?> GetBySourceAndNormalizedUrlAsync(
             string source,
             string normalizedUrl,

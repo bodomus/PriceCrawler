@@ -86,6 +86,20 @@ public sealed class PgProductCatalogRepository(PgRoutineExecutor routineExecutor
                 .AddParameter("p_next_check_at", failure.NextCheckAtUtc.UtcDateTime),
             ct);
 
+    public async Task<int> ReleaseReservationsAsync(IReadOnlyCollection<long> catalogItemIds, CancellationToken ct)
+    {
+        if (catalogItemIds.Count == 0)
+        {
+            return 0;
+        }
+
+        return await routineExecutor.ExecuteScalarAsync<int?>(
+                   DbRoutineCall.ScalarFunction("product_catalog_release_reservations")
+                       .AddParameter("p_catalog_item_ids", catalogItemIds.Distinct().ToArray()),
+                   ct)
+               ?? 0;
+    }
+
     public async Task<ProductCatalogItem?> GetBySourceAndNormalizedUrlAsync(
         string source,
         string normalizedUrl,

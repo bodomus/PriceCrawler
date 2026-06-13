@@ -23,6 +23,10 @@ public interface IProductCatalogRepository
         ProductCatalogCheckFailure failure,
         CancellationToken ct);
 
+    Task<int> ReleaseReservationsAsync(
+        IReadOnlyCollection<long> catalogItemIds,
+        CancellationToken ct);
+
     Task<ProductCatalogItem?> GetByIdAsync(
         long id,
         CancellationToken ct);

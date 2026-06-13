@@ -69,7 +69,22 @@ public sealed class CollectProductPricesUseCase(
                     BuildIdempotencyKey(runId, item.Id, item.NormalizedUrl),
                     item.Id))
                 .ToList();
-            var enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
+            int enqueued;
+            try
+            {
+                enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
+            }
+            catch
+            {
+                await ReleaseCatalogReservationsAsync(selected, ct);
+                throw;
+            }
+
+            if (enqueued < selected.Count)
+            {
+                await ReleaseCatalogReservationsAsync(selected.Skip(enqueued).ToList(), ct);
+            }
+
             logger.LogInformation(
                 "Price collection queue seeded. RunId={RunId}; Selected={Selected}; Enqueued={Enqueued}",
                 runId,
@@ -118,6 +133,7 @@ public sealed class CollectProductPricesUseCase(
             await queueProcessor.DrainQueueAsync(runId, opt, queueOpt, callbacks, ct);
             var stats = await queueRepository.GetRunStatsAsync(runId, ct);
             var runStatus = stats.Dead > 0 ? RunStatus.Error : RunStatus.Ok;
+            var failedCount = stats.Retry + stats.Dead;
             var note =
                 $"selected={selected.Count}, enqueued={enqueued}, succeeded={stats.Succeeded}, retry={stats.Retry}, dead={stats.Dead}";
 
@@ -139,7 +155,7 @@ public sealed class CollectProductPricesUseCase(
                 selected.Count,
                 enqueued,
                 stats.Succeeded,
-                stats.Dead,
+                failedCount,
                 stats.Retry,
                 stats.Dead,
                 stats.Dead > 0 ? "price_collection_dead_items" : null,
@@ -195,5 +211,23 @@ public sealed class CollectProductPricesUseCase(
         var bytes = Encoding.UTF8.GetBytes($"{runId}:{catalogItemId}:{normalizedUrl.Trim()}");
         var hash = sha.ComputeHash(bytes);
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private async Task ReleaseCatalogReservationsAsync(
+        IReadOnlyCollection<ProductCatalogItem> catalogItems,
+        CancellationToken ct)
+    {
+        if (catalogItems.Count == 0)
+        {
+            return;
+        }
+
+        var released = await productCatalogRepository.ReleaseReservationsAsync(
+            catalogItems.Select(x => x.Id).ToArray(),
+            ct);
+        logger.LogWarning(
+            "Released catalog reservations after queue enqueue mismatch. Released={Released}; Requested={Requested}",
+            released,
+            catalogItems.Count);
     }
 }

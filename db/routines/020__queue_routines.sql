@@ -30,17 +30,22 @@ declare
 v_count integer;
 v_catalog_ids
 bigint[];
+v_expected
+integer;
 begin
+v_expected
+:= coalesce(array_length(p_urls, 1), 0);
+
 if
-coalesce(array_length(p_urls, 1), 0) <> coalesce(array_length(p_idempotency_keys, 1), 0) then
+v_expected <> coalesce(array_length(p_idempotency_keys, 1), 0) then
     raise exception 'p_urls and p_idempotency_keys length mismatch';
 end if;
 
 v_catalog_ids
-:= coalesce(p_product_catalog_ids, array_fill(null::bigint, array[coalesce(array_length(p_urls, 1), 0)]));
+:= coalesce(p_product_catalog_ids, array_fill(null::bigint, array[v_expected]));
 
 if
-coalesce(array_length(p_urls, 1), 0) <> coalesce(array_length(v_catalog_ids, 1), 0) then
+v_expected <> coalesce(array_length(v_catalog_ids, 1), 0) then
     raise exception 'p_urls and p_product_catalog_ids length mismatch';
 end if;
 
@@ -72,6 +77,11 @@ from unnest(p_urls, p_idempotency_keys, v_catalog_ids) as x(url, idempotency_key
 select count(*)
 into v_count
 from inserted;
+
+if
+coalesce(v_count, 0) <> v_expected then
+    raise exception 'price_collect_queue_enqueue inserted % of % items', coalesce(v_count, 0), v_expected;
+end if;
 
 return coalesce(v_count, 0);
 end;

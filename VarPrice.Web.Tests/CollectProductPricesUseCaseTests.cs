@@ -49,6 +49,67 @@ public sealed class CollectProductPricesUseCaseTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_OnItemSucceededThrows_DoesNotMarkQueueItemSucceeded()
+    {
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1)])
+        {
+            ThrowOnMarkChecked = true
+        };
+        var queue = new FakeQueueRepository();
+        var sut = CreateUseCase(catalog, queue, ProductExtractResult.Success(Card(), 200, 1, 1));
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal("error", result.Status);
+        Assert.Equal(0, queue.CountByStatus(QueueItemStatuses.Succeeded));
+        Assert.Equal(1, queue.CountByStatus(QueueItemStatuses.Dead));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FailedCount_IsRetryPlusDead()
+    {
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1)]);
+        var queue = new FakeQueueRepository
+        {
+            StatsOverride = new QueueRunStats(0, 0, 2, 3, 4)
+        };
+        var sut = CreateUseCase(catalog, queue, ProductExtractResult.Success(Card(), 200, 1, 1));
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(6, result.FailedCount);
+        Assert.Equal(2, result.RetryCount);
+        Assert.Equal(4, result.DeadCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PartialEnqueue_ReleasesCatalogReservationsNotQueued()
+    {
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1), CatalogItem(2), CatalogItem(3)]);
+        var queue = new FakeQueueRepository { EnqueueLimit = 1 };
+        var sut = CreateUseCase(catalog, queue, ProductExtractResult.Success(Card(), 200, 1, 1));
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(1, result.EnqueuedCount);
+        Assert.Equal([2, 3], catalog.ReleasedCatalogItemIds);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EnqueueThrows_ReleasesAllSelectedCatalogReservations()
+    {
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1), CatalogItem(2)]);
+        var queue = new FakeQueueRepository { ThrowOnEnqueue = true };
+        var sut = CreateUseCase(catalog, queue, ProductExtractResult.Success(Card(), 200, 1, 1));
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal("error", result.Status);
+        Assert.Equal("price_collection_failed", result.ErrorCode);
+        Assert.Equal([1, 2], catalog.ReleasedCatalogItemIds);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_UsesMaxProductsPerRunAsSelectionLimit()
     {
         var catalog = new FakeProductCatalogRepository([CatalogItem(1), CatalogItem(2), CatalogItem(3)]);
@@ -189,6 +250,8 @@ public sealed class CollectProductPricesUseCaseTests
         public FakeIngestionRunRepository Ingestion { get; } = new();
         public List<ProductCatalogCheckSuccess> Checked { get; } = [];
         public List<ProductCatalogCheckFailure> Failed { get; } = [];
+        public List<long> ReleasedCatalogItemIds { get; } = [];
+        public bool ThrowOnMarkChecked { get; init; }
         public int LastLimit { get; private set; }
 
         public Task<ProductCatalogUpsertResult> UpsertDiscoveredAsync(
@@ -209,6 +272,11 @@ public sealed class CollectProductPricesUseCaseTests
 
         public Task MarkCheckedAsync(ProductCatalogCheckSuccess success, CancellationToken ct)
         {
+            if (ThrowOnMarkChecked)
+            {
+                throw new InvalidOperationException("catalog update failed");
+            }
+
             Checked.Add(success);
             return Task.CompletedTask;
         }
@@ -221,6 +289,12 @@ public sealed class CollectProductPricesUseCaseTests
 
         public Task<ProductCatalogItem?> GetByIdAsync(long id, CancellationToken ct) =>
             Task.FromResult<ProductCatalogItem?>(due.FirstOrDefault(x => x.Id == id));
+
+        public Task<int> ReleaseReservationsAsync(IReadOnlyCollection<long> catalogItemIds, CancellationToken ct)
+        {
+            ReleasedCatalogItemIds.AddRange(catalogItemIds);
+            return Task.FromResult(catalogItemIds.Count);
+        }
 
         public Task<ProductCatalogItem?> GetBySourceAndNormalizedUrlAsync(
             string source,
@@ -271,6 +345,11 @@ public sealed class CollectProductPricesUseCaseTests
         private readonly Dictionary<long, QueueRow> _rows = [];
         private long _nextId = 1;
         public int TotalEnqueued => _rows.Count;
+        public int? EnqueueLimit { get; init; }
+        public bool ThrowOnEnqueue { get; init; }
+        public QueueRunStats? StatsOverride { get; init; }
+
+        public int CountByStatus(string status) => _rows.Values.Count(x => x.Status == status);
 
         public Task<int> EnqueueAsync(
             long runId,
@@ -278,7 +357,16 @@ public sealed class CollectProductPricesUseCaseTests
             int maxAttempts,
             CancellationToken ct)
         {
-            foreach (var item in items)
+            if (ThrowOnEnqueue)
+            {
+                throw new InvalidOperationException("enqueue failed");
+            }
+
+            var itemsToInsert = (EnqueueLimit is null
+                    ? items
+                    : items.Take(EnqueueLimit.Value))
+                .ToList();
+            foreach (var item in itemsToInsert)
             {
                 _rows[_nextId] = new QueueRow
                 {
@@ -293,7 +381,7 @@ public sealed class CollectProductPricesUseCaseTests
                 _nextId++;
             }
 
-            return Task.FromResult(items.Count);
+            return Task.FromResult(itemsToInsert.Count);
         }
 
         public Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(
@@ -358,6 +446,11 @@ public sealed class CollectProductPricesUseCaseTests
 
         public Task<QueueRunStats> GetRunStatsAsync(long runId, CancellationToken ct)
         {
+            if (StatsOverride is not null)
+            {
+                return Task.FromResult(StatsOverride);
+            }
+
             var rows = _rows.Values.Where(x => x.RunId == runId).ToList();
             return Task.FromResult(new QueueRunStats(
                 rows.Count(x => x.Status == QueueItemStatuses.Pending),

@@ -151,12 +151,12 @@ public sealed class PriceCollectionQueueProcessor(
                     ct);
             }
 
-            await queueRepository.MarkSucceededAsync(item.Id, ct);
             if (callbacks?.OnItemSucceeded is not null)
             {
                 await callbacks.OnItemSucceeded(item, card, writeResult, extractResult, ct);
             }
 
+            await queueRepository.MarkSucceededAsync(item.Id, ct);
             progressReporter.IncrementChecked();
             progressReporter.IncrementSuccessful();
 

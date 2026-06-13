@@ -334,6 +334,33 @@ public sealed class ProductCatalogRepositoryIntegrationTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    public async Task GetDueProductsAsync_SameTimestamps_AreOrderedById()
+    {
+        var repo = await CreatePreparedRepositoryAsync();
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        await ExecuteAsync(
+            conn,
+            """
+            insert into product_catalog(source, url, normalized_url, first_discovered_at, last_discovered_at, last_checked_at, next_check_at, is_active)
+            values
+                ('varus', 'https://example/c', 'https://example/c', now(), now(), '2026-06-01T10:00:00Z', '2026-06-12T09:00:00Z', true),
+                ('varus', 'https://example/a', 'https://example/a', now(), now(), '2026-06-01T10:00:00Z', '2026-06-12T09:00:00Z', true),
+                ('varus', 'https://example/b', 'https://example/b', now(), now(), '2026-06-01T10:00:00Z', '2026-06-12T09:00:00Z', true);
+            """);
+
+        var due = await repo.GetDueProductsAsync(
+            3,
+            new DateTimeOffset(2026, 06, 12, 10, 0, 0, TimeSpan.Zero),
+            TimeSpan.FromMinutes(30),
+            "test-worker",
+            CancellationToken.None);
+
+        Assert.Equal(due.OrderBy(x => x.Id).Select(x => x.Id), due.Select(x => x.Id));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task GetDueProductsAsync_ActiveReservationIsSkippedAndExpiredReservationIsReused()
     {
         var repo = await CreatePreparedRepositoryAsync();
