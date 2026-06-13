@@ -42,6 +42,7 @@ public sealed class RefreshProductCatalogUseCase(
                 ProductCatalogSource,
                 discoverySource,
                 DateTimeOffset.UtcNow,
+                GetRunningTimeout(options),
                 ct);
 
             if (refreshId <= 0)
@@ -263,18 +264,6 @@ public sealed class RefreshProductCatalogUseCase(
                     safety.Reason);
             }
 
-            await refreshRepository.CompleteAsync(
-                refreshId,
-                new ProductCatalogRefreshCompletion(
-                    discoveredCount,
-                    acceptedCount,
-                    insertedCount,
-                    updatedCount,
-                    deactivatedCount,
-                    reactivatedCount,
-                    DateTimeOffset.UtcNow),
-                ct);
-
             var note = BuildNote(
                 discoverySource,
                 refreshId,
@@ -289,7 +278,40 @@ public sealed class RefreshProductCatalogUseCase(
                 safety.Reason,
                 null);
 
-            await crawlerRunRepository.FinishAsync(runId, RunStatus.Ok, note, ct);
+            try
+            {
+                await refreshRepository.CompleteWithRunAsync(
+                    refreshId,
+                    runId,
+                    new ProductCatalogRefreshCompletion(
+                        discoveredCount,
+                        acceptedCount,
+                        insertedCount,
+                        updatedCount,
+                        deactivatedCount,
+                        reactivatedCount,
+                        DateTimeOffset.UtcNow),
+                    note,
+                    ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return await FinishFailureAsync(
+                    runId,
+                    refreshId,
+                    "catalog_refresh_finalize_failed",
+                    discoverySource,
+                    discoveredCount,
+                    acceptedCount,
+                    insertedCount,
+                    updatedCount,
+                    reactivatedCount,
+                    deactivatedCount,
+                    skippedCount,
+                    $"catalog refresh finalization failed: {TrimMessage(ex.Message)}",
+                    ex,
+                    CancellationToken.None);
+            }
 
             logger.LogInformation(
                 "Product catalog refresh completed. RunId={RunId}; RefreshId={RefreshId}; Inserted={Inserted}; Updated={Updated}; Reactivated={Reactivated}; Deactivated={Deactivated}",
@@ -321,14 +343,19 @@ public sealed class RefreshProductCatalogUseCase(
         {
             if (refreshId > 0)
             {
-                await TryFailRefreshAsync(
+                await TryFailRefreshAndRunAsync(
                     refreshId,
+                    runId,
                     ProductCatalogRefreshStatuses.Cancelled,
                     "catalog_refresh_cancelled",
+                    "catalog refresh cancelled",
                     "catalog refresh cancelled");
             }
+            else
+            {
+                await TryFinishFailedRunAsync(runId, "catalog refresh cancelled");
+            }
 
-            await TryFinishFailedRunAsync(runId, "catalog refresh cancelled");
             throw;
         }
     }
@@ -349,15 +376,6 @@ public sealed class RefreshProductCatalogUseCase(
         Exception? exception,
         CancellationToken ct)
     {
-        if (refreshId > 0)
-        {
-            await TryFailRefreshAsync(
-                refreshId,
-                ProductCatalogRefreshStatuses.Error,
-                errorCode,
-                message);
-        }
-
         var note = BuildNote(
             discoverySource,
             refreshId,
@@ -374,7 +392,23 @@ public sealed class RefreshProductCatalogUseCase(
 
         try
         {
-            await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, note, ct);
+            if (refreshId > 0)
+            {
+                await refreshRepository.FailWithRunAsync(
+                    refreshId,
+                    runId,
+                    ProductCatalogRefreshStatuses.Error,
+                    errorCode,
+                    TrimMessage(message),
+                    DateTimeOffset.UtcNow,
+                    RunStatus.Error,
+                    note,
+                    ct);
+            }
+            else
+            {
+                await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, note, ct);
+            }
         }
         catch (Exception finishException)
         {
@@ -421,27 +455,33 @@ public sealed class RefreshProductCatalogUseCase(
             note);
     }
 
-    private async Task TryFailRefreshAsync(
+    private async Task TryFailRefreshAndRunAsync(
         long refreshId,
+        long runId,
         string status,
         string errorCode,
-        string? errorMessage)
+        string? errorMessage,
+        string? runNote)
     {
         try
         {
-            await refreshRepository.FailAsync(
+            await refreshRepository.FailWithRunAsync(
                 refreshId,
+                runId,
                 status,
                 errorCode,
                 TrimMessage(errorMessage),
                 DateTimeOffset.UtcNow,
+                RunStatus.Error,
+                runNote,
                 CancellationToken.None);
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
-                "Product catalog refresh failed to update refresh session. RefreshId={RefreshId}; ErrorCode={ErrorCode}",
+                "Product catalog refresh failed to atomically update refresh session and crawler run. RunId={RunId}; RefreshId={RefreshId}; ErrorCode={ErrorCode}",
+                runId,
                 refreshId,
                 errorCode);
         }
@@ -480,6 +520,9 @@ public sealed class RefreshProductCatalogUseCase(
             : string.Equals(discoveryMode, ProductUrlDiscoveryModes.Sitemap, StringComparison.OrdinalIgnoreCase)
                 ? "sitemap"
                 : "category-seed";
+
+    private static TimeSpan GetRunningTimeout(CrawlerOptions options) =>
+        TimeSpan.FromMinutes(Math.Max(1, options.CatalogRefreshRunningTimeoutMinutes));
 
     private static string ToDiscoverySource(ProductUrlDiscoverySourceKind sourceKind) =>
         sourceKind switch

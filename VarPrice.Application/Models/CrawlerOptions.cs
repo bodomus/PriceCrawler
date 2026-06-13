@@ -84,6 +84,8 @@ public sealed class CrawlerOptions
 
     public bool CatalogDeactivationEnabled { get; set; } = true;
 
+    public int CatalogRefreshRunningTimeoutMinutes { get; set; } = 360;
+
     /// <summary>
     /// Максимальное количество URL-кандидатов, которое discovery может собрать или передать дальше.
     /// Используется как общий верхний предел для sitemap/category discovery и дополнительно ограничивает итоговый набор вместе с `MaxProductsPerRun`.

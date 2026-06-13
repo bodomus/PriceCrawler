@@ -293,6 +293,7 @@ dotnet run --project VarPrice.Worker -- --collect-prices
 - `Crawler:CatalogMissingGracePeriodDays` (default `14`)
 - `Crawler:CatalogMinimumExpectedUrls` (default `1000`)
 - `Crawler:CatalogMinimumPreviousRatio` (default `0.5`)
+- `Crawler:CatalogRefreshRunningTimeoutMinutes` (default `360`)
 - `Crawler:MaxUrls`
 - `Crawler:MaxCategoryPagesPerSeed` (default `10`)
 - `Crawler:MaxConcurrency` (default `4`)
@@ -321,6 +322,10 @@ Limit semantics:
 - `Crawler:VegetablesUrlContains` is still respected by discovery; use an empty value for a full catalog refresh.
 - Catalog deactivation safety guards: grace period, absolute minimum accepted URL count, accepted/current-active ratio,
   empty scoped filter, supported full discovery mode (`CategorySeeds`), and a single running refresh per source.
+- A stale `product_catalog_refresh` stuck in `running` longer than `CatalogRefreshRunningTimeoutMinutes` is marked
+  `error` with `catalog_refresh_abandoned` before a new refresh session starts.
+- Refresh session and `crawler_run` final statuses are written by one PostgreSQL routine during catalog-refresh
+  completion/failure.
 - `Api` and `Sitemap` discovery do not automatically allow deactivation because their full-catalog completeness is not
   confirmed.
 
@@ -356,6 +361,7 @@ limit 20;
 - `Crawler__CatalogMissingGracePeriodDays`
 - `Crawler__CatalogMinimumExpectedUrls`
 - `Crawler__CatalogMinimumPreviousRatio`
+- `Crawler__CatalogRefreshRunningTimeoutMinutes`
 - `Crawler__MaxUrls`
 - `Crawler__MaxCategoryPagesPerSeed`
 - `Crawler__MaxConcurrency`

@@ -51,6 +51,8 @@ product_catalog
 - Catalog row lifecycle is `discovered -> active -> missing during refresh -> grace period -> inactive -> discovered again -> reactivated`.
 - `is_active = false` is a soft deactivation only. It does not delete `product_catalog`, `product`, queue history, or price snapshots.
 - Deactivation is allowed only for full `category-seed` discovery with no scoped `VegetablesUrlContains` filter, after minimum URL and previous active ratio checks pass.
+- Stale running refresh sessions older than `Crawler:CatalogRefreshRunningTimeoutMinutes` are marked `error` with `catalog_refresh_abandoned` before a new session starts.
+- Refresh session and `crawler_run` terminal statuses are finalized through one PostgreSQL routine to avoid divergent states.
 - `Crawler:MaxUrls` limits discovery/catalog refresh. `Crawler:MaxProductsPerRun` limits only price collection queue
   size.
 - Discovery source (`category-seed`, `sitemap`, `api`) is reported in result/logs; catalog item source remains `varus`.

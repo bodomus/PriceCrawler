@@ -42,11 +42,11 @@ public sealed class RefreshProductCatalogUseCaseTests
         Assert.Equal(1, result.DeactivatedCount);
         Assert.True(result.DeactivationExecuted);
         Assert.Null(result.DeactivationSkipReason);
-        Assert.Equal(RunStatus.Ok, crawler.LastStatus);
+        Assert.Equal(RunStatus.Ok, refresh.LastRunStatus);
         Assert.Equal(
             [
                 "crawler_start", "refresh_start", "active_count", "discover", "upsert", "deactivate",
-                "refresh_complete", "crawler_finish"
+                "refresh_complete"
             ],
             calls);
         Assert.Equal(1001, catalog.LastRefreshId);
@@ -65,7 +65,7 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
         Assert.Equal("catalog_discovery_failed", result.ErrorCode);
-        Assert.Equal(RunStatus.Error, crawler.LastStatus);
+        Assert.Equal(RunStatus.Error, refresh.LastRunStatus);
         Assert.Equal("error", refresh.LastFailStatus);
         Assert.Equal(0, catalog.DeactivateCallCount);
     }
@@ -112,7 +112,7 @@ public sealed class RefreshProductCatalogUseCaseTests
         Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
         Assert.Equal("catalog_refresh_below_minimum", result.ErrorCode);
         Assert.Equal(0, catalog.DeactivateCallCount);
-        Assert.Equal(RunStatus.Error, crawler.LastStatus);
+        Assert.Equal(RunStatus.Error, refresh.LastRunStatus);
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => sut.ExecuteAsync(cts.Token));
 
-        Assert.Equal(RunStatus.Error, crawler.LastStatus);
+        Assert.Equal(RunStatus.Error, refresh.LastRunStatus);
         Assert.Equal("cancelled", refresh.LastFailStatus);
         Assert.Equal(0, catalog.DeactivateCallCount);
     }
@@ -214,7 +214,29 @@ public sealed class RefreshProductCatalogUseCaseTests
         Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
         Assert.Equal("catalog_deactivation_failed", result.ErrorCode);
         Assert.Equal("catalog_deactivation_failed", refresh.LastErrorCode);
-        Assert.Equal(RunStatus.Error, crawler.LastStatus);
+        Assert.Equal(RunStatus.Error, refresh.LastRunStatus);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CompletionFinalizationFails_ReturnsControlledError()
+    {
+        var crawler = new FakeCrawlerRunRepository([]);
+        var refresh = new FakeRefreshRepository([]) { ThrowOnCompleteWithRun = true };
+        var catalog = new FakeProductCatalogRepository([])
+        {
+            Result = new ProductCatalogUpsertResult(1, 1, 0, 0)
+        };
+        var sut = CreateUseCase(
+            new FakeDiscoveryService([], ["https://varus.ua/product-a"]),
+            catalog,
+            refresh,
+            crawler);
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(RefreshProductCatalogStatus.Error, result.Status);
+        Assert.Equal("catalog_refresh_finalize_failed", result.ErrorCode);
+        Assert.Equal("catalog_refresh_finalize_failed", refresh.LastErrorCode);
     }
 
     private static RefreshProductCatalogUseCase CreateUseCase(
@@ -356,10 +378,15 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         public string? LastErrorCode { get; private set; }
 
+        public RunStatus LastRunStatus { get; private set; } = RunStatus.Running;
+
+        public bool ThrowOnCompleteWithRun { get; init; }
+
         public Task<long> StartAsync(
             string source,
             string discoverySource,
             DateTimeOffset startedAtUtc,
+            TimeSpan runningTimeout,
             CancellationToken ct)
         {
             calls.Add("refresh_start");
@@ -375,6 +402,23 @@ public sealed class RefreshProductCatalogUseCaseTests
             return Task.CompletedTask;
         }
 
+        public Task CompleteWithRunAsync(
+            long refreshId,
+            long runId,
+            ProductCatalogRefreshCompletion completion,
+            string? runNote,
+            CancellationToken ct)
+        {
+            calls.Add("refresh_complete");
+            if (ThrowOnCompleteWithRun)
+            {
+                throw new InvalidOperationException("finalize failed");
+            }
+
+            LastRunStatus = RunStatus.Ok;
+            return Task.CompletedTask;
+        }
+
         public Task FailAsync(
             long refreshId,
             string status,
@@ -385,6 +429,23 @@ public sealed class RefreshProductCatalogUseCaseTests
         {
             LastFailStatus = status;
             LastErrorCode = errorCode;
+            return Task.CompletedTask;
+        }
+
+        public Task FailWithRunAsync(
+            long refreshId,
+            long runId,
+            string status,
+            string errorCode,
+            string? errorMessage,
+            DateTimeOffset finishedAtUtc,
+            RunStatus runStatus,
+            string? runNote,
+            CancellationToken ct)
+        {
+            LastFailStatus = status;
+            LastErrorCode = errorCode;
+            LastRunStatus = runStatus;
             return Task.CompletedTask;
         }
 

@@ -2,13 +2,24 @@ create
 or replace function product_catalog_refresh_start(
     p_source text,
     p_discovery_source text,
-    p_started_at timestamptz)
+    p_started_at timestamptz,
+    p_abandoned_before timestamptz)
 returns bigint
 language plpgsql
 as $$
 declare
 v_id bigint;
 begin
+update product_catalog_refresh
+set status        = 'error',
+    finished_at   = coalesce(p_started_at, now()),
+    error_code    = 'catalog_refresh_abandoned',
+    error_message = 'running refresh session exceeded configured timeout',
+    updated_at    = now()
+where source = routine_support_trim_required(p_source, 50)
+  and status = 'running'
+  and started_at < p_abandoned_before;
+
 if
 exists (
     select 1
@@ -34,6 +45,54 @@ values (routine_support_trim_required(p_source, 50),
 into v_id;
 
 return v_id;
+end;
+$$;
+
+create
+or replace procedure product_catalog_refresh_complete_with_run(
+    p_refresh_id bigint,
+    p_run_id bigint,
+    p_discovered_count integer,
+    p_accepted_count integer,
+    p_inserted_count integer,
+    p_updated_count integer,
+    p_deactivated_count integer,
+    p_reactivated_count integer,
+    p_finished_at timestamptz,
+    p_run_note text default null)
+language plpgsql
+as $$
+begin
+update product_catalog_refresh
+set finished_at       = p_finished_at,
+    status            = 'ok',
+    discovered_count  = greatest(coalesce(p_discovered_count, 0), 0),
+    accepted_count    = greatest(coalesce(p_accepted_count, 0), 0),
+    inserted_count    = greatest(coalesce(p_inserted_count, 0), 0),
+    updated_count     = greatest(coalesce(p_updated_count, 0), 0),
+    deactivated_count = greatest(coalesce(p_deactivated_count, 0), 0),
+    reactivated_count = greatest(coalesce(p_reactivated_count, 0), 0),
+    error_code        = null,
+    error_message     = null,
+    updated_at        = now()
+where id = p_refresh_id
+  and status = 'running';
+
+if
+not found then
+    raise exception 'Running product_catalog_refresh % was not found for completion.', p_refresh_id;
+end if;
+
+update crawler_run
+set status      = routine_support_run_status('ok'),
+    note        = routine_support_trim_nullable(p_run_note, 255),
+    finished_at = p_finished_at
+where id = p_run_id;
+
+if
+not found then
+    raise exception 'crawler_run % was not found for catalog refresh completion.', p_run_id;
+end if;
 end;
 $$;
 
@@ -64,6 +123,49 @@ set finished_at       = p_finished_at,
     updated_at        = now()
 where id = p_refresh_id
   and status = 'running';
+end;
+$$;
+
+create
+or replace procedure product_catalog_refresh_fail_with_run(
+    p_refresh_id bigint,
+    p_run_id bigint,
+    p_status text,
+    p_error_code text,
+    p_error_message text,
+    p_finished_at timestamptz,
+    p_run_status text,
+    p_run_note text default null)
+language plpgsql
+as $$
+begin
+update product_catalog_refresh
+set finished_at   = p_finished_at,
+    status        = case
+                        when routine_support_trim_required(p_status, 20) = 'cancelled' then 'cancelled'
+                        else 'error'
+        end,
+    error_code    = routine_support_trim_required(p_error_code, 100),
+    error_message = routine_support_trim_nullable(p_error_message, 1000),
+    updated_at    = now()
+where id = p_refresh_id
+  and status = 'running';
+
+if
+not found then
+    raise exception 'Running product_catalog_refresh % was not found for failure.', p_refresh_id;
+end if;
+
+update crawler_run
+set status      = routine_support_run_status(p_run_status),
+    note        = routine_support_trim_nullable(p_run_note, 255),
+    finished_at = p_finished_at
+where id = p_run_id;
+
+if
+not found then
+    raise exception 'crawler_run % was not found for catalog refresh failure.', p_run_id;
+end if;
 end;
 $$;
 

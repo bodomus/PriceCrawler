@@ -75,6 +75,7 @@ These keys are used by `RefreshProductCatalogUseCase` after catalog discovery/up
 | `CatalogMissingGracePeriodDays` | `int` | `14` | Missing active rows are deactivated only when `last_discovered_at < now - grace period`; values below `1` become `1`. |
 | `CatalogMinimumExpectedUrls` | `int` | `1000` | Absolute accepted URL threshold required before deactivation; values below `1` become `1`. |
 | `CatalogMinimumPreviousRatio` | `double` | `0.5` | Accepted/current-active ratio threshold. Valid range is `0.0 < value <= 1.0`; invalid values become `0.5`. |
+| `CatalogRefreshRunningTimeoutMinutes` | `int` | `360` | Running refresh sessions older than this timeout are marked `error` with `catalog_refresh_abandoned` before a new refresh starts. Values below `1` become `1`. |
 
 Example:
 
@@ -84,12 +85,13 @@ Example:
     "CatalogDeactivationEnabled": true,
     "CatalogMissingGracePeriodDays": 14,
     "CatalogMinimumExpectedUrls": 1000,
-    "CatalogMinimumPreviousRatio": 0.5
+    "CatalogMinimumPreviousRatio": 0.5,
+    "CatalogRefreshRunningTimeoutMinutes": 360
   }
 }
 ```
 
-Deactivation runs only after a full `CategorySeeds` refresh with empty `VegetablesUrlContains`, successful discovery/upsert, and passing safety thresholds. `Api` and `Sitemap` discovery modes currently skip deactivation because their full-catalog completeness is not confirmed.
+Deactivation runs only after a full `CategorySeeds` refresh with empty `VegetablesUrlContains`, successful discovery/upsert, and passing safety thresholds. `Api` and `Sitemap` discovery modes currently skip deactivation because their full-catalog completeness is not confirmed. Refresh and crawler run finalization is performed by one PostgreSQL routine so their terminal statuses do not diverge.
 
 Useful SQL checks:
 

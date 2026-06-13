@@ -704,6 +704,55 @@ public sealed class ProductCatalogRepositoryIntegrationTests
         Assert.Equal(0, second);
     }
 
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task CatalogRefresh_StaleRunningSession_IsAbandonedBeforeNewStart()
+    {
+        var repo = await CreatePreparedRefreshRepositoryAsync();
+
+        var first = await repo.StartAsync("varus", "category-seed", Now(1), TimeSpan.FromHours(6),
+            CancellationToken.None);
+        var second = await repo.StartAsync("varus", "category-seed", Now(2), TimeSpan.FromMinutes(30),
+            CancellationToken.None);
+
+        var firstSession = await repo.GetByIdAsync(first, CancellationToken.None);
+        var secondSession = await repo.GetByIdAsync(second, CancellationToken.None);
+
+        Assert.True(first > 0);
+        Assert.True(second > 0);
+        Assert.NotNull(firstSession);
+        Assert.Equal("error", firstSession.Status);
+        Assert.Equal("catalog_refresh_abandoned", firstSession.ErrorCode);
+        Assert.NotNull(secondSession);
+        Assert.Equal("running", secondSession.Status);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ProductCatalogRefresh_CompleteWithRun_UpdatesRefreshAndCrawlerRunAtomically()
+    {
+        var repo = await CreatePreparedRefreshRepositoryAsync();
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        var runId = await ScalarLongAsync(conn,
+            "insert into crawler_run(status, source) values('running', 'catalog-refresh') returning id;");
+        var refreshId = await repo.StartAsync("varus", "category-seed", Now(1), CancellationToken.None);
+
+        await repo.CompleteWithRunAsync(
+            refreshId,
+            runId,
+            new ProductCatalogRefreshCompletion(2, 2, 1, 1, 0, 0, Now(2)),
+            "done",
+            CancellationToken.None);
+
+        var session = await repo.GetByIdAsync(refreshId, CancellationToken.None);
+
+        Assert.NotNull(session);
+        Assert.Equal("ok", session.Status);
+        Assert.Equal("ok", await ScalarStringAsync(conn, $"select status from crawler_run where id = {runId};"));
+        Assert.Equal("done", await ScalarStringAsync(conn, $"select note from crawler_run where id = {runId};"));
+    }
+
     private static async Task<PgProductCatalogRepository> CreatePreparedRepositoryAsync()
     {
         await PrepareSchemaAsync();
