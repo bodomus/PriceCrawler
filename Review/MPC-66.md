@@ -24,6 +24,8 @@ details, recent filters/limit и aggregate диапазон. Добавлены 
 ## Проверка
 
 - SQL named argument в `make_interval` проверен в raw-файле и исправлен с `secs = >` на `secs =>`.
+- После последующих правок строки оператор повторно проверен: source и build-output содержат raw bytes `3D-3E`, поиск
+  `secs\s+=\s+>` по SQL assets пуст, а deployed `pg_get_functiondef` подтверждает корректный `secs =>`.
 - `public` schema базы `varprice_test` полностью удалена и создана заново; bootstrap с нуля успешно создал schema и routines.
 - Clean-bootstrap integration test сохранил stage `queue-processing` (`duration_ms=25`, `item_count=3`), а
   `pg_get_functiondef(crawler_run_complete)` подтвердил корректный named argument.
