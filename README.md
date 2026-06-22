@@ -501,6 +501,8 @@ order by id;
 - `products_created` и `products_updated` берутся из явных флагов `price_observation_store`. Existing product считается
   updated только при изменении его бизнес-полей; повторное observation/no-op не увеличивает `products_updated`.
 - Общие поля: `run_type`, `discovery_source`, `duration_ms`, `error_code`, `error_message`.
+- Семантика `run-finalization`: application finalization (`refresh`/`ingestion` completion) плюс overhead DB routine
+  `crawler_run_complete`, которая сохраняет итоговые counters и batch stages.
 - Worker печатает эти же значения из result use case. `run-all` последовательно выводит два независимых summary.
 - Каждый invocation Worker получает `ExecutionId`; он добавляется в structured log context и CLI `run-all`, связывая
   catalog и price runs одной команды без изменения DB schema.
