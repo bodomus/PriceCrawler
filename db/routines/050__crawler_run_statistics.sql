@@ -76,7 +76,7 @@ v_db_finalization_ms
 insert into crawler_run_stage(run_id, stage, started_at, finished_at, duration_ms, item_count)
 select p_run_id,
        routine_support_trim_required(x.stage, 100),
-       v_finished_at - make_interval(secs = > timing.effective_duration_ms::double precision / 1000.0),
+       v_finished_at - make_interval(secs => timing.effective_duration_ms::double precision / 1000.0),
        v_finished_at,
        timing.effective_duration_ms,
        x.item_count
