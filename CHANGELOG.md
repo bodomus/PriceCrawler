@@ -32,3 +32,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Fixed
 - Removed stale documentation assumptions about `city`, `product_errors`, `discount_percent`, and `last_seen_at`.
+- Worker positional commands are no longer forwarded to Generic Host configuration parsing; Worker configuration is loaded from the executable content root, and `--once` is rejected outside `vegetables`.

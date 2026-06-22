@@ -82,8 +82,14 @@ public static class WorkerCommandParser
             }
         }
 
+        var mode = selectedMode ?? WorkerRunMode.Vegetables;
+        if (once && mode != WorkerRunMode.Vegetables)
+        {
+            return Invalid("--once is only supported for vegetables.");
+        }
+
         return new WorkerCommandParseResult(
-            new WorkerCommand(selectedMode ?? WorkerRunMode.Vegetables, once),
+            new WorkerCommand(mode, once),
             false,
             null);
     }

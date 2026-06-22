@@ -33,8 +33,12 @@ if (commandResult.ShowHelp)
 
 var command = commandResult.Command ?? throw new InvalidOperationException("Worker command was not resolved.");
 
-var builder = Host.CreateApplicationBuilder(args);
 var executableDirectoryPath = AppContext.BaseDirectory;
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    Args = [],
+    ContentRootPath = executableDirectoryPath
+});
 var logsDirectoryPath = Path.Combine(executableDirectoryPath, "logs");
 Directory.CreateDirectory(logsDirectoryPath);
 var logFilePath = Path.Combine(logsDirectoryPath, "varprice-worker.log");
@@ -159,13 +163,6 @@ logger.LogInformation(
     result.Status,
     result.ProductsProcessed,
     result.Errors);
-
-if (command.Once)
-{
-    return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase)
-        ? WorkerCommandParser.SuccessExitCode
-        : WorkerCommandParser.FailedRunExitCode;
-}
 
 return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase)
     ? WorkerCommandParser.SuccessExitCode

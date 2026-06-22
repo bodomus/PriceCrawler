@@ -23,5 +23,7 @@ Legacy aliases должны оставаться совместимыми:
 - Неподдерживаемые команды и опции завершаются контролируемо с exit code `2`.
 - Конфликтующие режимы завершаются контролируемо с exit code `2`.
 - Help и invalid command не должны создавать host и не должны запускать DB bootstrap.
+- Worker CLI-аргументы не должны передаваться в Generic Host как configuration arguments.
+- `--once` является legacy/no-op только для `vegetables` и запрещен для остальных режимов.
 - Существующие flows `vegetables`, `catalog-refresh`, `collect-prices` должны остаться привязанными к текущим use cases.
 - Тесты должны выполняться только на тестовой базе `varprice_test`.

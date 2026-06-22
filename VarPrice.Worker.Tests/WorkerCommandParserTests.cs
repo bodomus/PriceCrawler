@@ -1,6 +1,4 @@
-using VarPrice.Worker;
-
-namespace VarPrice.Web.Tests;
+namespace VarPrice.Worker.Tests;
 
 public sealed class WorkerCommandParserTests
 {
@@ -20,7 +18,7 @@ public sealed class WorkerCommandParserTests
     }
 
     [Fact]
-    public void Parse_VegetablesOnce_SetsOnceFlag()
+    public void Parse_VegetablesOnce_SetsLegacyOnceFlag()
     {
         var result = WorkerCommandParser.Parse(["vegetables", "--once"]);
 
@@ -28,6 +26,35 @@ public sealed class WorkerCommandParserTests
         Assert.NotNull(result.Command);
         Assert.Equal(WorkerRunMode.Vegetables, result.Command.Mode);
         Assert.True(result.Command.Once);
+    }
+
+    [Theory]
+    [InlineData("catalog-refresh")]
+    [InlineData("collect-prices")]
+    public void Parse_OnceWithUnsupportedMode_ReturnsInvalidResult(string mode)
+    {
+        var result = WorkerCommandParser.Parse([mode, "--once"]);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("--once is only supported for vegetables.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void Parse_LegacyCatalogRefreshOnce_ReturnsInvalidResult()
+    {
+        var result = WorkerCommandParser.Parse(["--job", "catalog-refresh", "--once"]);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("--once is only supported for vegetables.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void Parse_LegacyCollectPricesOnce_ReturnsInvalidResult()
+    {
+        var result = WorkerCommandParser.Parse(["--collect-prices", "--once"]);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("--once is only supported for vegetables.", result.ErrorMessage);
     }
 
     [Theory]
