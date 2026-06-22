@@ -27,14 +27,34 @@ public sealed class CrawlerRunStatisticsIntegrationTests
             SnapshotsCreatedCount: 2, ErrorsCreatedCount: 1);
 
         await writer.CompleteAsync(runId, RunStatus.Error, statistics,
-            [new CrawlerRunStageTiming(CrawlerRunStages.QueueProcessing, 25, 3)], "done", "dead", "one dead", default);
+        [
+            new CrawlerRunStageTiming(CrawlerRunStages.QueueProcessing, 25, 3),
+            new CrawlerRunStageTiming(CrawlerRunStages.CatalogSelection, 5, 3),
+            new CrawlerRunStageTiming(CrawlerRunStages.QueueEnqueue, 10, 3),
+            new CrawlerRunStageTiming(CrawlerRunStages.RunFinalization, 7)
+        ], "done", "dead", "one dead", default);
 
         var details = await reader.GetByIdAsync(runId, default);
         Assert.NotNull(details);
+        Assert.Equal(CrawlerRunTypes.PriceCollection, details.RunType);
+        Assert.Equal("worker", details.Source);
+        Assert.Equal("error", details.Status);
+        Assert.True(details.DurationMs >= 0);
         Assert.Equal(3, details.Statistics.SelectedCount);
         Assert.Equal(2, details.Statistics.SnapshotsCreatedCount);
-        Assert.Single(details.StageTimings);
+        Assert.Equal("dead", details.ErrorCode);
+        Assert.Equal("one dead", details.ErrorMessage);
+        Assert.Equal("done", details.Note);
+        Assert.Equal(
+            [
+                CrawlerRunStages.QueueProcessing,
+                CrawlerRunStages.CatalogSelection,
+                CrawlerRunStages.QueueEnqueue,
+                CrawlerRunStages.RunFinalization
+            ],
+            details.StageTimings.Select(x => x.Stage));
         Assert.Equal(3, details.StageTimings[0].ItemCount);
+        Assert.True(details.StageTimings[^1].DurationMs >= 7);
 
         var recent = await reader.GetRecentAsync(50, CrawlerRunTypes.PriceCollection, "error", default);
         Assert.Contains(recent, x => x.Id == runId && x.PrimaryCount == 3);

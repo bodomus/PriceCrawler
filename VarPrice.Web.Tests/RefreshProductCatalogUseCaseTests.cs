@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
 using VarPrice.Application.UseCases;
+using VarPrice.Domain.Constants;
 using VarPrice.Domain.Enums;
 using VarPrice.Domain.Interfaces;
 using VarPrice.Domain.Models;
@@ -17,7 +18,7 @@ public sealed class RefreshProductCatalogUseCaseTests
     {
         var calls = new List<string>();
         var crawler = new FakeCrawlerRunRepository(calls);
-        var refresh = new FakeRefreshRepository(calls);
+        var refresh = new FakeRefreshRepository(calls) { CompleteDelay = TimeSpan.FromMilliseconds(20) };
         var catalog = new FakeProductCatalogRepository(calls)
         {
             ActiveCount = 2,
@@ -42,6 +43,7 @@ public sealed class RefreshProductCatalogUseCaseTests
         Assert.Equal(1, result.DeactivatedCount);
         Assert.True(result.DeactivationExecuted);
         Assert.Null(result.DeactivationSkipReason);
+        Assert.True(result.StageTimings!.Single(x => x.Stage == CrawlerRunStages.RunFinalization).DurationMs >= 10);
         Assert.Equal(RunStatus.Ok, refresh.LastRunStatus);
         Assert.Equal(
             [
@@ -88,6 +90,8 @@ public sealed class RefreshProductCatalogUseCaseTests
         Assert.Equal("catalog_upsert_failed", result.ErrorCode);
         Assert.Equal(0, catalog.DeactivateCallCount);
         Assert.Equal("catalog_upsert_failed", refresh.LastErrorCode);
+        Assert.Equal([CrawlerRunStages.Discovery], crawler.LastStageTimings.Select(x => x.Stage));
+        Assert.Equal([CrawlerRunStages.Discovery], result.StageTimings!.Select(x => x.Stage));
     }
 
     [Fact]
@@ -382,6 +386,8 @@ public sealed class RefreshProductCatalogUseCaseTests
 
         public bool ThrowOnCompleteWithRun { get; init; }
 
+        public TimeSpan CompleteDelay { get; init; }
+
         public Task<long> StartAsync(
             string source,
             string discoverySource,
@@ -402,7 +408,7 @@ public sealed class RefreshProductCatalogUseCaseTests
             return Task.CompletedTask;
         }
 
-        public Task CompleteWithRunAsync(
+        public async Task CompleteWithRunAsync(
             long refreshId,
             long runId,
             ProductCatalogRefreshCompletion completion,
@@ -410,13 +416,17 @@ public sealed class RefreshProductCatalogUseCaseTests
             CancellationToken ct)
         {
             calls.Add("refresh_complete");
+            if (CompleteDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(CompleteDelay, ct);
+            }
+
             if (ThrowOnCompleteWithRun)
             {
                 throw new InvalidOperationException("finalize failed");
             }
 
             LastRunStatus = RunStatus.Ok;
-            return Task.CompletedTask;
         }
 
         public Task FailAsync(
@@ -456,6 +466,7 @@ public sealed class RefreshProductCatalogUseCaseTests
     private sealed class FakeCrawlerRunRepository(List<string> calls) : ICrawlerRunRepository
     {
         public RunStatus LastStatus { get; private set; } = RunStatus.Running;
+        public IReadOnlyList<CrawlerRunStageTiming> LastStageTimings { get; private set; } = [];
 
         public Task<long> StartAsync(string source, CancellationToken ct)
         {
@@ -463,11 +474,28 @@ public sealed class RefreshProductCatalogUseCaseTests
             return Task.FromResult(42L);
         }
 
+        public Task<long> StartAsync(string runType, string source, string? discoverySource, CancellationToken ct)
+            => StartAsync(source, ct);
+
         public Task FinishAsync(long runId, RunStatus status, string? note, CancellationToken ct)
         {
             calls.Add("crawler_finish");
             LastStatus = status;
             return Task.CompletedTask;
+        }
+
+        public Task CompleteAsync(
+            long runId,
+            RunStatus status,
+            CrawlerRunStatistics statistics,
+            IReadOnlyCollection<CrawlerRunStageTiming> stageTimings,
+            string? note,
+            string? errorCode,
+            string? errorMessage,
+            CancellationToken ct)
+        {
+            LastStageTimings = stageTimings.ToArray();
+            return FinishAsync(runId, status, note, ct);
         }
     }
 }

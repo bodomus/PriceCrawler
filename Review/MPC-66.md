@@ -23,8 +23,28 @@ details, recent filters/limit и aggregate диапазон. Добавлены 
 
 ## Проверка
 
+- SQL named argument в `make_interval` проверен в raw-файле и исправлен с `secs = >` на `secs =>`.
+- `public` schema базы `varprice_test` полностью удалена и создана заново; bootstrap с нуля успешно создал schema и routines.
+- Clean-bootstrap integration test сохранил stage `queue-processing` (`duration_ms=25`, `item_count=3`), а
+  `pg_get_functiondef(crawler_run_complete)` подтвердил корректный named argument.
+- `crawler_run_get_by_id` возвращает явный `RETURNS TABLE(...)` projection без `select *`; C# mapper синхронизирован
+  с этим стабильным порядком. Integration test проверяет identity/status/time, все ключевые counters, errors и note.
+- `CrawlerRunMetrics` отвечает только за counters; измерение, validation и uniqueness stages вынесены в
+  `CrawlerRunStageRecorder`. Recorder и DB read model сохраняют порядок выполнения, а не алфавитную сортировку.
+- `ProductObservationWriteResult` возвращает независимые `ProductCreated`/`ProductUpdated`; no-op больше не считается
+  update. DB routine определяет update по фактическому изменению business fields, а accumulator считает только явные флаги.
+- Catalog failure path передаёт текущий ordered stage snapshot в persistence и application result; завершённые stages
+  больше не теряются при ошибке последующего этапа.
+- Typed `StartAsync` и statistics `CompleteAsync` в `ICrawlerRunRepository` обязательны для каждой реализации;
+  default fallback в legacy methods удалён, поэтому неполная реализация теперь завершается compile-time ошибкой.
+- `run-finalization` больше не записывается как константный `0`: application stopwatch измеряет refresh/ingestion
+  completion, а DB routine добавляет время собственной statistics finalization перед batch insert stages.
+- Read API валидирует и нормализует `runType` (`catalog-refresh`, `price-collection`, `legacy`) и `status`
+  (`running`, `ok`, `error`); неизвестные значения возвращают `400`, а не неоднозначный пустой `200`.
+- Worker создаёт один `ExecutionId` на invocation и помещает его в Serilog context/console/file output; `run-all`
+  выводит ID и логирует оба независимых run IDs с общей correlation, не меняя DB schema.
 - `dotnet build VarPrice.sln --no-restore`: успешно, 0 ошибок.
-- Полный suite: 208 passed, 0 failed (`VarPrice.Web.Tests` 187; `VarPrice.Worker.Tests` 21).
+- Полный suite: 219 passed, 0 failed (`VarPrice.Web.Tests` 198; `VarPrice.Worker.Tests` 21).
 - Controlled catalog (`varprice_test`): RunId 1, duration 43 ms, discovered 2, accepted 2, inserted 2, updated 0,
   reactivated 0, deactivated 0.
 - Worker collect-prices со stub и batch=2 (`varprice_test`): RunId 2, selected 2, enqueued 2, succeeded 2,

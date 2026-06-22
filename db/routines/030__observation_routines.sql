@@ -20,7 +20,8 @@ returns table(
     product_id bigint,
     snapshot_id bigint,
     snapshot_created boolean,
-    product_created boolean)
+    product_created boolean,
+    product_updated boolean)
 language plpgsql
 as $$
 declare
@@ -45,6 +46,8 @@ bigint;
 boolean := false;
     v_product_created
 boolean := false;
+    v_product_updated
+boolean := false;
     v_latest_price
 numeric(18, 2);
     v_latest_old_price
@@ -63,14 +66,29 @@ begin
             or p_old_price is not null
             or coalesce(p_in_stock, false));
 
-select product_row.id
-into v_existing_product_id
+select product_row.id,
+       product_row.external_id is distinct
+from coalesce (v_external_id, product_row.external_id)
+    or product_row.name is distinct
+from v_name
+    or product_row.url is distinct
+from v_url
+    or product_row.slug is distinct
+from v_slug
+    or product_row.pack_value is distinct
+from p_pack_value
+    or product_row.pack_unit is distinct
+from v_pack_unit
+into v_existing_product_id, v_product_updated
 from product as product_row
 where product_row.url = v_url
    or (v_external_id is not null and product_row.external_id = v_external_id)
 order by case when product_row.url = v_url then 0 else 1 end, product_row.id limit 1
     for
 update;
+
+v_product_updated
+:= coalesce(v_product_updated, false);
 
 if
 v_existing_product_id is not null then
@@ -162,6 +180,8 @@ end if;
 := v_snapshot_created;
     product_created
 := v_product_created;
+    product_updated
+:= v_product_updated;
     return
 next;
 end;

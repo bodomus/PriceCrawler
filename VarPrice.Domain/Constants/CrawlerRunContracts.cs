@@ -5,6 +5,17 @@ public static class CrawlerRunTypes
     public const string CatalogRefresh = "catalog-refresh";
     public const string PriceCollection = "price-collection";
     public const string Legacy = "legacy";
+
+    public static bool IsSupported(string value) => value is CatalogRefresh or PriceCollection or Legacy;
+}
+
+public static class CrawlerRunStatuses
+{
+    public const string Running = "running";
+    public const string Ok = "ok";
+    public const string Error = "error";
+
+    public static bool IsSupported(string value) => value is Running or Ok or Error;
 }
 
 public static class CrawlerRunStages

@@ -8,8 +8,7 @@ public interface ICrawlerRunRepository
     Task<long> StartAsync(string source, CancellationToken ct);
     Task FinishAsync(long runId, RunStatus status, string? note, CancellationToken ct);
 
-    Task<long> StartAsync(string runType, string source, string? discoverySource, CancellationToken ct)
-        => StartAsync(source, ct);
+    Task<long> StartAsync(string runType, string source, string? discoverySource, CancellationToken ct);
 
     Task CompleteAsync(
         long runId,
@@ -19,6 +18,5 @@ public interface ICrawlerRunRepository
         string? note,
         string? errorCode,
         string? errorMessage,
-        CancellationToken ct)
-        => FinishAsync(runId, status, note, ct);
+        CancellationToken ct);
 }

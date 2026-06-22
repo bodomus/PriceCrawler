@@ -498,8 +498,12 @@ order by id;
 - Catalog: `discovered`, `accepted`, `inserted`, `updated`, `reactivated`, `deactivated`.
 - Price collection: `selected`, `enqueued`, `succeeded`, `retry`, `dead`, `failed`, `products_created`,
   `products_updated`, `snapshots_created`, `errors_created`.
+- `products_created` и `products_updated` берутся из явных флагов `price_observation_store`. Existing product считается
+  updated только при изменении его бизнес-полей; повторное observation/no-op не увеличивает `products_updated`.
 - Общие поля: `run_type`, `discovery_source`, `duration_ms`, `error_code`, `error_message`.
 - Worker печатает эти же значения из result use case. `run-all` последовательно выводит два независимых summary.
+- Каждый invocation Worker получает `ExecutionId`; он добавляется в structured log context и CLI `run-all`, связывая
+  catalog и price runs одной команды без изменения DB schema.
 
 Read-only API:
 
@@ -510,6 +514,8 @@ GET /api/crawler-runs/statistics?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:0
 ```
 
 `limit` — от 1 до 200. Для aggregate без дат используется диапазон 30 дней; максимальный диапазон — 365 дней.
+Допустимые фильтры: `runType` — `catalog-refresh`, `price-collection`, `legacy`; `status` — `running`, `ok`, `error`.
+Неизвестные значения возвращают `400 Bad Request`, а регистр и внешние пробелы нормализуются.
 
 ```sql
 select id, run_type, status, started_at, finished_at, duration_ms,

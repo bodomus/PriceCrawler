@@ -277,6 +277,14 @@ public sealed class RunCrawlerUseCaseTests
             LastStatus = status;
             return Task.CompletedTask;
         }
+
+        public Task<long> StartAsync(string runType, string source, string? discoverySource, CancellationToken ct)
+            => throw new NotSupportedException("Legacy crawler tests must use the legacy start contract.");
+
+        public Task CompleteAsync(long runId, RunStatus status, CrawlerRunStatistics statistics,
+            IReadOnlyCollection<CrawlerRunStageTiming> stageTimings, string? note, string? errorCode,
+            string? errorMessage, CancellationToken ct)
+            => throw new NotSupportedException("Legacy crawler tests must use the legacy finish contract.");
     }
 
     private sealed class FakeIngestionRunRepository : IIngestionRunRepository

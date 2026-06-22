@@ -124,7 +124,8 @@ product_catalog
 
 ```text
 Use case
-  -> per-run CrawlerRunMetrics
+  -> per-run CrawlerRunMetrics (counters)
+  -> CrawlerRunStageRecorder (ordered stage timings)
   -> ICrawlerRunRepository.CompleteAsync
   -> crawler_run + crawler_run_stage (single batched routine call)
   -> structured completion logs / Worker summary
@@ -134,8 +135,17 @@ Use case
 `catalog-refresh` and `price-collection` always create separate `crawler_run` rows. `run-all` is orchestration only
 and does not merge incompatible counters. Queue totals are read from final persisted queue states; product/snapshot/error
 counters are incremented from actual repository write results. Partial counters are finalized on errors and cancellation.
+Worker creates one `ExecutionId` per command invocation and pushes it into Serilog `LogContext`; both `run-all` use cases
+therefore share a searchable process-level correlation without adding a synthetic DB run.
+Catalog failure finalization also receives the current stage-recorder snapshot, so completed stages remain observable
+when a later stage fails.
 
 List queries return summaries without loading stages, avoiding N+1. Only the details query loads its run stages.
+Stage timings preserve execution/insertion order through recorder, JSON batch persistence, and `crawler_run_stage.id`.
+`run-finalization` measures application completion (refresh/ingestion) with a stopwatch; `crawler_run_complete` adds
+the time spent finalizing run counters and preparing the stage batch before persistence.
+`ICrawlerRunRepository` has no default implementations for typed start or statistics completion: every repository
+implementation must explicitly support the observability contract, preventing silent fallback to legacy finish.
 
 ## Verification
 

@@ -141,6 +141,8 @@ public sealed class WorkerIntegrationTests
             CancellationToken.None);
 
         Assert.True(result.SnapshotCreated);
+        Assert.True(result.ProductCreated);
+        Assert.False(result.ProductUpdated);
 
         await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
@@ -175,6 +177,8 @@ public sealed class WorkerIntegrationTests
             CancellationToken.None);
 
         Assert.False(second.SnapshotCreated);
+        Assert.False(second.ProductCreated);
+        Assert.False(second.ProductUpdated);
 
         await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
@@ -183,6 +187,37 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(
             new DateTime(2026, 03, 10, 11, 0, 0, DateTimeKind.Utc),
             await TimestampAsync(conn, "select updated_at from product limit 1"));
+    }
+
+    [Fact]
+    public async Task StoreObservation_ChangedProductFields_ReportsProductUpdated()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+
+        var crawlerRepo = CreateCrawlerRunRepository(factory);
+        var snapshotRepo = CreatePriceSnapshotRepository(factory);
+        var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
+        await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(12m, 10m, true, true, name: "Original"),
+            CancellationToken.None);
+
+        var second = await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(12m, 10m, true, true,
+                new DateTimeOffset(2026, 03, 10, 11, 0, 0, TimeSpan.Zero), "Changed"),
+            CancellationToken.None);
+
+        Assert.False(second.ProductCreated);
+        Assert.True(second.ProductUpdated);
+        Assert.False(second.SnapshotCreated);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        Assert.Equal("Changed", await StringScalarAsync(conn, "select name from product limit 1"));
     }
 
     [Fact]
@@ -767,10 +802,11 @@ public sealed class WorkerIntegrationTests
         decimal? price,
         bool promoFlag,
         bool inStock,
-        DateTimeOffset? observedAt = null)
+        DateTimeOffset? observedAt = null,
+        string name = "Name")
         => new(
             "sku-1",
-            "Name",
+            name,
             "https://varus.ua/kyiv/ovochi/item",
             "item",
             1m,

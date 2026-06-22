@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
+using Serilog.Context;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.DependencyInjection;
@@ -32,6 +33,8 @@ if (commandResult.ShowHelp)
 }
 
 var command = commandResult.Command ?? throw new InvalidOperationException("Worker command was not resolved.");
+var executionId = Guid.NewGuid().ToString("N");
+using var executionLogContext = LogContext.PushProperty("ExecutionId", executionId);
 
 var executableDirectoryPath = AppContext.BaseDirectory;
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
@@ -66,10 +69,16 @@ builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfigurati
         rollOnFileSizeLimit: true,
         retainedFileCountLimit: 10,
         shared: true,
-        encoding: logFileEncoding));
+        encoding: logFileEncoding,
+        outputTemplate:
+        "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] [ExecutionId={ExecutionId}] {Message:lj}{NewLine}{Exception}"));
 
 using var host = builder.Build();
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("VarPrice.Worker");
+logger.LogInformation(
+    "Worker command started. ExecutionId={ExecutionId}; Mode={Mode}",
+    executionId,
+    command.Mode);
 
 using (var scope = host.Services.CreateScope())
 {
@@ -144,16 +153,29 @@ if (command.Mode == WorkerRunMode.RunAll)
 {
     try
     {
+        Console.WriteLine($"ExecutionId: {executionId}");
         var refresh = await runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>()
             .ExecuteAsync(cancellation.Token);
         Console.WriteLine("Catalog refresh:");
         PrintCatalogSummary(refresh, "  ");
+        logger.LogInformation(
+            "Run-all catalog refresh completed. ExecutionId={ExecutionId}; CatalogRunId={CatalogRunId}; CatalogStatus={CatalogStatus}",
+            executionId,
+            refresh.RunId,
+            refresh.Status);
         if (refresh.Status != RefreshProductCatalogStatus.Ok) return WorkerCommandParser.FailedRunExitCode;
 
         var prices = await runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>()
             .ExecuteAsync(cancellation.Token);
         Console.WriteLine("Price collection:");
         PrintPriceSummary(prices, "  ");
+        logger.LogInformation(
+            "Run-all completed. ExecutionId={ExecutionId}; CatalogRunId={CatalogRunId}; CatalogStatus={CatalogStatus}; PriceRunId={PriceRunId}; PriceStatus={PriceStatus}",
+            executionId,
+            refresh.RunId,
+            refresh.Status,
+            prices.RunId,
+            prices.Status);
         return string.Equals(prices.Status, "ok", StringComparison.OrdinalIgnoreCase)
             ? WorkerCommandParser.SuccessExitCode
             : WorkerCommandParser.FailedRunExitCode;

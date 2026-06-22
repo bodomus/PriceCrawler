@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
+using VarPrice.Domain.Constants;
 using VarPrice.Domain.Interfaces;
 
 namespace VarPrice.Web.Controllers;
@@ -16,7 +17,11 @@ public sealed class CrawlerRunsApiController(ICrawlerRunReadRepository repositor
         CancellationToken ct = default)
     {
         if (limit is < 1 or > 200) return BadRequest(new { error = "limit must be between 1 and 200." });
-        return Ok(await repository.GetRecentAsync(limit, runType, status, ct));
+        if (!TryNormalize(runType, CrawlerRunTypes.IsSupported, out var normalizedRunType))
+            return BadRequest(new { error = "runType must be catalog-refresh, price-collection, or legacy." });
+        if (!TryNormalize(status, CrawlerRunStatuses.IsSupported, out var normalizedStatus))
+            return BadRequest(new { error = "status must be running, ok, or error." });
+        return Ok(await repository.GetRecentAsync(limit, normalizedRunType, normalizedStatus, ct));
     }
 
     [HttpGet("{id:long}")]
@@ -39,6 +44,20 @@ public sealed class CrawlerRunsApiController(ICrawlerRunReadRepository repositor
         if (fromUtc >= toUtc) return BadRequest(new { error = "from must be earlier than to." });
         if (toUtc - fromUtc > TimeSpan.FromDays(365))
             return BadRequest(new { error = "date range cannot exceed 365 days." });
-        return Ok(await repository.GetAggregateAsync(fromUtc, toUtc, runType, ct));
+        if (!TryNormalize(runType, CrawlerRunTypes.IsSupported, out var normalizedRunType))
+            return BadRequest(new { error = "runType must be catalog-refresh, price-collection, or legacy." });
+        return Ok(await repository.GetAggregateAsync(fromUtc, toUtc, normalizedRunType, ct));
+    }
+
+    private static bool TryNormalize(string? value, Func<string, bool> isSupported, out string? normalized)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            normalized = null;
+            return true;
+        }
+
+        normalized = value.Trim().ToLowerInvariant();
+        return isSupported(normalized);
     }
 }

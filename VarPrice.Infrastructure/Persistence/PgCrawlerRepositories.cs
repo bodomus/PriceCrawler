@@ -112,13 +112,13 @@ public sealed class PgCrawlerRunReadRepository(PgRoutineExecutor routineExecutor
     }
 
     private static CrawlerRunDetails MapDetailsWithoutStages(DbDataReader r) => new(
-        r.GetInt64(0), r.GetString(6), r.GetString(4), r.IsDBNull(7) ? null : r.GetString(7), r.GetString(3),
-        ToOffset(r, 1), r.IsDBNull(2) ? null : ToOffset(r, 2), r.IsDBNull(8) ? null : r.GetInt64(8),
-        new CrawlerRunStatistics(r.GetInt32(9), r.GetInt32(10), r.GetInt32(11), r.GetInt32(12),
-            r.GetInt32(13), r.GetInt32(14), r.GetInt32(15), r.GetInt32(16), r.GetInt32(17), r.GetInt32(18),
-            r.GetInt32(19), r.GetInt32(20), r.GetInt32(21), r.GetInt32(22), r.GetInt32(23), r.GetInt32(24)),
-        [], r.IsDBNull(25) ? null : r.GetString(25), r.IsDBNull(26) ? null : r.GetString(26),
-        r.IsDBNull(5) ? null : r.GetString(5));
+        r.GetInt64(0), r.GetString(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3), r.GetString(4),
+        ToOffset(r, 5), r.IsDBNull(6) ? null : ToOffset(r, 6), r.IsDBNull(7) ? null : r.GetInt64(7),
+        new CrawlerRunStatistics(r.GetInt32(8), r.GetInt32(9), r.GetInt32(10), r.GetInt32(11),
+            r.GetInt32(12), r.GetInt32(13), r.GetInt32(14), r.GetInt32(15), r.GetInt32(16), r.GetInt32(17),
+            r.GetInt32(18), r.GetInt32(19), r.GetInt32(20), r.GetInt32(21), r.GetInt32(22), r.GetInt32(23)),
+        [], r.IsDBNull(24) ? null : r.GetString(24), r.IsDBNull(25) ? null : r.GetString(25),
+        r.IsDBNull(26) ? null : r.GetString(26));
 
     private static DateTimeOffset ToOffset(DbDataReader reader, int ordinal)
         => new(DateTime.SpecifyKind(reader.GetDateTime(ordinal), DateTimeKind.Utc));
@@ -172,7 +172,8 @@ public sealed class PgPriceSnapshotRepository(PgRoutineExecutor routineExecutor)
                 reader.GetInt64(0),
                 reader.IsDBNull(1) ? null : reader.GetInt64(1),
                 reader.GetBoolean(2),
-                reader.GetBoolean(3)),
+                reader.GetBoolean(3),
+                reader.GetBoolean(4)),
             ct);
 
         return result ?? throw new InvalidOperationException(

@@ -18,6 +18,7 @@ public sealed class CollectProductPricesUseCaseTests
     public async Task ExecuteAsync_NoDueProducts_CompletesSuccessfullyWithoutQueue()
     {
         var catalog = new FakeProductCatalogRepository([]);
+        catalog.Ingestion.FinishDelay = TimeSpan.FromMilliseconds(20);
         var queue = new FakeQueueRepository();
         var sut = CreateUseCase(catalog, queue, ProductExtractResult.Success(Card(), 200, 1, 1));
 
@@ -27,6 +28,7 @@ public sealed class CollectProductPricesUseCaseTests
         Assert.Equal(0, result.SelectedCount);
         Assert.Equal(0, queue.TotalEnqueued);
         Assert.Equal(RunStatus.Ok, catalog.Crawler.LastStatus);
+        Assert.True(result.StageTimings!.Single(x => x.Stage == CrawlerRunStages.RunFinalization).DurationMs >= 10);
     }
 
     [Fact]
@@ -46,6 +48,30 @@ public sealed class CollectProductPricesUseCaseTests
         Assert.Equal(1, catalog.Checked[0].CatalogItemId);
         Assert.Equal("sku-new", catalog.Checked[0].ExternalId);
         Assert.Equal("slug-new", catalog.Checked[0].Slug);
+    }
+
+    [Theory]
+    [InlineData(true, false, 1, 0)]
+    [InlineData(false, true, 0, 1)]
+    [InlineData(false, false, 0, 0)]
+    public async Task ExecuteAsync_ProductWriteFlags_AreCountedExplicitly(
+        bool productCreated,
+        bool productUpdated,
+        int expectedCreated,
+        int expectedUpdated)
+    {
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1)]);
+        var queue = new FakeQueueRepository();
+        var sut = CreateUseCase(
+            catalog,
+            queue,
+            ProductExtractResult.Success(Card(), 200, 1, 1),
+            writeResult: new ProductObservationWriteResult(1, 1, true, productCreated, productUpdated));
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(expectedCreated, result.ProductsCreatedCount);
+        Assert.Equal(expectedUpdated, result.ProductsUpdatedCount);
     }
 
     [Fact]
@@ -185,7 +211,8 @@ public sealed class CollectProductPricesUseCaseTests
         FakeQueueRepository queue,
         ProductExtractResult extractResult,
         int maxProducts = 10,
-        int maxAttempts = 1)
+        int maxAttempts = 1,
+        ProductObservationWriteResult? writeResult = null)
     {
         var crawlerOptions = Options.Create(new CrawlerOptions
         {
@@ -206,7 +233,7 @@ public sealed class CollectProductPricesUseCaseTests
             RetryMaxDelayMs = 10,
             ReaperIntervalSeconds = 1
         });
-        var snapshot = new FakePriceSnapshotRepository();
+        var snapshot = new FakePriceSnapshotRepository(writeResult ?? new ProductObservationWriteResult(1, 1, true));
         var processor = new PriceCollectionQueueProcessor(
             queue,
             snapshot,
@@ -322,31 +349,54 @@ public sealed class CollectProductPricesUseCaseTests
     private sealed class FakeCrawlerRunRepository : ICrawlerRunRepository
     {
         public RunStatus LastStatus { get; private set; } = RunStatus.Running;
+        public CrawlerRunStatistics? LastStatistics { get; private set; }
+        public IReadOnlyList<CrawlerRunStageTiming> LastStageTimings { get; private set; } = [];
         public Task<long> StartAsync(string source, CancellationToken ct) => Task.FromResult(1L);
+
+        public Task<long> StartAsync(string runType, string source, string? discoverySource, CancellationToken ct)
+            => StartAsync(source, ct);
 
         public Task FinishAsync(long runId, RunStatus status, string? note, CancellationToken ct)
         {
             LastStatus = status;
             return Task.CompletedTask;
         }
+
+        public Task CompleteAsync(long runId, RunStatus status, CrawlerRunStatistics statistics,
+            IReadOnlyCollection<CrawlerRunStageTiming> stageTimings, string? note, string? errorCode,
+            string? errorMessage, CancellationToken ct)
+        {
+            LastStatistics = statistics;
+            LastStageTimings = stageTimings.ToArray();
+            return FinishAsync(runId, status, note, ct);
+        }
     }
 
     private sealed class FakeIngestionRunRepository : IIngestionRunRepository
     {
+        public TimeSpan FinishDelay { get; set; }
+
         public Task<long> StartAsync(long crawlerRunId, CancellationToken ct) => Task.FromResult(10L);
 
-        public Task FinishAsync(long ingestionRunId, RunStatus status, ErrorInfo? errorInfo, CancellationToken ct) =>
-            Task.CompletedTask;
+        public async Task FinishAsync(long ingestionRunId, RunStatus status, ErrorInfo? errorInfo,
+            CancellationToken ct)
+        {
+            if (FinishDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(FinishDelay, ct);
+            }
+        }
     }
 
-    private sealed class FakePriceSnapshotRepository : IPriceSnapshotRepository
+    private sealed class FakePriceSnapshotRepository(ProductObservationWriteResult writeResult)
+        : IPriceSnapshotRepository
     {
         public Task<ProductObservationWriteResult> StoreObservationAsync(
             long runId,
             long? queueId,
             ProductObservation observation,
             CancellationToken ct) =>
-            Task.FromResult(new ProductObservationWriteResult(1, 1, true));
+            Task.FromResult(writeResult);
 
         public Task<long> InsertCrawlErrorAsync(CrawlErrorRecord error, CancellationToken ct) => Task.FromResult(1L);
     }

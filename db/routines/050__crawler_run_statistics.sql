@@ -29,6 +29,10 @@ or replace procedure crawler_run_complete(
 language plpgsql as $$
 declare
 v_finished_at timestamptz := now();
+v_completion_started_at
+timestamptz := clock_timestamp();
+v_db_finalization_ms
+bigint;
 begin
 update crawler_run
 set status                  = routine_support_run_status(p_status),
@@ -63,23 +67,90 @@ end if;
 delete
 from crawler_run_stage
 where run_id = p_run_id;
+
+v_db_finalization_ms
+:= greatest(
+    0,
+    floor(extract(epoch from (clock_timestamp() - v_completion_started_at)) * 1000)::bigint);
+
 insert into crawler_run_stage(run_id, stage, started_at, finished_at, duration_ms, item_count)
 select p_run_id,
        routine_support_trim_required(x.stage, 100),
-       v_finished_at - make_interval(secs = > greatest(x.duration_ms, 0)::double precision / 1000.0),
+       v_finished_at - make_interval(secs = > timing.effective_duration_ms::double precision / 1000.0),
        v_finished_at,
-       greatest(x.duration_ms, 0),
+       timing.effective_duration_ms,
        x.item_count
 from jsonb_to_recordset(coalesce(nullif(p_stages_json, ''), '[]')::jsonb)
-         as x(stage text, duration_ms bigint, item_count integer);
+         as x(stage text, duration_ms bigint, item_count integer)
+         cross join lateral (
+    select greatest(x.duration_ms, 0)
+               + case when x.stage = 'run-finalization' then v_db_finalization_ms else 0 end
+               as effective_duration_ms) timing;
 end $$;
 
-create
-or replace function crawler_run_get_by_id(p_run_id bigint)
-returns setof crawler_run language sql stable as $$
-select *
-from crawler_run
-where id = p_run_id;
+drop function if exists crawler_run_get_by_id(bigint);
+
+create function crawler_run_get_by_id(p_run_id bigint)
+    returns table
+            (
+                id                      bigint,
+                run_type                varchar(50),
+                source                  varchar(64),
+                discovery_source        varchar(50),
+                status                  varchar(32),
+                started_at              timestamptz,
+                finished_at             timestamptz,
+                duration_ms             bigint,
+                discovered_count        integer,
+                accepted_count          integer,
+                inserted_count          integer,
+                updated_count           integer,
+                reactivated_count       integer,
+                deactivated_count       integer,
+                selected_count          integer,
+                enqueued_count          integer,
+                succeeded_count         integer,
+                retry_count             integer,
+                dead_count              integer,
+                failed_count            integer,
+                products_created_count  integer,
+                products_updated_count  integer,
+                snapshots_created_count integer,
+                errors_created_count    integer,
+                error_code              varchar(100),
+                error_message           varchar(1000),
+                note                    varchar(255)
+            )
+    language sql stable as $$
+select cr.id,
+       cr.run_type,
+       cr.source,
+       cr.discovery_source,
+       cr.status,
+       cr.started_at,
+       cr.finished_at,
+       cr.duration_ms,
+       cr.discovered_count,
+       cr.accepted_count,
+       cr.inserted_count,
+       cr.updated_count,
+       cr.reactivated_count,
+       cr.deactivated_count,
+       cr.selected_count,
+       cr.enqueued_count,
+       cr.succeeded_count,
+       cr.retry_count,
+       cr.dead_count,
+       cr.failed_count,
+       cr.products_created_count,
+       cr.products_updated_count,
+       cr.snapshots_created_count,
+       cr.errors_created_count,
+       cr.error_code,
+       cr.error_message,
+       cr.note
+from crawler_run cr
+where cr.id = p_run_id;
 $$;
 
 create
