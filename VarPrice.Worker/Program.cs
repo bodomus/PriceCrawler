@@ -16,6 +16,23 @@ using VarPrice.Worker;
 Console.InputEncoding = Encoding.UTF8;
 Console.OutputEncoding = Encoding.UTF8;
 
+var commandResult = WorkerCommandParser.Parse(args);
+if (!commandResult.IsValid)
+{
+    Console.Error.WriteLine(commandResult.ErrorMessage);
+    Console.Error.WriteLine();
+    Console.Error.WriteLine(WorkerCommandParser.GetHelpText());
+    return WorkerCommandParser.InvalidCommandExitCode;
+}
+
+if (commandResult.ShowHelp)
+{
+    Console.WriteLine(WorkerCommandParser.GetHelpText());
+    return WorkerCommandParser.SuccessExitCode;
+}
+
+var command = commandResult.Command ?? throw new InvalidOperationException("Worker command was not resolved.");
+
 var builder = Host.CreateApplicationBuilder(args);
 var executableDirectoryPath = AppContext.BaseDirectory;
 var logsDirectoryPath = Path.Combine(executableDirectoryPath, "logs");
@@ -56,28 +73,6 @@ using (var scope = host.Services.CreateScope())
     await bootstrap.EnsureSchemaAsync();
 }
 
-var once = args.Contains("--once");
-var jobIndex = Array.IndexOf(args, "--job");
-var job = jobIndex >= 0 && jobIndex + 1 < args.Length ? args[jobIndex + 1] : "vegetables";
-if (args.Any(arg => string.Equals(arg, "catalog-refresh", StringComparison.OrdinalIgnoreCase)))
-{
-    job = "catalog-refresh";
-}
-
-if (args.Any(arg => string.Equals(arg, "--collect-prices", StringComparison.OrdinalIgnoreCase)) ||
-    args.Any(arg => string.Equals(arg, "collect-prices", StringComparison.OrdinalIgnoreCase)))
-{
-    job = "collect-prices";
-}
-
-if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase) &&
-    !string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase) &&
-    !string.Equals(job, "collect-prices", StringComparison.OrdinalIgnoreCase))
-{
-    logger.LogError("Unsupported job: {Job}", job);
-    return 2;
-}
-
 using var runScope = host.Services.CreateScope();
 using var cancellation = new CancellationTokenSource();
 Console.CancelKeyPress += (_, eventArgs) =>
@@ -86,7 +81,7 @@ Console.CancelKeyPress += (_, eventArgs) =>
     cancellation.Cancel();
 };
 
-if (string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase))
+if (command.Mode == WorkerRunMode.CatalogRefresh)
 {
     var refreshUseCase = runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>();
     try
@@ -102,16 +97,18 @@ if (string.Equals(job, "catalog-refresh", StringComparison.OrdinalIgnoreCase))
             refreshResult.InsertedCount,
             refreshResult.UpdatedCount,
             refreshResult.SkippedCount);
-        return refreshResult.Status == RefreshProductCatalogStatus.Ok ? 0 : 1;
+        return refreshResult.Status == RefreshProductCatalogStatus.Ok
+            ? WorkerCommandParser.SuccessExitCode
+            : WorkerCommandParser.FailedRunExitCode;
     }
     catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
     {
         logger.LogWarning("Catalog refresh was cancelled.");
-        return 1;
+        return WorkerCommandParser.FailedRunExitCode;
     }
 }
 
-if (string.Equals(job, "collect-prices", StringComparison.OrdinalIgnoreCase))
+if (command.Mode == WorkerRunMode.CollectPrices)
 {
     var collectUseCase = runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>();
     try
@@ -126,12 +123,14 @@ if (string.Equals(job, "collect-prices", StringComparison.OrdinalIgnoreCase))
             collectResult.SucceededCount,
             collectResult.RetryCount,
             collectResult.DeadCount);
-        return string.Equals(collectResult.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+        return string.Equals(collectResult.Status, "ok", StringComparison.OrdinalIgnoreCase)
+            ? WorkerCommandParser.SuccessExitCode
+            : WorkerCommandParser.FailedRunExitCode;
     }
     catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
     {
         logger.LogWarning("Price collection was cancelled.");
-        return 1;
+        return WorkerCommandParser.FailedRunExitCode;
     }
 }
 
@@ -147,7 +146,7 @@ try
 catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
 {
     logger.LogWarning("Crawler run was cancelled.");
-    return 1;
+    return WorkerCommandParser.FailedRunExitCode;
 }
 finally
 {
@@ -161,9 +160,13 @@ logger.LogInformation(
     result.ProductsProcessed,
     result.Errors);
 
-if (once)
+if (command.Once)
 {
-    return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+    return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase)
+        ? WorkerCommandParser.SuccessExitCode
+        : WorkerCommandParser.FailedRunExitCode;
 }
 
-return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase)
+    ? WorkerCommandParser.SuccessExitCode
+    : WorkerCommandParser.FailedRunExitCode;

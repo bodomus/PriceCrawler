@@ -102,7 +102,7 @@ Health endpoint: `http://localhost:8080/health` (в Docker) или локаль�
 ### 3) Запустить Worker
 
 ```bash
-dotnet run --project VarPrice.Worker -- --once --job vegetables
+dotnet run --project VarPrice.Worker -- vegetables --once
 ```
 
 Для ручного обновления постоянного каталога товаров без сбора цен:
@@ -114,7 +114,7 @@ dotnet run --project VarPrice.Worker -- catalog-refresh
 Для ежедневного сбора цен из постоянного каталога без discovery:
 
 ```bash
-dotnet run --project VarPrice.Worker -- --collect-prices
+dotnet run --project VarPrice.Worker -- collect-prices
 ```
 
 В интерактивной консоли Worker показывает фиксированную верхнюю панель прогресса:
@@ -150,22 +150,23 @@ dotnet run --project VarPrice.Worker -- --collect-prices
 - открой `db/seeds/001__local_debug_month.sql` в `DataGrip` и выполни его против локальной БД `varprice`
 - после завершения script сам вернет summary counts по основным таблицам и статусам
 
-## Параметры командной строки (Worker)
+## Команды запуска Worker
 
-Поддерживаются параметры:
+Основной CLI-контракт Worker теперь задается явной позиционной командой:
 
-- `--once`
+- `vegetables [--once]`
+- `catalog-refresh`
+- `collect-prices`
+- `--help` / `-h`
+
+Legacy aliases сохранены для обратной совместимости:
+
 - `--job <name>`
-- позиционная команда `catalog-refresh`
-- команда `--collect-prices` / `collect-prices`
+- `--collect-prices`
+
+Ошибочные команды, неизвестные параметры и конфликтующие режимы завершаются до создания host и до DB bootstrap с кодом `2`.
 
 ### `--once`
-
-Флаг наличия параметра:
-
-```csharp
-var once = args.Contains("--once");
-```
 
 Если флаг указан, приложение завершится с кодом:
 
@@ -174,20 +175,20 @@ var once = args.Contains("--once");
 
 Примечание: в текущей реализации Worker возвращает те же коды завершения даже без `--once`.
 
-### `--job <name>`
+### `vegetables`
 
-Индекс параметра в аргументах:
+Команда:
 
-```csharp
-var jobIndex = Array.IndexOf(args, "--job");
+```bash
+dotnet run --project VarPrice.Worker -- vegetables
+dotnet run --project VarPrice.Worker -- vegetables --once
 ```
 
 Поведение:
 
-- если `--job` передан и после него есть значение, берется это значение
-- если не передан, используется значение по умолчанию: `vegetables`
-- поддерживаемые значения: `vegetables`, `catalog-refresh`, `collect-prices`
-- если значение не поддерживается, Worker пишет `Unsupported job: <name>` и завершается с кодом `2`
+- запускает существующий discovery + queue + price snapshot flow для legacy vegetables режима;
+- показывает интерактивную progress-панель, если терминал поддерживает динамическую перерисовку;
+- legacy запуск без аргументов пока остается alias для `vegetables`.
 
 ### `catalog-refresh`
 
@@ -235,7 +236,7 @@ discovered -> active -> missing during refresh -> grace period -> inactive -> di
 Команда:
 
 ```bash
-dotnet run --project VarPrice.Worker -- --collect-prices
+dotnet run --project VarPrice.Worker -- collect-prices
 ```
 
 Поведение:
@@ -260,20 +261,18 @@ Inactive rows, future `next_check_at` и rows с активным `reserved_unti
 Примеры:
 
 ```bash
-dotnet run --project VarPrice.Worker
-dotnet run --project VarPrice.Worker -- --once
-dotnet run --project VarPrice.Worker -- --job vegetables
-dotnet run --project VarPrice.Worker -- --once --job vegetables
-dotnet run --project VarPrice.Worker -- --job catalog-refresh
+dotnet run --project VarPrice.Worker -- vegetables
+dotnet run --project VarPrice.Worker -- vegetables --once
 dotnet run --project VarPrice.Worker -- catalog-refresh
-dotnet run --project VarPrice.Worker -- --collect-prices
+dotnet run --project VarPrice.Worker -- collect-prices
+dotnet run --project VarPrice.Worker -- --help
 ```
 
 ## Коды завершения Worker
 
 - `0` - успешный run (`status=ok`)
 - `1` - run завершился с ошибочным статусом
-- `2` - передан неподдерживаемый `--job`
+- `2` - передана неподдерживаемая команда, опция или конфликтующие режимы
 
 ## Конфигурация
 

@@ -15,6 +15,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `PgRoutineExecutor` and `DbRoutineCall` helpers for calling PostgreSQL functions/procedures from write-side C# code.
 - Integration coverage for write-side DB routines in `WorkerIntegrationTests`.
 - Local/dev SQL seed script `db/seeds/001__local_debug_month.sql` for destructive reset + generation of realistic month-long debug data.
+- Explicit Worker CLI commands: `vegetables`, `catalog-refresh`, `collect-prices`, and `--help`.
 
 ### Changed
 - Database schema refactored around internal `product.id` links instead of legacy `product_key`.
@@ -27,6 +28,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `crawler_run`, `ingestion_run`, and `crawl_error` write-side persistence now goes through DB routines instead of inline SQL DML in the repositories.
 - `price_collect_queue` lifecycle operations now go through DB routines as well, including enqueue, reserve with `FOR UPDATE SKIP LOCKED`, retry/dead transitions, reaper, outstanding checks, and run stats.
 - `StoreObservationAsync` now executes as a single DB-side business operation through `price_observation_store`, covering product lookup/upsert, snapshot comparison, conditional insert, and write result return.
+- Worker argument parsing now validates unsupported options and conflicting modes before host creation and DB bootstrap.
 
 ### Fixed
 - Removed stale documentation assumptions about `city`, `product_errors`, `discount_percent`, and `last_seen_at`.
