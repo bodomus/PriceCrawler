@@ -142,8 +142,9 @@ when a later stage fails.
 
 List queries return summaries without loading stages, avoiding N+1. Only the details query loads its run stages.
 Stage timings preserve execution/insertion order through recorder, JSON batch persistence, and `crawler_run_stage.id`.
-`run-finalization` measures application completion (refresh/ingestion) with a stopwatch; `crawler_run_complete` adds
-the time spent finalizing run counters and preparing the stage batch before persistence.
+`run-finalization` is intentionally a mixed boundary timing:
+`application finalization (refresh/ingestion completion) + crawler_run_complete DB overhead`.
+The DB portion covers final run-counter update and stage-batch preparation before persistence.
 `ICrawlerRunRepository` has no default implementations for typed start or statistics completion: every repository
 implementation must explicitly support the observability contract, preventing silent fallback to legacy finish.
 

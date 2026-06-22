@@ -39,8 +39,8 @@ details, recent filters/limit и aggregate диапазон. Добавлены 
   больше не теряются при ошибке последующего этапа.
 - Typed `StartAsync` и statistics `CompleteAsync` в `ICrawlerRunRepository` обязательны для каждой реализации;
   default fallback в legacy methods удалён, поэтому неполная реализация теперь завершается compile-time ошибкой.
-- `run-finalization` больше не записывается как константный `0`: application stopwatch измеряет refresh/ingestion
-  completion, а DB routine добавляет время собственной statistics finalization перед batch insert stages.
+- Семантика `run-finalization` явно документирована как сумма application finalization (refresh/ingestion completion)
+  и overhead `crawler_run_complete` (итоговые counters и подготовка batch stages).
 - Read API валидирует и нормализует `runType` (`catalog-refresh`, `price-collection`, `legacy`) и `status`
   (`running`, `ok`, `error`); неизвестные значения возвращают `400`, а не неоднозначный пустой `200`.
 - Worker создаёт один `ExecutionId` на invocation и помещает его в Serilog context/console/file output; `run-all`
