@@ -17,9 +17,6 @@ namespace VarPrice.Web.Tests;
 
 public sealed class WorkerIntegrationTests
 {
-    private const string ConnectionString =
-        "Host=localhost;Port=55432;Database=varprice;Username=var;Password=myPassword";
-
     [Fact]
     public async Task RunCrawlerUseCase_PersistsRunAndSnapshots_AndDrainsQueue()
     {
@@ -41,7 +38,7 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(1, result.ProductsProcessed);
         Assert.Equal(0, result.Errors);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run"));
@@ -52,6 +49,79 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(0,
             await ScalarAsync(conn,
                 "select count(*) from price_collect_queue where status in ('pending','retry','reserved')"));
+    }
+
+    [Fact]
+    public async Task RefreshProductCatalogUseCase_NewUrls_PersistsCatalogItems()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+        var useCase = CreateCatalogRefreshUseCase(
+            factory,
+            new StaticSource(
+                ["https://varus.ua/product-a", "https://varus.ua/product-b"],
+                ProductUrlDiscoverySourceKind.CategorySeed));
+
+        var result = await useCase.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(RefreshProductCatalogStatus.Ok, result.Status);
+        Assert.Equal("category-seed", result.Source);
+        Assert.Equal(2, result.DiscoveredCount);
+        Assert.Equal(2, result.AcceptedCount);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status='ok'"));
+        Assert.Equal(2, await ScalarAsync(conn, "select count(*) from product_catalog"));
+        Assert.Equal(2, await ScalarAsync(conn, "select count(*) from product_catalog where source='varus'"));
+    }
+
+    [Fact]
+    public async Task RefreshProductCatalogUseCase_RepeatedUrls_UpdateExistingCatalogRows()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+        var useCase = CreateCatalogRefreshUseCase(
+            factory,
+            new StaticSource(["https://varus.ua/product-a"], ProductUrlDiscoverySourceKind.CategorySeed));
+
+        await useCase.ExecuteAsync(CancellationToken.None);
+        var firstDiscovered = await ReadCatalogTimestampAsync("first_discovered_at");
+
+        await Task.Delay(20);
+        var secondResult = await useCase.ExecuteAsync(CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(RefreshProductCatalogStatus.Ok, secondResult.Status);
+        Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product_catalog"));
+        Assert.Equal(2, await ScalarAsync(conn, "select count(*) from crawler_run where status='ok'"));
+        Assert.Equal(firstDiscovered, await TimestampAsync(conn, "select first_discovered_at from product_catalog"));
+        Assert.True(await TimestampAsync(conn, "select last_discovered_at from product_catalog") >= firstDiscovered);
+    }
+
+    [Fact]
+    public async Task RefreshProductCatalogUseCase_DoesNotCreatePriceCollectionData()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+        var useCase = CreateCatalogRefreshUseCase(
+            factory,
+            new StaticSource(["https://varus.ua/product-a"], ProductUrlDiscoverySourceKind.CategorySeed));
+
+        var result = await useCase.ExecuteAsync(CancellationToken.None);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+
+        Assert.Equal(RefreshProductCatalogStatus.Ok, result.Status);
+        Assert.Equal(0,
+            await ScalarAsync(conn, $"select count(*) from price_collect_queue where run_id={result.RunId}"));
+        Assert.Equal(0, await ScalarAsync(conn, "select count(*) from price_snapshot"));
+        Assert.Equal(0, await ScalarAsync(conn, "select count(*) from product"));
+        Assert.Equal(0, await ScalarAsync(conn, "select count(*) from ingestion_run"));
     }
 
     [Fact]
@@ -71,8 +141,10 @@ public sealed class WorkerIntegrationTests
             CancellationToken.None);
 
         Assert.True(result.SnapshotCreated);
+        Assert.True(result.ProductCreated);
+        Assert.False(result.ProductUpdated);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from product"));
@@ -105,14 +177,47 @@ public sealed class WorkerIntegrationTests
             CancellationToken.None);
 
         Assert.False(second.SnapshotCreated);
+        Assert.False(second.ProductCreated);
+        Assert.False(second.ProductUpdated);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
         Assert.Equal(
             new DateTime(2026, 03, 10, 11, 0, 0, DateTimeKind.Utc),
             await TimestampAsync(conn, "select updated_at from product limit 1"));
+    }
+
+    [Fact]
+    public async Task StoreObservation_ChangedProductFields_ReportsProductUpdated()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+
+        var crawlerRepo = CreateCrawlerRunRepository(factory);
+        var snapshotRepo = CreatePriceSnapshotRepository(factory);
+        var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
+        await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(12m, 10m, true, true, name: "Original"),
+            CancellationToken.None);
+
+        var second = await snapshotRepo.StoreObservationAsync(
+            runId,
+            queueId: null,
+            CreateObservation(12m, 10m, true, true,
+                new DateTimeOffset(2026, 03, 10, 11, 0, 0, TimeSpan.Zero), "Changed"),
+            CancellationToken.None);
+
+        Assert.False(second.ProductCreated);
+        Assert.True(second.ProductUpdated);
+        Assert.False(second.SnapshotCreated);
+
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        Assert.Equal("Changed", await StringScalarAsync(conn, "select name from product limit 1"));
     }
 
     [Fact]
@@ -140,7 +245,7 @@ public sealed class WorkerIntegrationTests
 
         Assert.True(second.SnapshotCreated);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_snapshot"));
@@ -173,7 +278,7 @@ public sealed class WorkerIntegrationTests
 
         Assert.True(second.SnapshotCreated);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_snapshot"));
@@ -212,7 +317,7 @@ public sealed class WorkerIntegrationTests
         Assert.True(result.SnapshotCreated);
         Assert.NotNull(result.PriceSnapshotId);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(64,
@@ -249,7 +354,7 @@ public sealed class WorkerIntegrationTests
         var result = await useCase.RunVegetablesAsync(CancellationToken.None);
         Assert.Equal("ok", result.Status);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_snapshot"));
@@ -350,7 +455,7 @@ public sealed class WorkerIntegrationTests
         Assert.Equal(0, result.ProductsProcessed);
         Assert.Equal(1, result.Errors);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from price_collect_queue where status='dead'"));
@@ -379,7 +484,7 @@ public sealed class WorkerIntegrationTests
         var result = await useCase.RunVegetablesAsync(CancellationToken.None);
         Assert.Equal("error", result.Status);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1, await ScalarAsync(conn, "select count(*) from crawler_run where status='error'"));
@@ -391,7 +496,7 @@ public sealed class WorkerIntegrationTests
     {
         await PrepareSchemaAsync();
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         const string scriptName = "001__routine_support_text.sql";
@@ -428,7 +533,7 @@ public sealed class WorkerIntegrationTests
         var runId = await crawlerRepo.StartAsync($"   {new string('s', 80)}   ", CancellationToken.None);
         await crawlerRepo.FinishAsync(runId, RunStatus.Error, $"   {new string('n', 300)}   ", CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(64, await ScalarAsync(conn, $"select length(source) from crawler_run where id={runId}"));
@@ -455,7 +560,7 @@ public sealed class WorkerIntegrationTests
             new ErrorInfo($"   {new string('E', 140)}   ", $"   {new string('M', 530)}   "),
             CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal("error",
@@ -494,7 +599,7 @@ public sealed class WorkerIntegrationTests
                 ErrorMessage: $"   {new string('x', 600)}   "),
             CancellationToken.None);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal("unknown",
@@ -568,7 +673,7 @@ public sealed class WorkerIntegrationTests
         var stats = await queueRepo.GetRunStatsAsync(runId, CancellationToken.None);
         Assert.Equal(new QueueRunStats(0, 0, 0, 1, 2), stats);
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
 
         Assert.Equal(1024, await ScalarAsync(conn, "select length(url) from price_collect_queue order by id limit 1"));
@@ -636,43 +741,72 @@ public sealed class WorkerIntegrationTests
         IProductUrlDiscoveryService source,
         IProductCardExtractor extractor,
         QueueOptions? queueOptions = null)
-        => new(
-            Options.Create(new CrawlerOptions
-            {
-                SitemapIndexUrl = "unused",
-                VegetablesUrlContains = "ovochi",
-                MaxProductsPerRun = 10,
-                MaxUrls = 10,
-                MaxConcurrency = 2
-            }),
-            Options.Create(queueOptions ?? new QueueOptions
-            {
-                BatchSize = 4,
-                PollDelayMs = 1,
-                LeaseSeconds = 10,
-                MaxAttempts = 3,
-                RetryBaseDelayMs = 1,
-                RetryMaxDelayMs = 10,
-                ReaperIntervalSeconds = 1
-            }),
-            source,
+    {
+        var crawlerOptions = Options.Create(new CrawlerOptions
+        {
+            SitemapIndexUrl = "unused",
+            VegetablesUrlContains = "ovochi",
+            MaxProductsPerRun = 10,
+            MaxUrls = 10,
+            MaxConcurrency = 2
+        });
+        var queueOptionsValue = Options.Create(queueOptions ?? new QueueOptions
+        {
+            BatchSize = 4,
+            PollDelayMs = 1,
+            LeaseSeconds = 10,
+            MaxAttempts = 3,
+            RetryBaseDelayMs = 1,
+            RetryMaxDelayMs = 10,
+            ReaperIntervalSeconds = 1
+        });
+        var queueRepository = CreatePriceCollectQueueRepository(factory);
+        var snapshotRepository = CreatePriceSnapshotRepository(factory);
+        var progress = new CrawlerProgressState();
+        var processor = new PriceCollectionQueueProcessor(
+            queueRepository,
+            snapshotRepository,
             extractor,
+            progress,
+            NullLogger<PriceCollectionQueueProcessor>.Instance);
+
+        return new RunCrawlerUseCase(
+            crawlerOptions,
+            queueOptionsValue,
+            source,
             CreateCrawlerRunRepository(factory),
             CreateIngestionRunRepository(factory),
-            CreatePriceCollectQueueRepository(factory),
-            CreatePriceSnapshotRepository(factory),
-            new CrawlerProgressState(),
+            queueRepository,
+            processor,
+            progress,
             NullLogger<RunCrawlerUseCase>.Instance);
+    }
+
+    private static RefreshProductCatalogUseCase CreateCatalogRefreshUseCase(
+        IPgConnectionFactory factory,
+        IProductUrlDiscoveryService source)
+        => new(
+            source,
+            CreateProductCatalogRepository(factory),
+            CreateProductCatalogRefreshRepository(factory),
+            CreateCrawlerRunRepository(factory),
+            Options.Create(new CrawlerOptions
+            {
+                CatalogMinimumExpectedUrls = 1,
+                CatalogMinimumPreviousRatio = 0.5d
+            }),
+            NullLogger<RefreshProductCatalogUseCase>.Instance);
 
     private static ProductObservation CreateObservation(
         decimal? oldPrice,
         decimal? price,
         bool promoFlag,
         bool inStock,
-        DateTimeOffset? observedAt = null)
+        DateTimeOffset? observedAt = null,
+        string name = "Name")
         => new(
             "sku-1",
-            "Name",
+            name,
             "https://varus.ua/kyiv/ovochi/item",
             "item",
             1m,
@@ -687,12 +821,16 @@ public sealed class WorkerIntegrationTests
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(
-                new Dictionary<string, string?> { ["ConnectionStrings:Postgres"] = ConnectionString })
+                new Dictionary<string, string?>
+                    { ["ConnectionStrings:Postgres"] = PostgresIntegrationFixture.ConnectionString })
             .Build();
         return new PgConnectionFactory(config);
     }
 
     private static PgCrawlerRunRepository CreateCrawlerRunRepository(IPgConnectionFactory factory)
+        => new(new PgRoutineExecutor(factory));
+
+    private static PgProductCatalogRefreshRepository CreateProductCatalogRefreshRepository(IPgConnectionFactory factory)
         => new(new PgRoutineExecutor(factory));
 
     private static PgIngestionRunRepository CreateIngestionRunRepository(IPgConnectionFactory factory)
@@ -704,24 +842,34 @@ public sealed class WorkerIntegrationTests
     private static PgPriceCollectQueueRepository CreatePriceCollectQueueRepository(IPgConnectionFactory factory)
         => new(new PgRoutineExecutor(factory));
 
+    private static PgProductCatalogRepository CreateProductCatalogRepository(IPgConnectionFactory factory)
+        => new(new PgRoutineExecutor(factory));
+
     private static async Task PrepareSchemaAsync()
     {
         await using var dbContext = CreateDbContext();
         var schema = new SchemaBootstrapper(dbContext, NullLogger<SchemaBootstrapper>.Instance);
         await schema.EnsureSchemaAsync();
 
-        await using var conn = new NpgsqlConnection(ConnectionString);
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
-            "truncate table crawl_error, price_snapshot, price_collect_queue, product, ingestion_run, crawler_run restart identity cascade;",
+            "truncate table crawl_error, price_snapshot, price_collect_queue, product_catalog, product, ingestion_run, crawler_run restart identity cascade;",
             conn);
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    private static async Task<DateTime> ReadCatalogTimestampAsync(string column)
+    {
+        await using var conn = new NpgsqlConnection(PostgresIntegrationFixture.ConnectionString);
+        await conn.OpenAsync();
+        return await TimestampAsync(conn, $"select {column} from product_catalog limit 1");
     }
 
     private static VarPriceDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<VarPriceDbContext>()
-            .UseNpgsql(ConnectionString)
+            .UseNpgsql(PostgresIntegrationFixture.ConnectionString)
             .Options;
         return new VarPriceDbContext(options);
     }
@@ -754,10 +902,12 @@ public sealed class WorkerIntegrationTests
         return Convert.ToDateTime(value);
     }
 
-    private sealed class StaticSource(IReadOnlyList<string> urls) : IProductUrlDiscoveryService
+    private sealed class StaticSource(
+        IReadOnlyList<string> urls,
+        ProductUrlDiscoverySourceKind sourceKind = ProductUrlDiscoverySourceKind.Sitemap) : IProductUrlDiscoveryService
     {
         public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct) =>
-            Task.FromResult(new ProductUrlDiscoveryResult(ProductUrlDiscoverySourceKind.Sitemap, urls));
+            Task.FromResult(new ProductUrlDiscoveryResult(sourceKind, urls));
     }
 
     private sealed class ThrowingSource : IProductUrlDiscoveryService

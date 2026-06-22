@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
+using Serilog.Context;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.DependencyInjection;
@@ -16,8 +17,31 @@ using VarPrice.Worker;
 Console.InputEncoding = Encoding.UTF8;
 Console.OutputEncoding = Encoding.UTF8;
 
-var builder = Host.CreateApplicationBuilder(args);
+var commandResult = WorkerCommandParser.Parse(args);
+if (!commandResult.IsValid)
+{
+    Console.Error.WriteLine(commandResult.ErrorMessage);
+    Console.Error.WriteLine();
+    Console.Error.WriteLine(WorkerCommandParser.GetHelpText());
+    return WorkerCommandParser.InvalidCommandExitCode;
+}
+
+if (commandResult.ShowHelp)
+{
+    Console.WriteLine(WorkerCommandParser.GetHelpText());
+    return WorkerCommandParser.SuccessExitCode;
+}
+
+var command = commandResult.Command ?? throw new InvalidOperationException("Worker command was not resolved.");
+var executionId = Guid.NewGuid().ToString("N");
+using var executionLogContext = LogContext.PushProperty("ExecutionId", executionId);
+
 var executableDirectoryPath = AppContext.BaseDirectory;
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    Args = [],
+    ContentRootPath = executableDirectoryPath
+});
 var logsDirectoryPath = Path.Combine(executableDirectoryPath, "logs");
 Directory.CreateDirectory(logsDirectoryPath);
 var logFilePath = Path.Combine(logsDirectoryPath, "varprice-worker.log");
@@ -45,10 +69,16 @@ builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfigurati
         rollOnFileSizeLimit: true,
         retainedFileCountLimit: 10,
         shared: true,
-        encoding: logFileEncoding));
+        encoding: logFileEncoding,
+        outputTemplate:
+        "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] [ExecutionId={ExecutionId}] {Message:lj}{NewLine}{Exception}"));
 
 using var host = builder.Build();
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("VarPrice.Worker");
+logger.LogInformation(
+    "Worker command started. ExecutionId={ExecutionId}; Mode={Mode}",
+    executionId,
+    command.Mode);
 
 using (var scope = host.Services.CreateScope())
 {
@@ -56,20 +86,7 @@ using (var scope = host.Services.CreateScope())
     await bootstrap.EnsureSchemaAsync();
 }
 
-var once = args.Contains("--once");
-var jobIndex = Array.IndexOf(args, "--job");
-var job = jobIndex >= 0 && jobIndex + 1 < args.Length ? args[jobIndex + 1] : "vegetables";
-
-if (!string.Equals(job, "vegetables", StringComparison.OrdinalIgnoreCase))
-{
-    logger.LogError("Unsupported job: {Job}", job);
-    return 2;
-}
-
 using var runScope = host.Services.CreateScope();
-var useCase = runScope.ServiceProvider.GetRequiredService<IRunCrawlerUseCase>();
-var progressState = runScope.ServiceProvider.GetRequiredService<CrawlerProgressState>();
-var dashboard = new CrawlerConsoleDashboard(progressState, TimeSpan.FromMilliseconds(200));
 using var cancellation = new CancellationTokenSource();
 Console.CancelKeyPress += (_, eventArgs) =>
 {
@@ -77,6 +94,102 @@ Console.CancelKeyPress += (_, eventArgs) =>
     cancellation.Cancel();
 };
 
+if (command.Mode == WorkerRunMode.CatalogRefresh)
+{
+    var refreshUseCase = runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>();
+    try
+    {
+        var refreshResult = await refreshUseCase.ExecuteAsync(cancellation.Token);
+        PrintCatalogSummary(refreshResult);
+        logger.LogInformation(
+            "catalog_refresh run_id={RunId}; status={Status}; source={Source}; discovered={Discovered}; accepted={Accepted}; inserted={Inserted}; updated={Updated}; skipped={Skipped}",
+            refreshResult.RunId,
+            refreshResult.Status,
+            refreshResult.Source,
+            refreshResult.DiscoveredCount,
+            refreshResult.AcceptedCount,
+            refreshResult.InsertedCount,
+            refreshResult.UpdatedCount,
+            refreshResult.SkippedCount);
+        return refreshResult.Status == RefreshProductCatalogStatus.Ok
+            ? WorkerCommandParser.SuccessExitCode
+            : WorkerCommandParser.FailedRunExitCode;
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+    {
+        logger.LogWarning("Catalog refresh was cancelled.");
+        return WorkerCommandParser.FailedRunExitCode;
+    }
+}
+
+if (command.Mode == WorkerRunMode.CollectPrices)
+{
+    var collectUseCase = runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>();
+    try
+    {
+        var collectResult = await collectUseCase.ExecuteAsync(cancellation.Token);
+        PrintPriceSummary(collectResult);
+        logger.LogInformation(
+            "collect_prices run_id={RunId}; status={Status}; selected={Selected}; enqueued={Enqueued}; succeeded={Succeeded}; retry={Retry}; dead={Dead}",
+            collectResult.RunId,
+            collectResult.Status,
+            collectResult.SelectedCount,
+            collectResult.EnqueuedCount,
+            collectResult.SucceededCount,
+            collectResult.RetryCount,
+            collectResult.DeadCount);
+        return string.Equals(collectResult.Status, "ok", StringComparison.OrdinalIgnoreCase)
+            ? WorkerCommandParser.SuccessExitCode
+            : WorkerCommandParser.FailedRunExitCode;
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+    {
+        logger.LogWarning("Price collection was cancelled.");
+        return WorkerCommandParser.FailedRunExitCode;
+    }
+}
+
+if (command.Mode == WorkerRunMode.RunAll)
+{
+    try
+    {
+        Console.WriteLine($"ExecutionId: {executionId}");
+        var refresh = await runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>()
+            .ExecuteAsync(cancellation.Token);
+        Console.WriteLine("Catalog refresh:");
+        PrintCatalogSummary(refresh, "  ");
+        logger.LogInformation(
+            "Run-all catalog refresh completed. ExecutionId={ExecutionId}; CatalogRunId={CatalogRunId}; CatalogStatus={CatalogStatus}",
+            executionId,
+            refresh.RunId,
+            refresh.Status);
+        if (refresh.Status != RefreshProductCatalogStatus.Ok) return WorkerCommandParser.FailedRunExitCode;
+
+        var prices = await runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>()
+            .ExecuteAsync(cancellation.Token);
+        Console.WriteLine("Price collection:");
+        PrintPriceSummary(prices, "  ");
+        logger.LogInformation(
+            "Run-all completed. ExecutionId={ExecutionId}; CatalogRunId={CatalogRunId}; CatalogStatus={CatalogStatus}; PriceRunId={PriceRunId}; PriceStatus={PriceStatus}",
+            executionId,
+            refresh.RunId,
+            refresh.Status,
+            prices.RunId,
+            prices.Status);
+        return string.Equals(prices.Status, "ok", StringComparison.OrdinalIgnoreCase)
+            ? WorkerCommandParser.SuccessExitCode
+            : WorkerCommandParser.FailedRunExitCode;
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+    {
+        logger.LogWarning("Run-all was cancelled.");
+        return WorkerCommandParser.FailedRunExitCode;
+    }
+}
+
+var useCase = runScope.ServiceProvider.GetRequiredService<IRunCrawlerUseCase>();
+var progressState = runScope.ServiceProvider.GetRequiredService<CrawlerProgressState>();
+var dashboard = new CrawlerConsoleDashboard(progressState, TimeSpan.FromMilliseconds(200));
 CrawlerRunResult result;
 dashboard.Start();
 try
@@ -86,7 +199,7 @@ try
 catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
 {
     logger.LogWarning("Crawler run was cancelled.");
-    return 1;
+    return WorkerCommandParser.FailedRunExitCode;
 }
 finally
 {
@@ -100,9 +213,37 @@ logger.LogInformation(
     result.ProductsProcessed,
     result.Errors);
 
-if (once)
+return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase)
+    ? WorkerCommandParser.SuccessExitCode
+    : WorkerCommandParser.FailedRunExitCode;
+
+static void PrintCatalogSummary(RefreshProductCatalogResult result, string prefix = "")
 {
-    return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+    Console.WriteLine($"{prefix}Command: catalog-refresh");
+    Console.WriteLine($"{prefix}Status: {result.Status.ToString().ToLowerInvariant()}");
+    Console.WriteLine($"{prefix}RunId: {result.RunId}");
+    Console.WriteLine($"{prefix}DurationMs: {result.DurationMs}");
+    Console.WriteLine($"{prefix}Discovered: {result.DiscoveredCount}");
+    Console.WriteLine($"{prefix}Accepted: {result.AcceptedCount}");
+    Console.WriteLine($"{prefix}Inserted: {result.InsertedCount}");
+    Console.WriteLine($"{prefix}Updated: {result.UpdatedCount}");
+    Console.WriteLine($"{prefix}Reactivated: {result.ReactivatedCount}");
+    Console.WriteLine($"{prefix}Deactivated: {result.DeactivatedCount}");
 }
 
-return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+static void PrintPriceSummary(CollectProductPricesResult result, string prefix = "")
+{
+    Console.WriteLine($"{prefix}Command: collect-prices");
+    Console.WriteLine($"{prefix}Status: {result.Status}");
+    Console.WriteLine($"{prefix}RunId: {result.RunId}");
+    Console.WriteLine($"{prefix}DurationMs: {result.DurationMs}");
+    Console.WriteLine($"{prefix}Selected: {result.SelectedCount}");
+    Console.WriteLine($"{prefix}Enqueued: {result.EnqueuedCount}");
+    Console.WriteLine($"{prefix}Succeeded: {result.SucceededCount}");
+    Console.WriteLine($"{prefix}Retry: {result.RetryCount}");
+    Console.WriteLine($"{prefix}Dead: {result.DeadCount}");
+    Console.WriteLine($"{prefix}Products created: {result.ProductsCreatedCount}");
+    Console.WriteLine($"{prefix}Products updated: {result.ProductsUpdatedCount}");
+    Console.WriteLine($"{prefix}Snapshots created: {result.SnapshotsCreatedCount}");
+    Console.WriteLine($"{prefix}Errors created: {result.ErrorsCreatedCount}");
+}

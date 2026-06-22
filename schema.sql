@@ -4,8 +4,183 @@ create table if not exists crawler_run (
     finished_at  timestamptz null,
     status       varchar(32) not null,
     source       varchar(64) not null,
-    note         varchar(255) null
+    note varchar
+(
+    255
+) null,
+    run_type varchar
+(
+    50
+) not null default 'legacy',
+    discovery_source varchar
+(
+    50
+),
+    duration_ms bigint,
+    discovered_count integer not null default 0,
+    accepted_count integer not null default 0,
+    inserted_count integer not null default 0,
+    updated_count integer not null default 0,
+    reactivated_count integer not null default 0,
+    deactivated_count integer not null default 0,
+    selected_count integer not null default 0,
+    enqueued_count integer not null default 0,
+    succeeded_count integer not null default 0,
+    retry_count integer not null default 0,
+    dead_count integer not null default 0,
+    failed_count integer not null default 0,
+    products_created_count integer not null default 0,
+    products_updated_count integer not null default 0,
+    snapshots_created_count integer not null default 0,
+    errors_created_count integer not null default 0,
+    error_code varchar
+(
+    100
+),
+    error_message varchar
+(
+    1000
+),
+    created_at timestamptz not null default now
+(
+),
+    updated_at timestamptz not null default now
+(
+)
 );
+
+alter table crawler_run
+    add column if not exists run_type varchar (50) not null default 'legacy';
+alter table crawler_run
+    add column if not exists discovery_source varchar (50);
+alter table crawler_run
+    add column if not exists duration_ms bigint;
+alter table crawler_run
+    add column if not exists discovered_count integer not null default 0;
+alter table crawler_run
+    add column if not exists accepted_count integer not null default 0;
+alter table crawler_run
+    add column if not exists inserted_count integer not null default 0;
+alter table crawler_run
+    add column if not exists updated_count integer not null default 0;
+alter table crawler_run
+    add column if not exists reactivated_count integer not null default 0;
+alter table crawler_run
+    add column if not exists deactivated_count integer not null default 0;
+alter table crawler_run
+    add column if not exists selected_count integer not null default 0;
+alter table crawler_run
+    add column if not exists enqueued_count integer not null default 0;
+alter table crawler_run
+    add column if not exists succeeded_count integer not null default 0;
+alter table crawler_run
+    add column if not exists retry_count integer not null default 0;
+alter table crawler_run
+    add column if not exists dead_count integer not null default 0;
+alter table crawler_run
+    add column if not exists failed_count integer not null default 0;
+alter table crawler_run
+    add column if not exists products_created_count integer not null default 0;
+alter table crawler_run
+    add column if not exists products_updated_count integer not null default 0;
+alter table crawler_run
+    add column if not exists snapshots_created_count integer not null default 0;
+alter table crawler_run
+    add column if not exists errors_created_count integer not null default 0;
+alter table crawler_run
+    add column if not exists error_code varchar (100);
+alter table crawler_run
+    add column if not exists error_message varchar (1000);
+alter table crawler_run
+    add column if not exists created_at timestamptz not null default now();
+alter table crawler_run
+    add column if not exists updated_at timestamptz not null default now();
+
+create table if not exists crawler_run_stage
+(
+    id
+    bigint
+    generated
+    always as
+    identity
+    primary
+    key,
+    run_id
+    bigint
+    not
+    null
+    references
+    crawler_run
+(
+    id
+) on delete cascade,
+    stage varchar
+(
+    100
+) not null,
+    started_at timestamptz not null,
+    finished_at timestamptz not null,
+    duration_ms bigint not null check
+(
+    duration_ms
+    >=
+    0
+),
+    item_count integer check
+(
+    item_count
+    is
+    null
+    or
+    item_count
+    >=
+    0
+),
+    created_at timestamptz not null default now
+(
+),
+    constraint uq_crawler_run_stage unique
+(
+    run_id,
+    stage
+),
+    constraint ck_crawler_run_stage_dates check
+(
+    finished_at
+    >=
+    started_at
+)
+    );
+
+create index if not exists ix_crawler_run_started_at on crawler_run(started_at desc);
+create index if not exists ix_crawler_run_run_type_started_at on crawler_run(run_type, started_at desc);
+create index if not exists ix_crawler_run_status_started_at on crawler_run(status, started_at desc);
+create index if not exists ix_crawler_run_stage_run_id on crawler_run_stage(run_id);
+
+do
+$$
+begin
+    if
+not exists (select 1 from pg_constraint where conname = 'ck_crawler_run_run_type') then
+alter table crawler_run
+    add constraint ck_crawler_run_run_type check (run_type in ('catalog-refresh', 'price-collection', 'legacy'));
+end if;
+    if
+not exists (select 1 from pg_constraint where conname = 'ck_crawler_run_dates') then
+alter table crawler_run
+    add constraint ck_crawler_run_dates check (finished_at is null or finished_at >= started_at);
+end if;
+    if
+not exists (select 1 from pg_constraint where conname = 'ck_crawler_run_non_negative') then
+alter table crawler_run
+    add constraint ck_crawler_run_non_negative check (
+        (duration_ms is null or duration_ms >= 0) and discovered_count >= 0 and accepted_count >= 0 and
+        inserted_count >= 0 and updated_count >= 0 and reactivated_count >= 0 and deactivated_count >= 0 and
+        selected_count >= 0 and enqueued_count >= 0 and succeeded_count >= 0 and retry_count >= 0 and
+        dead_count >= 0 and failed_count >= 0 and products_created_count >= 0 and products_updated_count >= 0 and
+        snapshots_created_count >= 0 and errors_created_count >= 0);
+end if;
+end $$;
 
 create table if not exists ingestion_run (
     ingestion_run_id bigserial primary key,
@@ -29,9 +204,151 @@ create table if not exists product (
     updated_at   timestamptz null
 );
 
+create table if not exists product_catalog
+(
+    id
+    bigint
+    generated
+    by
+    default as
+    identity
+    primary
+    key,
+    source
+    varchar
+(
+    50
+) not null,
+    url varchar
+(
+    1024
+) not null,
+    normalized_url varchar
+(
+    1024
+) not null,
+    external_id varchar
+(
+    200
+) null,
+    slug varchar
+(
+    300
+) null,
+    first_discovered_at timestamptz not null,
+    last_discovered_at timestamptz not null,
+    last_checked_at timestamptz null,
+    next_check_at timestamptz null,
+    reserved_at timestamptz null,
+    reserved_until timestamptz null,
+    reserved_by varchar
+(
+    200
+) null,
+    is_active boolean not null default true,
+    consecutive_errors integer not null default 0,
+    created_at timestamptz not null default now
+(
+),
+    updated_at timestamptz not null default now
+(
+),
+    constraint ck_product_catalog_consecutive_errors_non_negative check
+(
+    consecutive_errors
+    >=
+    0
+)
+    );
+
+create table if not exists product_catalog_refresh
+(
+    id
+    bigint
+    generated
+    always as
+    identity
+    primary
+    key,
+    source
+    varchar
+(
+    50
+) not null,
+    discovery_source varchar
+(
+    50
+) not null,
+    started_at timestamptz not null,
+    finished_at timestamptz null,
+    status varchar
+(
+    20
+) not null,
+    discovered_count integer not null default 0,
+    accepted_count integer not null default 0,
+    inserted_count integer not null default 0,
+    updated_count integer not null default 0,
+    deactivated_count integer not null default 0,
+    reactivated_count integer not null default 0,
+    error_code varchar
+(
+    100
+) null,
+    error_message varchar
+(
+    1000
+) null,
+    created_at timestamptz not null default now
+(
+),
+    updated_at timestamptz not null default now
+(
+),
+    constraint ck_product_catalog_refresh_status
+    check
+(
+    status
+    in
+(
+    'running',
+    'ok',
+    'error',
+    'cancelled'
+)),
+    constraint ck_product_catalog_refresh_counts_non_negative
+    check
+(
+    discovered_count
+    >=
+    0
+    and
+    accepted_count
+    >=
+    0
+    and
+    inserted_count
+    >=
+    0
+    and
+    updated_count
+    >=
+    0
+    and
+    deactivated_count
+    >=
+    0
+    and
+    reactivated_count
+    >=
+    0
+)
+    );
+
 create table if not exists price_collect_queue (
     id                  bigint generated by default as identity primary key,
     run_id              bigint not null references crawler_run(id),
+    product_catalog_id bigint null,
     url                 varchar(1024) not null,
     status              varchar(32) not null,
     attempt             integer not null default 0,
@@ -89,9 +406,78 @@ create table if not exists db_routine_script
 )
     );
 
+alter table product_catalog
+    add column if not exists reserved_at timestamptz null;
+alter table product_catalog
+    add column if not exists reserved_until timestamptz null;
+alter table product_catalog
+    add column if not exists reserved_by varchar (200) null;
+alter table product_catalog
+    add column if not exists last_seen_refresh_id bigint null;
+alter table product_catalog
+    add column if not exists deactivated_at timestamptz null;
+alter table product_catalog
+    add column if not exists reactivated_at timestamptz null;
+alter table price_collect_queue
+    add column if not exists product_catalog_id bigint null;
+
+do
+$$
+begin
+    if
+not exists (
+        select 1
+        from pg_constraint
+        where conname = 'fk_price_collect_queue_product_catalog'
+          and conrelid = 'price_collect_queue'::regclass
+    ) then
+alter table price_collect_queue
+    add constraint fk_price_collect_queue_product_catalog
+        foreign key (product_catalog_id)
+            references product_catalog (id)
+            on delete restrict;
+end if;
+end;
+$$;
+
+do
+$$
+begin
+    if
+not exists (
+        select 1
+        from pg_constraint
+        where conname = 'fk_product_catalog_last_seen_refresh'
+          and conrelid = 'product_catalog'::regclass
+    ) then
+alter table product_catalog
+    add constraint fk_product_catalog_last_seen_refresh
+        foreign key (last_seen_refresh_id)
+            references product_catalog_refresh (id)
+            on delete restrict;
+end if;
+end;
+$$;
+
 create unique index if not exists ux_product_url on product(url);
 create index if not exists ix_product_external_id on product(external_id);
+create unique index if not exists ux_product_catalog_source_normalized_url
+    on product_catalog(source, normalized_url);
+create index if not exists ix_product_catalog_due
+    on product_catalog(is_active, next_check_at, reserved_until, last_checked_at, id);
+create index if not exists ix_product_catalog_last_discovered_at
+    on product_catalog(last_discovered_at);
+create index if not exists ix_product_catalog_last_seen_refresh_id
+    on product_catalog(last_seen_refresh_id);
+create index if not exists ix_product_catalog_reservation
+    on product_catalog(reserved_until, id)
+    where reserved_until is not null;
+create unique index if not exists ux_product_catalog_refresh_running_source
+    on product_catalog_refresh(source)
+    where status = 'running';
 create unique index if not exists ux_price_collect_queue_run_url on price_collect_queue(run_id, url);
+create index if not exists ix_price_collect_queue_product_catalog_id
+    on price_collect_queue(product_catalog_id);
 create unique index if not exists ux_price_collect_queue_idempotency
     on price_collect_queue(idempotency_key)
     where idempotency_key is not null;

@@ -102,7 +102,19 @@ Health endpoint: `http://localhost:8080/health` (в Docker) или локаль�
 ### 3) Запустить Worker
 
 ```bash
-dotnet run --project VarPrice.Worker -- --once --job vegetables
+dotnet run --project VarPrice.Worker -- vegetables --once
+```
+
+Для ручного обновления постоянного каталога товаров без сбора цен:
+
+```bash
+dotnet run --project VarPrice.Worker -- catalog-refresh
+```
+
+Для ежедневного сбора цен из постоянного каталога без discovery:
+
+```bash
+dotnet run --project VarPrice.Worker -- collect-prices
 ```
 
 В интерактивной консоли Worker показывает фиксированную верхнюю панель прогресса:
@@ -138,56 +150,134 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - открой `db/seeds/001__local_debug_month.sql` в `DataGrip` и выполни его против локальной БД `varprice`
 - после завершения script сам вернет summary counts по основным таблицам и статусам
 
-## Параметры командной строки (Worker)
+## Команды запуска Worker
 
-Поддерживаются параметры:
+Основной CLI-контракт Worker теперь задается явной позиционной командой:
 
-- `--once`
+- `vegetables [--once]`
+- `catalog-refresh`
+- `collect-prices`
+- `--help` / `-h`
+
+Legacy aliases сохранены для обратной совместимости:
+
 - `--job <name>`
+- `--collect-prices`
+
+Ошибочные команды, неизвестные параметры и конфликтующие режимы завершаются до создания host и до DB bootstrap с кодом `2`.
+Worker CLI-аргументы не передаются в Generic Host как configuration overrides.
 
 ### `--once`
 
-Флаг наличия параметра:
+`--once` поддерживается только командой `vegetables`. Для `catalog-refresh` и `collect-prices`
+он считается ошибочной опцией и завершает Worker с кодом `2`.
 
-```csharp
-var once = args.Contains("--once");
-```
-
-Если флаг указан, приложение завершится с кодом:
+На текущем этапе `--once` сохранен как legacy/no-op для обратной совместимости: `vegetables`
+всегда выполняет один run и завершается с кодом:
 
 - `0`, если `result.Status == "ok"` (без учета регистра)
 - `1`, если статус не `ok`
 
-Примечание: в текущей реализации Worker возвращает те же коды завершения даже без `--once`.
+Long-running daemon/scheduler mode пока не реализован.
 
-### `--job <name>`
+### `vegetables`
 
-Индекс параметра в аргументах:
+Команда:
 
-```csharp
-var jobIndex = Array.IndexOf(args, "--job");
+```bash
+dotnet run --project VarPrice.Worker -- vegetables
+dotnet run --project VarPrice.Worker -- vegetables --once
 ```
 
 Поведение:
 
-- если `--job` передан и после него есть значение, берется это значение
-- если не передан, используется значение по умолчанию: `vegetables`
-- если значение не `vegetables`, Worker пишет `Unsupported job: <name>` и завершается с кодом `2`
+- запускает существующий discovery + queue + price snapshot flow для legacy vegetables режима;
+- показывает интерактивную progress-панель, если терминал поддерживает динамическую перерисовку;
+- legacy запуск без аргументов пока остается alias для `vegetables`.
+
+### `catalog-refresh`
+
+Команда:
+
+```bash
+dotnet run --project VarPrice.Worker -- catalog-refresh
+```
+
+Поведение:
+
+- создает `crawler_run` с source `catalog-refresh` до discovery;
+- создает `product_catalog_refresh` session;
+- запускает `IProductUrlDiscoveryService`;
+- выполняет один batch upsert в `product_catalog` с catalog source `varus` и текущим refresh id;
+- после безопасного полного refresh soft-деактивирует активные товары, которые давно не встречались;
+- inactive товар автоматически реактивируется при повторном discovery;
+- не создает `ingestion_run`, `price_collect_queue`, `price_snapshot` и `product`;
+- завершает процесс с кодом `0` при `status=ok` и `1` при ошибке.
+
+Runtime flow:
+
+```text
+crawler_run_start
+-> refresh_session_start
+-> active_count
+-> discovery
+-> catalog_upsert
+-> safety_check
+-> deactivate_missing
+-> refresh_session_complete
+-> crawler_run_finish
+```
+
+Soft deactivation lifecycle:
+
+```text
+discovered -> active -> missing during refresh -> grace period -> inactive -> discovered again -> reactivated
+```
+
+`is_active = false` does not physically delete catalog rows, products, queue history, or price snapshots.
+
+### `collect-prices`
+
+Команда:
+
+```bash
+dotnet run --project VarPrice.Worker -- collect-prices
+```
+
+Поведение:
+
+- создает `crawler_run` с source `price-collection`;
+- создает связанный `ingestion_run`;
+- выбирает due-товары из `product_catalog` по oldest-first;
+- ставит выбранные URL в `price_collect_queue` вместе с `product_catalog_id`;
+- обрабатывает очередь через текущий `IProductCardExtractor`;
+- пишет `product`, `price_snapshot`, `crawl_error` через существующий observation flow;
+- обновляет scheduling state `product_catalog` после финального success/dead;
+- не запускает discovery, category seed или catalog upsert.
+
+Oldest-first порядок:
+
+1. `last_checked_at is null`;
+2. самый старый `last_checked_at`;
+3. стабильный tie-breaker по `id`.
+
+Inactive rows, future `next_check_at` и rows с активным `reserved_until` не выбираются. Истекший catalog lease снова делает row доступной для выбора.
 
 Примеры:
 
 ```bash
-dotnet run --project VarPrice.Worker
-dotnet run --project VarPrice.Worker -- --once
-dotnet run --project VarPrice.Worker -- --job vegetables
-dotnet run --project VarPrice.Worker -- --once --job vegetables
+dotnet run --project VarPrice.Worker -- vegetables
+dotnet run --project VarPrice.Worker -- vegetables --once
+dotnet run --project VarPrice.Worker -- catalog-refresh
+dotnet run --project VarPrice.Worker -- collect-prices
+dotnet run --project VarPrice.Worker -- --help
 ```
 
 ## Коды завершения Worker
 
 - `0` - успешный run (`status=ok`)
 - `1` - run завершился с ошибочным статусом
-- `2` - передан неподдерживаемый `--job`
+- `2` - передана неподдерживаемая команда, опция или конфликтующие режимы
 
 ## Конфигурация
 
@@ -199,6 +289,15 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 - `Crawler:CategorySeedUrlsFilePath`
 - `Crawler:VegetablesUrlContains`
 - `Crawler:MaxProductsPerRun`
+- `Crawler:CatalogLeaseSeconds` (default `1800`)
+- `Crawler:SuccessfulCheckIntervalHours` (default `24`)
+- `Crawler:CatalogFailureBaseDelayMinutes` (default `60`)
+- `Crawler:CatalogFailureMaxDelayHours` (default `24`)
+- `Crawler:CatalogDeactivationEnabled` (default `true`)
+- `Crawler:CatalogMissingGracePeriodDays` (default `14`)
+- `Crawler:CatalogMinimumExpectedUrls` (default `1000`)
+- `Crawler:CatalogMinimumPreviousRatio` (default `0.5`)
+- `Crawler:CatalogRefreshRunningTimeoutMinutes` (default `360`)
 - `Crawler:MaxUrls`
 - `Crawler:MaxCategoryPagesPerSeed` (default `10`)
 - `Crawler:MaxConcurrency` (default `4`)
@@ -219,6 +318,37 @@ dotnet run --project VarPrice.Worker -- --once --job vegetables
 
 Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed-urls.varus.json`.
 
+Limit semantics:
+
+- `Crawler:MaxUrls` limits discovery and catalog refresh size.
+- `Crawler:MaxProductsPerRun` limits price collection batch size. In legacy `vegetables` mode it limits discovered URLs
+  enqueued into `price_collect_queue`; in `collect-prices` mode it limits due `product_catalog` rows selected.
+- `Crawler:VegetablesUrlContains` is still respected by discovery; use an empty value for a full catalog refresh.
+- Catalog deactivation safety guards: grace period, absolute minimum accepted URL count, accepted/current-active ratio,
+  empty scoped filter, supported full discovery mode (`CategorySeeds`), and a single running refresh per source.
+- A stale `product_catalog_refresh` stuck in `running` longer than `CatalogRefreshRunningTimeoutMinutes` is marked
+  `error` with `catalog_refresh_abandoned` before a new refresh session starts.
+- Refresh session and `crawler_run` final statuses are written by one PostgreSQL routine during catalog-refresh
+  completion/failure.
+- `Api` and `Sitemap` discovery do not automatically allow deactivation because their full-catalog completeness is not
+  confirmed.
+
+Catalog SQL checks:
+
+```sql
+select is_active, count(*) from product_catalog group by is_active;
+
+select id, normalized_url, last_discovered_at, last_seen_refresh_id, is_active, deactivated_at, reactivated_at
+from product_catalog
+order by updated_at desc
+limit 100;
+
+select *
+from product_catalog_refresh
+order by id desc
+limit 20;
+```
+
 Переопределение через переменные окружения:
 
 - `ConnectionStrings__Postgres`
@@ -227,6 +357,15 @@ Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed
 - `Crawler__CategorySeedUrlsFilePath`
 - `Crawler__VegetablesUrlContains`
 - `Crawler__MaxProductsPerRun`
+- `Crawler__CatalogLeaseSeconds`
+- `Crawler__SuccessfulCheckIntervalHours`
+- `Crawler__CatalogFailureBaseDelayMinutes`
+- `Crawler__CatalogFailureMaxDelayHours`
+- `Crawler__CatalogDeactivationEnabled`
+- `Crawler__CatalogMissingGracePeriodDays`
+- `Crawler__CatalogMinimumExpectedUrls`
+- `Crawler__CatalogMinimumPreviousRatio`
+- `Crawler__CatalogRefreshRunningTimeoutMinutes`
 - `Crawler__MaxUrls`
 - `Crawler__MaxCategoryPagesPerSeed`
 - `Crawler__MaxConcurrency`
@@ -261,6 +400,11 @@ Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed
 - `crawler_run` хранит именно журнал конкретных запусков crawler, а не справочник crawler-ов.
 - `crawler_run.status` хранится как `varchar(32)` со значениями `running`, `ok`, `error`.
 - `product` нормализован и использует внутренний PK `product.id`; внешний идентификатор хранится отдельно в `product.external_id`.
+- `product_catalog` хранит постоянный каталог обнаруженных товарных URL: `source`, исходный и нормализованный URL,
+  metadata discovery, активность, даты проверок, reservation/lease поля и счетчик последовательных ошибок.
+  `collect-prices` выбирает активные due rows по oldest-first и обновляет `last_checked_at`, `next_check_at`,
+  `consecutive_errors`, `external_id` и `slug` после финального результата обработки.
+- `price_collect_queue.product_catalog_id` связывает queue item с исходной записью каталога для scheduling updates.
 - `price_snapshot` работает как append-only журнал значимых изменений состояния товара.
 - Новый `price_snapshot` создается только если изменилось хотя бы одно из полей:
   `price`, `old_price`, `promo_flag`, `in_stock`.
@@ -275,6 +419,34 @@ Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed
 - При некритической ошибке и валидном состоянии товара может быть создан и snapshot, и связанная запись
   в `crawl_error`.
 - При критической ошибке без валидного состояния snapshot не создается, сохраняется только `crawl_error`.
+
+## Catalog price collection SQL checks
+
+```sql
+select
+    id,
+    normalized_url,
+    last_checked_at,
+    next_check_at,
+    consecutive_errors,
+    reserved_until
+from product_catalog
+order by last_checked_at nulls first, id
+limit 50;
+```
+
+```sql
+select
+    id,
+    run_id,
+    product_catalog_id,
+    status,
+    attempt,
+    max_attempts
+from price_collect_queue
+where run_id = :run_id
+order by id;
+```
 
 ## DB routine scripts
 
@@ -299,6 +471,9 @@ Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed
   `price_collect_queue_mark_succeeded`, `price_collect_queue_mark_retry`,
   `price_collect_queue_mark_dead`, `price_collect_queue_reap_expired`,
   `price_collect_queue_has_outstanding`, `price_collect_queue_get_run_stats`.
+- Для `product_catalog` через DB routines выполняются:
+  `product_catalog_upsert_discovered`, `product_catalog_get_by_id`,
+  `product_catalog_get_by_source_normalized_url`.
 - `price_observation_store` инкапсулирует единое доменное действие записи observation:
   поиск existing product, upsert `product`, чтение latest snapshot,
   проверку meaningful change, conditional insert `price_snapshot`
@@ -313,6 +488,51 @@ Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed
 - Тесты проверяют:
   `crawler_run`, `ingestion_run`, `price_observation_store`,
   `crawl_error_add`, queue lifecycle, reaper, stats и полную use-case интеграцию.
+
+## Run statistics
+
+Каждый `catalog-refresh` и `price-collection` сохраняет итоговые агрегаты в `crawler_run`; длительности этапов
+сохраняются в `crawler_run_stage`. Статистика завершается одним вызовом `crawler_run_complete`, stages передаются
+одним JSON batch без update на каждый товар.
+
+- Catalog: `discovered`, `accepted`, `inserted`, `updated`, `reactivated`, `deactivated`.
+- Price collection: `selected`, `enqueued`, `succeeded`, `retry`, `dead`, `failed`, `products_created`,
+  `products_updated`, `snapshots_created`, `errors_created`.
+- `products_created` и `products_updated` берутся из явных флагов `price_observation_store`. Existing product считается
+  updated только при изменении его бизнес-полей; повторное observation/no-op не увеличивает `products_updated`.
+- Общие поля: `run_type`, `discovery_source`, `duration_ms`, `error_code`, `error_message`.
+- Семантика `run-finalization`: application finalization (`refresh`/`ingestion` completion) плюс overhead DB routine
+  `crawler_run_complete`, которая сохраняет итоговые counters и batch stages.
+- Worker печатает эти же значения из result use case. `run-all` последовательно выводит два независимых summary.
+- Каждый invocation Worker получает `ExecutionId`; он добавляется в structured log context и CLI `run-all`, связывая
+  catalog и price runs одной команды без изменения DB schema.
+
+Read-only API:
+
+```text
+GET /api/crawler-runs?limit=50&runType=price-collection&status=ok
+GET /api/crawler-runs/{id}
+GET /api/crawler-runs/statistics?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z&runType=price-collection
+```
+
+`limit` — от 1 до 200. Для aggregate без дат используется диапазон 30 дней; максимальный диапазон — 365 дней.
+Допустимые фильтры: `runType` — `catalog-refresh`, `price-collection`, `legacy`; `status` — `running`, `ok`, `error`.
+Неизвестные значения возвращают `400 Bad Request`, а регистр и внешние пробелы нормализуются.
+
+```sql
+select id, run_type, status, started_at, finished_at, duration_ms,
+       discovered_count, accepted_count, selected_count, succeeded_count,
+       dead_count, snapshots_created_count, error_code
+from crawler_run order by id desc limit 50;
+
+select run_id, stage, duration_ms, item_count
+from crawler_run_stage where run_id = :run_id order by id;
+
+select run_type, count(*) as runs, avg(duration_ms) as avg_duration_ms,
+       sum(succeeded_count) as succeeded, sum(dead_count) as dead
+from crawler_run where started_at >= now() - interval '30 days'
+group by run_type;
+```
 
 ## Версионирование (Git tags + Nerdbank.GitVersioning)
 

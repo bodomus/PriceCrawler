@@ -33,9 +33,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<PgRoutineExecutor>();
 
         services.AddScoped<ICrawlerRunRepository, PgCrawlerRunRepository>();
+        services.AddScoped<ICrawlerRunReadRepository, PgCrawlerRunReadRepository>();
         services.AddScoped<IIngestionRunRepository, PgIngestionRunRepository>();
         services.AddScoped<IPriceSnapshotRepository, PgPriceSnapshotRepository>();
         services.AddScoped<IPriceCollectQueueRepository, PgPriceCollectQueueRepository>();
+        services.AddScoped<IProductCatalogRepository, PgProductCatalogRepository>();
+        services.AddScoped<IProductCatalogRefreshRepository, PgProductCatalogRefreshRepository>();
 
         services.AddSingleton<ISitemapUrlProvider, SitemapUrlProvider>();
         services.AddSingleton<ISitemapHttpClient, SitemapHttpClient>();

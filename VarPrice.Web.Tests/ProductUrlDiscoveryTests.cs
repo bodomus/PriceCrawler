@@ -428,10 +428,101 @@ public sealed class ProductUrlDiscoveryTests
             service.DiscoverProductUrlsAsync(CancellationToken.None));
     }
 
+    [Fact]
+    public void Apply_WhenMaxResultsProvided_ReturnsAtMostRequestedCount()
+    {
+        var filter = CreateProductUrlFilter(new CrawlerOptions { MaxProductsPerRun = 200, MaxUrls = 50000 });
+        var urls = Enumerable.Range(1, 10).Select(i => new Uri($"https://varus.ua/product-{i}"));
+
+        var result = filter.Apply(urls, "category-seed", maxResults: 3);
+
+        Assert.Equal(3, result.Count);
+    }
+
+    [Fact]
+    public async Task DiscoverProductUrlsAsync_MaxProductsPerRunIs200AndMaxUrlsIs50000_ReturnsMoreThan200Urls()
+    {
+        var urls = Enumerable.Range(1, 250)
+            .Select(i => new ProductDiscoveryItem($"https://varus.ua/product-{i}"))
+            .ToList();
+        var strategy = new FakeDiscoveryStrategy(ProductUrlDiscoverySourceKind.CategorySeed, "category-seed", urls);
+        var filter = CreateProductUrlFilter(new CrawlerOptions
+        {
+            MaxProductsPerRun = 200,
+            MaxUrls = 50000
+        });
+        var service = new ProductUrlDiscoveryService(
+            Options.Create(new CrawlerOptions { MaxProductsPerRun = 200, MaxUrls = 50000 }),
+            new StaticDiscoveryStrategyFactory(strategy),
+            filter,
+            NullLogger<ProductUrlDiscoveryService>.Instance);
+
+        var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(250, result.Urls.Count);
+    }
+
+    [Fact]
+    public async Task DiscoverProductUrlsAsync_MaxUrlsIs1000_ReturnsAtMost1000Urls()
+    {
+        var urls = Enumerable.Range(1, 1_250)
+            .Select(i => new ProductDiscoveryItem($"https://varus.ua/product-{i}"))
+            .ToList();
+        var strategy = new FakeDiscoveryStrategy(ProductUrlDiscoverySourceKind.CategorySeed, "category-seed", urls);
+        var filter = CreateProductUrlFilter(new CrawlerOptions
+        {
+            MaxProductsPerRun = 200,
+            MaxUrls = 1_000
+        });
+        var service = new ProductUrlDiscoveryService(
+            Options.Create(new CrawlerOptions { MaxProductsPerRun = 200, MaxUrls = 1_000 }),
+            new StaticDiscoveryStrategyFactory(strategy),
+            filter,
+            NullLogger<ProductUrlDiscoveryService>.Instance);
+
+        var result = await service.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(1_000, result.Urls.Count);
+        Assert.Equal("https://varus.ua/product-1000", result.Urls[^1]);
+    }
+
+    [Fact]
+    public void ProductUrlFilter_EmptyVegetablesFilter_DoesNotExcludeValidUrls()
+    {
+        var filter = CreateProductUrlFilter(new CrawlerOptions { VegetablesUrlContains = "", MaxUrls = 10 });
+
+        var result = filter.Apply([new Uri("https://varus.ua/product-a")], "category-seed", maxResults: 10);
+
+        Assert.Equal(["https://varus.ua/product-a"], result);
+    }
+
+    [Fact]
+    public void ProductUrlFilter_ConfiguredVegetablesFilter_ExcludesNonMatchingUrls()
+    {
+        var filter = CreateProductUrlFilter(new CrawlerOptions { VegetablesUrlContains = "ovochi", MaxUrls = 10 });
+
+        var result = filter.Apply(
+            [
+                new Uri("https://varus.ua/ovochi-product"),
+                new Uri("https://varus.ua/molochni-product")
+            ],
+            "category-seed",
+            maxResults: 10);
+
+        Assert.Equal(["https://varus.ua/ovochi-product"], result);
+    }
+
     private static ProductUrlDiscoveryService CreateDiscoveryService(IProductUrlDiscoveryStrategy strategy)
-        => new(new StaticDiscoveryStrategyFactory(strategy),
+        => new(Options.Create(new CrawlerOptions { MaxUrls = 100 }),
+            new StaticDiscoveryStrategyFactory(strategy),
             new PassThroughProductUrlFilter(),
             NullLogger<ProductUrlDiscoveryService>.Instance);
+
+    private static ProductUrlFilter CreateProductUrlFilter(CrawlerOptions options)
+        => new(
+            Options.Create(options),
+            Options.Create(new UrlFilterOptions()),
+            NullLogger<ProductUrlFilter>.Instance);
 
     private static CategoryProductUrlDiscoverySourceHarness CreateCategorySource(
         string seedPath,
@@ -576,8 +667,8 @@ public sealed class ProductUrlDiscoveryTests
 
     private sealed class PassThroughProductUrlFilter : IProductUrlFilter
     {
-        public IReadOnlyList<string> Apply(IEnumerable<Uri> urls, string sourceName) =>
-            urls.Select(x => x.AbsoluteUri).ToList();
+        public IReadOnlyList<string> Apply(IEnumerable<Uri> urls, string sourceName, int maxResults) =>
+            urls.Select(x => x.AbsoluteUri).Take(Math.Max(1, maxResults)).ToList();
     }
 
     private sealed class StubHttpClientFactory(HttpClient httpClient) : IHttpClientFactory

@@ -7,6 +7,9 @@ Varus Crawler is a price collection and analysis project for e-commerce product 
 
 ---
 
+##IMportant
+If db varprice has been changed, copy to the varprice_test
+
 ## Working style
 - Read the relevant code path before editing.
 - For non-trivial tasks, make a short plan first.

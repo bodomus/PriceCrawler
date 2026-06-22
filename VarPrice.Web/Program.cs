@@ -67,6 +67,7 @@ app.Use(async (context, next) =>
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Runs}/{action=Index}/{id?}");
+app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
 using (var scope = app.Services.CreateScope())

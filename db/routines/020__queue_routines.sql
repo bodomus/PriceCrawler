@@ -13,21 +13,46 @@ select case lower(coalesce(btrim(p_status), ''))
            end::varchar(32);
 $$;
 
+drop function if exists price_collect_queue_enqueue(bigint, text[], text[], integer);
+drop function if exists price_collect_queue_enqueue(bigint, text[], text[], integer, bigint[]);
+
 create
 or replace function price_collect_queue_enqueue(
     p_run_id bigint,
     p_urls text[],
     p_idempotency_keys text[],
-    p_max_attempts integer)
+    p_max_attempts integer,
+    p_product_catalog_ids bigint[] default null)
 returns integer
 language plpgsql
 as $$
 declare
 v_count integer;
+v_catalog_ids
+bigint[];
+v_expected
+integer;
 begin
+v_expected
+:= coalesce(array_length(p_urls, 1), 0);
+
+if
+v_expected <> coalesce(array_length(p_idempotency_keys, 1), 0) then
+    raise exception 'p_urls and p_idempotency_keys length mismatch';
+end if;
+
+v_catalog_ids
+:= coalesce(p_product_catalog_ids, array_fill(null::bigint, array[v_expected]));
+
+if
+v_expected <> coalesce(array_length(v_catalog_ids, 1), 0) then
+    raise exception 'p_urls and p_product_catalog_ids length mismatch';
+end if;
+
 with inserted as (
 insert
 into price_collect_queue(run_id,
+                         product_catalog_id,
                          url,
                          status,
                          attempt,
@@ -37,6 +62,7 @@ into price_collect_queue(run_id,
                          created_at,
                          updated_at)
 select p_run_id,
+       x.product_catalog_id,
        routine_support_trim_required(x.url, 1024),
        routine_support_queue_status('pending'),
        0,
@@ -45,16 +71,23 @@ select p_run_id,
        routine_support_trim_required(x.idempotency_key, 128),
        now(),
        now()
-from unnest(p_urls, p_idempotency_keys) as x(url, idempotency_key) on conflict (run_id, url) do nothing
+from unnest(p_urls, p_idempotency_keys, v_catalog_ids) as x(url, idempotency_key, product_catalog_id) on conflict (run_id, url) do nothing
         returning 1
     )
 select count(*)
 into v_count
 from inserted;
 
+if
+coalesce(v_count, 0) <> v_expected then
+    raise exception 'price_collect_queue_enqueue inserted % of % items', coalesce(v_count, 0), v_expected;
+end if;
+
 return coalesce(v_count, 0);
 end;
 $$;
+
+drop function if exists price_collect_queue_reserve_batch(bigint, integer, text, integer);
 
 create
 or replace function price_collect_queue_reserve_batch(
@@ -67,7 +100,8 @@ returns table(
     url varchar(1024),
     attempt integer,
     max_attempts integer,
-    idempotency_key varchar(128))
+    idempotency_key varchar(128),
+    product_catalog_id bigint)
 language sql
 as $$
     with candidates as (
@@ -91,13 +125,14 @@ as $$
             updated_at = now()
         from candidates
         where queue.id = candidates.id
-        returning queue.id, queue.url, queue.attempt, queue.max_attempts, queue.idempotency_key
+        returning queue.id, queue.url, queue.attempt, queue.max_attempts, queue.idempotency_key, queue.product_catalog_id
     )
 select updated.id,
        updated.url,
        updated.attempt,
        updated.max_attempts,
-       coalesce(updated.idempotency_key, '')
+       coalesce(updated.idempotency_key, ''),
+       updated.product_catalog_id
 from updated
 order by updated.id;
 $$;
