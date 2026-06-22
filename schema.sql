@@ -4,8 +4,183 @@ create table if not exists crawler_run (
     finished_at  timestamptz null,
     status       varchar(32) not null,
     source       varchar(64) not null,
-    note         varchar(255) null
+    note varchar
+(
+    255
+) null,
+    run_type varchar
+(
+    50
+) not null default 'legacy',
+    discovery_source varchar
+(
+    50
+),
+    duration_ms bigint,
+    discovered_count integer not null default 0,
+    accepted_count integer not null default 0,
+    inserted_count integer not null default 0,
+    updated_count integer not null default 0,
+    reactivated_count integer not null default 0,
+    deactivated_count integer not null default 0,
+    selected_count integer not null default 0,
+    enqueued_count integer not null default 0,
+    succeeded_count integer not null default 0,
+    retry_count integer not null default 0,
+    dead_count integer not null default 0,
+    failed_count integer not null default 0,
+    products_created_count integer not null default 0,
+    products_updated_count integer not null default 0,
+    snapshots_created_count integer not null default 0,
+    errors_created_count integer not null default 0,
+    error_code varchar
+(
+    100
+),
+    error_message varchar
+(
+    1000
+),
+    created_at timestamptz not null default now
+(
+),
+    updated_at timestamptz not null default now
+(
+)
 );
+
+alter table crawler_run
+    add column if not exists run_type varchar (50) not null default 'legacy';
+alter table crawler_run
+    add column if not exists discovery_source varchar (50);
+alter table crawler_run
+    add column if not exists duration_ms bigint;
+alter table crawler_run
+    add column if not exists discovered_count integer not null default 0;
+alter table crawler_run
+    add column if not exists accepted_count integer not null default 0;
+alter table crawler_run
+    add column if not exists inserted_count integer not null default 0;
+alter table crawler_run
+    add column if not exists updated_count integer not null default 0;
+alter table crawler_run
+    add column if not exists reactivated_count integer not null default 0;
+alter table crawler_run
+    add column if not exists deactivated_count integer not null default 0;
+alter table crawler_run
+    add column if not exists selected_count integer not null default 0;
+alter table crawler_run
+    add column if not exists enqueued_count integer not null default 0;
+alter table crawler_run
+    add column if not exists succeeded_count integer not null default 0;
+alter table crawler_run
+    add column if not exists retry_count integer not null default 0;
+alter table crawler_run
+    add column if not exists dead_count integer not null default 0;
+alter table crawler_run
+    add column if not exists failed_count integer not null default 0;
+alter table crawler_run
+    add column if not exists products_created_count integer not null default 0;
+alter table crawler_run
+    add column if not exists products_updated_count integer not null default 0;
+alter table crawler_run
+    add column if not exists snapshots_created_count integer not null default 0;
+alter table crawler_run
+    add column if not exists errors_created_count integer not null default 0;
+alter table crawler_run
+    add column if not exists error_code varchar (100);
+alter table crawler_run
+    add column if not exists error_message varchar (1000);
+alter table crawler_run
+    add column if not exists created_at timestamptz not null default now();
+alter table crawler_run
+    add column if not exists updated_at timestamptz not null default now();
+
+create table if not exists crawler_run_stage
+(
+    id
+    bigint
+    generated
+    always as
+    identity
+    primary
+    key,
+    run_id
+    bigint
+    not
+    null
+    references
+    crawler_run
+(
+    id
+) on delete cascade,
+    stage varchar
+(
+    100
+) not null,
+    started_at timestamptz not null,
+    finished_at timestamptz not null,
+    duration_ms bigint not null check
+(
+    duration_ms
+    >=
+    0
+),
+    item_count integer check
+(
+    item_count
+    is
+    null
+    or
+    item_count
+    >=
+    0
+),
+    created_at timestamptz not null default now
+(
+),
+    constraint uq_crawler_run_stage unique
+(
+    run_id,
+    stage
+),
+    constraint ck_crawler_run_stage_dates check
+(
+    finished_at
+    >=
+    started_at
+)
+    );
+
+create index if not exists ix_crawler_run_started_at on crawler_run(started_at desc);
+create index if not exists ix_crawler_run_run_type_started_at on crawler_run(run_type, started_at desc);
+create index if not exists ix_crawler_run_status_started_at on crawler_run(status, started_at desc);
+create index if not exists ix_crawler_run_stage_run_id on crawler_run_stage(run_id);
+
+do
+$$
+begin
+    if
+not exists (select 1 from pg_constraint where conname = 'ck_crawler_run_run_type') then
+alter table crawler_run
+    add constraint ck_crawler_run_run_type check (run_type in ('catalog-refresh', 'price-collection', 'legacy'));
+end if;
+    if
+not exists (select 1 from pg_constraint where conname = 'ck_crawler_run_dates') then
+alter table crawler_run
+    add constraint ck_crawler_run_dates check (finished_at is null or finished_at >= started_at);
+end if;
+    if
+not exists (select 1 from pg_constraint where conname = 'ck_crawler_run_non_negative') then
+alter table crawler_run
+    add constraint ck_crawler_run_non_negative check (
+        (duration_ms is null or duration_ms >= 0) and discovered_count >= 0 and accepted_count >= 0 and
+        inserted_count >= 0 and updated_count >= 0 and reactivated_count >= 0 and deactivated_count >= 0 and
+        selected_count >= 0 and enqueued_count >= 0 and succeeded_count >= 0 and retry_count >= 0 and
+        dead_count >= 0 and failed_count >= 0 and products_created_count >= 0 and products_updated_count >= 0 and
+        snapshots_created_count >= 0 and errors_created_count >= 0);
+end if;
+end $$;
 
 create table if not exists ingestion_run (
     ingestion_run_id bigserial primary key,

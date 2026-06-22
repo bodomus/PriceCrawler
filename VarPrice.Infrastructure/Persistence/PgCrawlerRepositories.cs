@@ -1,3 +1,6 @@
+using System.Data.Common;
+using System.Text.Json;
+
 using VarPrice.Domain.Enums;
 using VarPrice.Domain.Interfaces;
 using VarPrice.Domain.Models;
@@ -22,6 +25,47 @@ public sealed class PgCrawlerRunRepository(PgRoutineExecutor routineExecutor) : 
                 .AddParameter("p_note", note),
             ct);
 
+    public async Task<long> StartAsync(string runType, string source, string? discoverySource, CancellationToken ct)
+        => await routineExecutor.ExecuteScalarAsync<long?>(
+               DbRoutineCall.ScalarFunction("crawler_run_start")
+                   .AddParameter("p_run_type", runType)
+                   .AddParameter("p_source", source)
+                   .AddParameter("p_discovery_source", discoverySource), ct)
+           ?? throw new InvalidOperationException("DB routine 'crawler_run_start' did not return a run id.");
+
+    public async Task CompleteAsync(long runId, RunStatus status, CrawlerRunStatistics statistics,
+        IReadOnlyCollection<CrawlerRunStageTiming> stageTimings, string? note, string? errorCode,
+        string? errorMessage, CancellationToken ct)
+    {
+        var stagesJson = JsonSerializer.Serialize(stageTimings.Select(x => new
+        {
+            stage = x.Stage,
+            duration_ms = x.DurationMs,
+            item_count = x.ItemCount
+        }));
+        await routineExecutor.ExecuteAsync(
+            DbRoutineCall.Procedure("crawler_run_complete")
+                .AddParameter("p_run_id", runId).AddParameter("p_status", ToStorage(status))
+                .AddParameter("p_discovered_count", statistics.DiscoveredCount)
+                .AddParameter("p_accepted_count", statistics.AcceptedCount)
+                .AddParameter("p_inserted_count", statistics.InsertedCount)
+                .AddParameter("p_updated_count", statistics.UpdatedCount)
+                .AddParameter("p_reactivated_count", statistics.ReactivatedCount)
+                .AddParameter("p_deactivated_count", statistics.DeactivatedCount)
+                .AddParameter("p_selected_count", statistics.SelectedCount)
+                .AddParameter("p_enqueued_count", statistics.EnqueuedCount)
+                .AddParameter("p_succeeded_count", statistics.SucceededCount)
+                .AddParameter("p_retry_count", statistics.RetryCount)
+                .AddParameter("p_dead_count", statistics.DeadCount)
+                .AddParameter("p_failed_count", statistics.FailedCount)
+                .AddParameter("p_products_created_count", statistics.ProductsCreatedCount)
+                .AddParameter("p_products_updated_count", statistics.ProductsUpdatedCount)
+                .AddParameter("p_snapshots_created_count", statistics.SnapshotsCreatedCount)
+                .AddParameter("p_errors_created_count", statistics.ErrorsCreatedCount)
+                .AddParameter("p_stages_json", stagesJson).AddParameter("p_note", note)
+                .AddParameter("p_error_code", errorCode).AddParameter("p_error_message", errorMessage), ct);
+    }
+
     private static string ToStorage(RunStatus status)
         => status switch
         {
@@ -29,6 +73,55 @@ public sealed class PgCrawlerRunRepository(PgRoutineExecutor routineExecutor) : 
             RunStatus.Ok => "ok",
             _ => "error"
         };
+}
+
+public sealed class PgCrawlerRunReadRepository(PgRoutineExecutor routineExecutor) : ICrawlerRunReadRepository
+{
+    public async Task<CrawlerRunDetails?> GetByIdAsync(long runId, CancellationToken ct)
+    {
+        var run = await routineExecutor.QuerySingleOrDefaultAsync(
+            DbRoutineCall.SetReturningFunction("crawler_run_get_by_id").AddParameter("p_run_id", runId),
+            MapDetailsWithoutStages, ct);
+        if (run is null) return null;
+        var stages = await routineExecutor.QueryAsync(
+            DbRoutineCall.SetReturningFunction("crawler_run_stage_get").AddParameter("p_run_id", runId),
+            r => new CrawlerRunStageTiming(r.GetString(0), r.GetInt64(1), r.IsDBNull(2) ? null : r.GetInt32(2)), ct);
+        return run with { StageTimings = stages };
+    }
+
+    public Task<IReadOnlyList<CrawlerRunSummary>> GetRecentAsync(int limit, string? runType, string? status,
+        CancellationToken ct) => routineExecutor.QueryAsync(
+        DbRoutineCall.SetReturningFunction("crawler_run_get_recent")
+            .AddParameter("p_limit", Math.Clamp(limit, 1, 200)).AddParameter("p_run_type", runType)
+            .AddParameter("p_status", status),
+        r => new CrawlerRunSummary(r.GetInt64(0), r.GetString(1), r.GetString(2), r.GetString(3), ToOffset(r, 4),
+            r.IsDBNull(5) ? null : ToOffset(r, 5), r.IsDBNull(6) ? null : r.GetInt64(6), r.GetInt32(7),
+            r.GetInt32(8), r.GetInt32(9), r.IsDBNull(10) ? null : r.GetString(10)), ct);
+
+    public async Task<CrawlerRunAggregateStatistics> GetAggregateAsync(DateTimeOffset fromUtc, DateTimeOffset toUtc,
+        string? runType, CancellationToken ct)
+    {
+        var row = await routineExecutor.QuerySingleOrDefaultAsync(
+            DbRoutineCall.SetReturningFunction("crawler_run_get_aggregate")
+                .AddParameter("p_from", fromUtc.UtcDateTime).AddParameter("p_to", toUtc.UtcDateTime)
+                .AddParameter("p_run_type", runType),
+            r => new CrawlerRunAggregateStatistics(fromUtc, toUtc, runType, r.GetInt32(0), r.GetInt32(1),
+                r.GetInt32(2), r.GetInt64(3), r.GetDouble(4), r.GetInt64(5), r.GetInt64(6), r.GetInt64(7),
+                r.GetInt64(8), r.GetInt64(9), r.GetInt64(10), r.GetInt64(11)), ct);
+        return row ?? new CrawlerRunAggregateStatistics(fromUtc, toUtc, runType, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    private static CrawlerRunDetails MapDetailsWithoutStages(DbDataReader r) => new(
+        r.GetInt64(0), r.GetString(6), r.GetString(4), r.IsDBNull(7) ? null : r.GetString(7), r.GetString(3),
+        ToOffset(r, 1), r.IsDBNull(2) ? null : ToOffset(r, 2), r.IsDBNull(8) ? null : r.GetInt64(8),
+        new CrawlerRunStatistics(r.GetInt32(9), r.GetInt32(10), r.GetInt32(11), r.GetInt32(12),
+            r.GetInt32(13), r.GetInt32(14), r.GetInt32(15), r.GetInt32(16), r.GetInt32(17), r.GetInt32(18),
+            r.GetInt32(19), r.GetInt32(20), r.GetInt32(21), r.GetInt32(22), r.GetInt32(23), r.GetInt32(24)),
+        [], r.IsDBNull(25) ? null : r.GetString(25), r.IsDBNull(26) ? null : r.GetString(26),
+        r.IsDBNull(5) ? null : r.GetString(5));
+
+    private static DateTimeOffset ToOffset(DbDataReader reader, int ordinal)
+        => new(DateTime.SpecifyKind(reader.GetDateTime(ordinal), DateTimeKind.Utc));
 }
 
 public sealed class PgIngestionRunRepository(PgRoutineExecutor routineExecutor) : IIngestionRunRepository
@@ -78,7 +171,8 @@ public sealed class PgPriceSnapshotRepository(PgRoutineExecutor routineExecutor)
             reader => new ProductObservationWriteResult(
                 reader.GetInt64(0),
                 reader.IsDBNull(1) ? null : reader.GetInt64(1),
-                reader.GetBoolean(2)),
+                reader.GetBoolean(2),
+                reader.GetBoolean(3)),
             ct);
 
         return result ?? throw new InvalidOperationException(

@@ -6,6 +6,7 @@ public sealed class WorkerCommandParserTests
     [InlineData("vegetables", WorkerRunMode.Vegetables)]
     [InlineData("catalog-refresh", WorkerRunMode.CatalogRefresh)]
     [InlineData("collect-prices", WorkerRunMode.CollectPrices)]
+    [InlineData("run-all", WorkerRunMode.RunAll)]
     public void Parse_PositionalCommand_SelectsMode(string command, WorkerRunMode expectedMode)
     {
         var result = WorkerCommandParser.Parse([command]);
@@ -31,6 +32,7 @@ public sealed class WorkerCommandParserTests
     [Theory]
     [InlineData("catalog-refresh")]
     [InlineData("collect-prices")]
+    [InlineData("run-all")]
     public void Parse_OnceWithUnsupportedMode_ReturnsInvalidResult(string mode)
     {
         var result = WorkerCommandParser.Parse([mode, "--once"]);
@@ -61,6 +63,7 @@ public sealed class WorkerCommandParserTests
     [InlineData("--job", "vegetables", WorkerRunMode.Vegetables)]
     [InlineData("--job", "catalog-refresh", WorkerRunMode.CatalogRefresh)]
     [InlineData("--job", "collect-prices", WorkerRunMode.CollectPrices)]
+    [InlineData("--job", "run-all", WorkerRunMode.RunAll)]
     public void Parse_LegacyJobOption_SelectsMode(string option, string value, WorkerRunMode expectedMode)
     {
         var result = WorkerCommandParser.Parse([option, value]);

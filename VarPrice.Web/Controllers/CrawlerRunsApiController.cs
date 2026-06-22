@@ -1,0 +1,44 @@
+using Microsoft.AspNetCore.Mvc;
+
+using VarPrice.Domain.Interfaces;
+
+namespace VarPrice.Web.Controllers;
+
+[ApiController]
+[Route("api/crawler-runs")]
+public sealed class CrawlerRunsApiController(ICrawlerRunReadRepository repository) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> GetRecent(
+        [FromQuery] int limit = 50,
+        [FromQuery] string? runType = null,
+        [FromQuery] string? status = null,
+        CancellationToken ct = default)
+    {
+        if (limit is < 1 or > 200) return BadRequest(new { error = "limit must be between 1 and 200." });
+        return Ok(await repository.GetRecentAsync(limit, runType, status, ct));
+    }
+
+    [HttpGet("{id:long}")]
+    public async Task<IActionResult> GetById(long id, CancellationToken ct = default)
+    {
+        if (id <= 0) return BadRequest(new { error = "id must be positive." });
+        var run = await repository.GetByIdAsync(id, ct);
+        return run is null ? NotFound() : Ok(run);
+    }
+
+    [HttpGet("statistics")]
+    public async Task<IActionResult> GetStatistics(
+        [FromQuery] DateTimeOffset? from = null,
+        [FromQuery] DateTimeOffset? to = null,
+        [FromQuery] string? runType = null,
+        CancellationToken ct = default)
+    {
+        var toUtc = to?.ToUniversalTime() ?? DateTimeOffset.UtcNow;
+        var fromUtc = from?.ToUniversalTime() ?? toUtc.AddDays(-30);
+        if (fromUtc >= toUtc) return BadRequest(new { error = "from must be earlier than to." });
+        if (toUtc - fromUtc > TimeSpan.FromDays(365))
+            return BadRequest(new { error = "date range cannot exceed 365 days." });
+        return Ok(await repository.GetAggregateAsync(fromUtc, toUtc, runType, ct));
+    }
+}

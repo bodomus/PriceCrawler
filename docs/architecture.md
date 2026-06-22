@@ -120,6 +120,23 @@ product_catalog
   `catalog-refresh`, or `CollectProductPricesUseCase` for `collect-prices` / `--collect-prices`.
 - No web host required.
 
+## Run observability
+
+```text
+Use case
+  -> per-run CrawlerRunMetrics
+  -> ICrawlerRunRepository.CompleteAsync
+  -> crawler_run + crawler_run_stage (single batched routine call)
+  -> structured completion logs / Worker summary
+  -> ICrawlerRunReadRepository / read-only Web API
+```
+
+`catalog-refresh` and `price-collection` always create separate `crawler_run` rows. `run-all` is orchestration only
+and does not merge incompatible counters. Queue totals are read from final persisted queue states; product/snapshot/error
+counters are incremented from actual repository write results. Partial counters are finalized on errors and cancellation.
+
+List queries return summaries without loading stages, avoiding N+1. Only the details query loads its run stages.
+
 ## Verification
 
 - `VarPrice.Web.Tests/WorkerIntegrationTests` covers the key DB routine flows:

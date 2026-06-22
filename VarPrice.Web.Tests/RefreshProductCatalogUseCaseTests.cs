@@ -46,7 +46,7 @@ public sealed class RefreshProductCatalogUseCaseTests
         Assert.Equal(
             [
                 "crawler_start", "refresh_start", "active_count", "discover", "upsert", "deactivate",
-                "refresh_complete"
+                "refresh_complete", "crawler_finish"
             ],
             calls);
         Assert.Equal(1001, catalog.LastRefreshId);

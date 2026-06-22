@@ -4,7 +4,8 @@ public enum WorkerRunMode
 {
     Vegetables,
     CatalogRefresh,
-    CollectPrices
+    CollectPrices,
+    RunAll
 }
 
 public sealed record WorkerCommand(WorkerRunMode Mode, bool Once);

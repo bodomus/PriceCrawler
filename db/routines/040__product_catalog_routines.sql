@@ -86,7 +86,7 @@ end if;
 update crawler_run
 set status      = routine_support_run_status('ok'),
     note        = routine_support_trim_nullable(p_run_note, 255),
-    finished_at = p_finished_at
+    finished_at = greatest(p_finished_at, started_at)
 where id = p_run_id;
 
 if
@@ -159,7 +159,7 @@ end if;
 update crawler_run
 set status      = routine_support_run_status(p_run_status),
     note        = routine_support_trim_nullable(p_run_note, 255),
-    finished_at = p_finished_at
+    finished_at = greatest(p_finished_at, started_at)
 where id = p_run_id;
 
 if

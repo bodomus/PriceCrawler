@@ -489,6 +489,43 @@ order by id;
   `crawler_run`, `ingestion_run`, `price_observation_store`,
   `crawl_error_add`, queue lifecycle, reaper, stats и полную use-case интеграцию.
 
+## Run statistics
+
+Каждый `catalog-refresh` и `price-collection` сохраняет итоговые агрегаты в `crawler_run`; длительности этапов
+сохраняются в `crawler_run_stage`. Статистика завершается одним вызовом `crawler_run_complete`, stages передаются
+одним JSON batch без update на каждый товар.
+
+- Catalog: `discovered`, `accepted`, `inserted`, `updated`, `reactivated`, `deactivated`.
+- Price collection: `selected`, `enqueued`, `succeeded`, `retry`, `dead`, `failed`, `products_created`,
+  `products_updated`, `snapshots_created`, `errors_created`.
+- Общие поля: `run_type`, `discovery_source`, `duration_ms`, `error_code`, `error_message`.
+- Worker печатает эти же значения из result use case. `run-all` последовательно выводит два независимых summary.
+
+Read-only API:
+
+```text
+GET /api/crawler-runs?limit=50&runType=price-collection&status=ok
+GET /api/crawler-runs/{id}
+GET /api/crawler-runs/statistics?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z&runType=price-collection
+```
+
+`limit` — от 1 до 200. Для aggregate без дат используется диапазон 30 дней; максимальный диапазон — 365 дней.
+
+```sql
+select id, run_type, status, started_at, finished_at, duration_ms,
+       discovered_count, accepted_count, selected_count, succeeded_count,
+       dead_count, snapshots_created_count, error_code
+from crawler_run order by id desc limit 50;
+
+select run_id, stage, duration_ms, item_count
+from crawler_run_stage where run_id = :run_id order by id;
+
+select run_type, count(*) as runs, avg(duration_ms) as avg_duration_ms,
+       sum(succeeded_count) as succeeded, sum(dead_count) as dead
+from crawler_run where started_at >= now() - interval '30 days'
+group by run_type;
+```
+
 ## Версионирование (Git tags + Nerdbank.GitVersioning)
 
 В solution используется `Nerdbank.GitVersioning` через корневые `Directory.Build.props` и `version.json`.

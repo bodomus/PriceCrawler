@@ -1,8 +1,11 @@
+using System.Diagnostics;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
+using VarPrice.Domain.Constants;
 using VarPrice.Domain.Enums;
 using VarPrice.Domain.Interfaces;
 using VarPrice.Domain.Models;
@@ -23,8 +26,11 @@ public sealed class RefreshProductCatalogUseCase(
     public async Task<RefreshProductCatalogResult> ExecuteAsync(CancellationToken ct)
     {
         var options = crawlerOptions.Value;
-        var runId = await crawlerRunRepository.StartAsync(CatalogRunSource, ct);
         var discoverySource = ToConfiguredDiscoverySource(options.DiscoveryMode);
+        var runId = await crawlerRunRepository.StartAsync(
+            CrawlerRunTypes.CatalogRefresh, CatalogRunSource, discoverySource, ct);
+        var metrics = new CrawlerRunMetrics();
+        var duration = Stopwatch.StartNew();
         var refreshId = 0L;
         var discoveredCount = 0;
         var acceptedCount = 0;
@@ -74,9 +80,12 @@ public sealed class RefreshProductCatalogUseCase(
             var activeCountBefore = await productCatalogRepository.GetActiveCountAsync(ProductCatalogSource, ct);
 
             ProductUrlDiscoveryResult discovery;
+            var discoveryWatch = Stopwatch.StartNew();
             try
             {
                 discovery = await productUrlDiscoveryService.DiscoverProductUrlsAsync(ct);
+                discoveryWatch.Stop();
+                metrics.AddStage(CrawlerRunStages.Discovery, discoveryWatch.ElapsedMilliseconds, discovery.Urls.Count);
             }
             catch (ProductUrlDiscoveryUnavailableException ex)
             {
@@ -159,9 +168,13 @@ public sealed class RefreshProductCatalogUseCase(
                 .ToList();
 
             ProductCatalogUpsertResult upsertResult;
+            var upsertWatch = Stopwatch.StartNew();
             try
             {
                 upsertResult = await productCatalogRepository.UpsertDiscoveredAsync(refreshId, items, ct);
+                upsertWatch.Stop();
+                metrics.AddStage(CrawlerRunStages.CatalogUpsert, upsertWatch.ElapsedMilliseconds,
+                    upsertResult.ReceivedCount);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -187,6 +200,8 @@ public sealed class RefreshProductCatalogUseCase(
             updatedCount = upsertResult.UpdatedCount;
             reactivatedCount = upsertResult.ReactivatedCount;
             skippedCount = Math.Max(0, discoveredCount - acceptedCount);
+            metrics.SetCatalog(discoveredCount, acceptedCount, insertedCount, updatedCount, reactivatedCount,
+                deactivatedCount);
 
             var safety = CatalogRefreshSafetyPolicy.Evaluate(new CatalogRefreshSafetyInput(
                 discoverySource,
@@ -230,12 +245,18 @@ public sealed class RefreshProductCatalogUseCase(
 
                 try
                 {
+                    var deactivationWatch = Stopwatch.StartNew();
                     deactivatedCount = await productCatalogRepository.DeactivateMissingAsync(
                         ProductCatalogSource,
                         refreshId,
                         cutoff,
                         deactivatedAt,
                         ct);
+                    deactivationWatch.Stop();
+                    metrics.AddStage(CrawlerRunStages.CatalogDeactivation, deactivationWatch.ElapsedMilliseconds,
+                        deactivatedCount);
+                    metrics.SetCatalog(discoveredCount, acceptedCount, insertedCount, updatedCount, reactivatedCount,
+                        deactivatedCount);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -293,6 +314,10 @@ public sealed class RefreshProductCatalogUseCase(
                         DateTimeOffset.UtcNow),
                     note,
                     ct);
+                metrics.AddStage(CrawlerRunStages.RunFinalization, 0);
+                await crawlerRunRepository.CompleteAsync(runId, RunStatus.Ok, metrics.Snapshot(),
+                    metrics.StageTimings(),
+                    note, null, null, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -314,9 +339,11 @@ public sealed class RefreshProductCatalogUseCase(
             }
 
             logger.LogInformation(
-                "Product catalog refresh completed. RunId={RunId}; RefreshId={RefreshId}; Inserted={Inserted}; Updated={Updated}; Reactivated={Reactivated}; Deactivated={Deactivated}",
+                "Catalog refresh completed. RunId={RunId}; DurationMs={DurationMs}; Discovered={Discovered}; Accepted={Accepted}; Inserted={Inserted}; Updated={Updated}; Reactivated={Reactivated}; Deactivated={Deactivated}",
                 runId,
-                refreshId,
+                duration.ElapsedMilliseconds,
+                discoveredCount,
+                acceptedCount,
                 insertedCount,
                 updatedCount,
                 reactivatedCount,
@@ -337,7 +364,10 @@ public sealed class RefreshProductCatalogUseCase(
                 safety.CanDeactivate,
                 safety.Reason,
                 null,
-                note);
+                note,
+                duration.ElapsedMilliseconds,
+                metrics.Snapshot(),
+                metrics.StageTimings());
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -355,6 +385,11 @@ public sealed class RefreshProductCatalogUseCase(
             {
                 await TryFinishFailedRunAsync(runId, "catalog refresh cancelled");
             }
+
+            await TryCompleteStatisticsAsync(runId, RunStatus.Error,
+                new CrawlerRunStatistics(discoveredCount, acceptedCount, insertedCount, updatedCount,
+                    reactivatedCount, deactivatedCount), metrics.StageTimings(), "catalog refresh cancelled",
+                "catalog_refresh_cancelled", "catalog refresh cancelled");
 
             throw;
         }
@@ -409,6 +444,10 @@ public sealed class RefreshProductCatalogUseCase(
             {
                 await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, note, ct);
             }
+
+            await crawlerRunRepository.CompleteAsync(runId, RunStatus.Error,
+                new CrawlerRunStatistics(discoveredCount, acceptedCount, insertedCount, updatedCount,
+                    reactivatedCount, deactivatedCount), [], note, errorCode, TrimMessage(message), ct);
         }
         catch (Exception finishException)
         {
@@ -453,6 +492,20 @@ public sealed class RefreshProductCatalogUseCase(
             errorCode,
             errorCode,
             note);
+    }
+
+    private async Task TryCompleteStatisticsAsync(long runId, RunStatus status, CrawlerRunStatistics statistics,
+        IReadOnlyCollection<CrawlerRunStageTiming> stages, string? note, string? errorCode, string? errorMessage)
+    {
+        try
+        {
+            await crawlerRunRepository.CompleteAsync(runId, status, statistics, stages, note, errorCode, errorMessage,
+                CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Crawler run statistics finalization failed. RunId={RunId}", runId);
+        }
     }
 
     private async Task TryFailRefreshAndRunAsync(

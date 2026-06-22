@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Options;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
+using VarPrice.Domain.Constants;
 using VarPrice.Domain.Enums;
 using VarPrice.Domain.Interfaces;
 using VarPrice.Domain.Models;
@@ -25,6 +27,8 @@ public sealed class CollectProductPricesUseCase(
 {
     public async Task<CollectProductPricesResult> ExecuteAsync(CancellationToken ct)
     {
+        var duration = Stopwatch.StartNew();
+        var metrics = new CrawlerRunMetrics();
         var opt = options.Value;
         var queueOpt = queueOptions.Value;
         var limit = Math.Max(1, opt.MaxProductsPerRun);
@@ -36,18 +40,19 @@ public sealed class CollectProductPricesUseCase(
 
         try
         {
-            runId = await crawlerRunRepository.StartAsync("price-collection", ct);
+            runId = await crawlerRunRepository.StartAsync(
+                CrawlerRunTypes.PriceCollection, CrawlerRunTypes.PriceCollection, null, ct);
             logger.LogInformation("Price collection started. RunId={RunId}; Limit={Limit}", runId, limit);
 
             ingestionRunId = await ingestionRunRepository.StartAsync(runId, ct);
             var nowUtc = DateTimeOffset.UtcNow;
-            var selected = await productCatalogRepository.GetDueProductsAsync(
-                limit,
-                nowUtc,
-                leaseDuration,
-                workerId,
-                ct);
+            var selectionWatch = Stopwatch.StartNew();
+            var selected =
+                await productCatalogRepository.GetDueProductsAsync(limit, nowUtc, leaseDuration, workerId, ct);
+            selectionWatch.Stop();
+            metrics.AddStage(CrawlerRunStages.CatalogSelection, selectionWatch.ElapsedMilliseconds, selected.Count);
             selectedById = selected.ToDictionary(x => x.Id);
+            metrics.SetSelection(selected.Count, 0);
 
             logger.LogInformation(
                 "Catalog products selected. RunId={RunId}; Selected={Selected}; WorkerId={WorkerId}",
@@ -59,8 +64,12 @@ public sealed class CollectProductPricesUseCase(
             {
                 const string emptyNote = "no due catalog products";
                 await ingestionRunRepository.FinishAsync(ingestionRunId, RunStatus.Ok, null, ct);
-                await crawlerRunRepository.FinishAsync(runId, RunStatus.Ok, emptyNote, ct);
-                return new CollectProductPricesResult(runId, "ok", 0, 0, 0, 0, 0, 0, null, emptyNote);
+                metrics.AddStage(CrawlerRunStages.RunFinalization, 0);
+                await crawlerRunRepository.CompleteAsync(runId, RunStatus.Ok, metrics.Snapshot(),
+                    metrics.StageTimings(),
+                    emptyNote, null, null, ct);
+                duration.Stop();
+                return BuildResult(runId, RunStatus.Ok, metrics, null, emptyNote, duration.ElapsedMilliseconds);
             }
 
             var queueItems = selected
@@ -72,7 +81,11 @@ public sealed class CollectProductPricesUseCase(
             int enqueued;
             try
             {
+                var enqueueWatch = Stopwatch.StartNew();
                 enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
+                enqueueWatch.Stop();
+                metrics.AddStage(CrawlerRunStages.QueueEnqueue, enqueueWatch.ElapsedMilliseconds, enqueued);
+                metrics.SetSelection(selected.Count, enqueued);
             }
             catch
             {
@@ -92,8 +105,9 @@ public sealed class CollectProductPricesUseCase(
                 enqueued);
 
             var callbacks = new PriceCollectionQueueCallbacks(
-                OnItemSucceeded: async (item, card, _, _, itemCt) =>
+                OnItemSucceeded: async (item, card, write, extract, itemCt) =>
                 {
+                    metrics.RecordObservation(write.ProductCreated, write.SnapshotCreated, extract.Issue is not null);
                     if (item.ProductCatalogId is null)
                     {
                         return;
@@ -111,6 +125,7 @@ public sealed class CollectProductPricesUseCase(
                 },
                 OnItemDead: async (item, _, itemCt) =>
                 {
+                    metrics.IncrementError();
                     if (item.ProductCatalogId is null ||
                         !selectedById.TryGetValue(item.ProductCatalogId.Value, out var catalogItem))
                     {
@@ -130,15 +145,23 @@ public sealed class CollectProductPricesUseCase(
                         itemCt);
                 });
 
+            var processingWatch = Stopwatch.StartNew();
             await queueProcessor.DrainQueueAsync(runId, opt, queueOpt, callbacks, ct);
+            processingWatch.Stop();
+            metrics.AddStage(CrawlerRunStages.QueueProcessing, processingWatch.ElapsedMilliseconds, enqueued);
             var stats = await queueRepository.GetRunStatsAsync(runId, ct);
+            metrics.SetQueue(stats.Succeeded, stats.Retry, stats.Dead);
             var runStatus = stats.Dead > 0 ? RunStatus.Error : RunStatus.Ok;
             var failedCount = stats.Retry + stats.Dead;
             var note =
                 $"selected={selected.Count}, enqueued={enqueued}, succeeded={stats.Succeeded}, retry={stats.Retry}, dead={stats.Dead}";
 
             await ingestionRunRepository.FinishAsync(ingestionRunId, runStatus, null, ct);
-            await crawlerRunRepository.FinishAsync(runId, runStatus, note, ct);
+            metrics.AddStage(CrawlerRunStages.RunFinalization, 0);
+            await crawlerRunRepository.CompleteAsync(runId, runStatus, metrics.Snapshot(), metrics.StageTimings(), note,
+                stats.Dead > 0 ? "price_collection_dead_items" : null,
+                stats.Dead > 0 ? note : null, ct);
+            duration.Stop();
 
             logger.LogInformation(
                 "Price collection completed. RunId={RunId}; Selected={Selected}; Enqueued={Enqueued}; Succeeded={Succeeded}; Retry={Retry}; Dead={Dead}",
@@ -149,17 +172,8 @@ public sealed class CollectProductPricesUseCase(
                 stats.Retry,
                 stats.Dead);
 
-            return new CollectProductPricesResult(
-                runId,
-                runStatus == RunStatus.Ok ? "ok" : "error",
-                selected.Count,
-                enqueued,
-                stats.Succeeded,
-                failedCount,
-                stats.Retry,
-                stats.Dead,
-                stats.Dead > 0 ? "price_collection_dead_items" : null,
-                note);
+            return BuildResult(runId, runStatus, metrics,
+                stats.Dead > 0 ? "price_collection_dead_items" : null, note, duration.ElapsedMilliseconds);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -174,11 +188,8 @@ public sealed class CollectProductPricesUseCase(
 
             if (runId > 0)
             {
-                await crawlerRunRepository.FinishAsync(
-                    runId,
-                    RunStatus.Error,
-                    "Price collection was cancelled.",
-                    CancellationToken.None);
+                await CompletePartialAsync(runId, metrics, "price_collection_cancelled",
+                    "Price collection was cancelled.");
             }
 
             throw;
@@ -198,11 +209,38 @@ public sealed class CollectProductPricesUseCase(
 
             if (runId > 0)
             {
-                await crawlerRunRepository.FinishAsync(runId, RunStatus.Error, ex.Message, CancellationToken.None);
+                await CompletePartialAsync(runId, metrics, errorCode, ex.Message);
             }
 
-            return new CollectProductPricesResult(runId, "error", 0, 0, 0, 1, 0, 0, errorCode, ex.Message);
+            duration.Stop();
+            return BuildResult(runId, RunStatus.Error, metrics, errorCode, ex.Message, duration.ElapsedMilliseconds);
         }
+    }
+
+    private async Task CompletePartialAsync(long runId, CrawlerRunMetrics metrics, string errorCode, string message)
+    {
+        try
+        {
+            var queue = await queueRepository.GetRunStatsAsync(runId, CancellationToken.None);
+            metrics.SetQueue(queue.Succeeded, queue.Retry, queue.Dead);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not read final queue statistics. RunId={RunId}", runId);
+        }
+
+        await crawlerRunRepository.CompleteAsync(runId, RunStatus.Error, metrics.Snapshot(), metrics.StageTimings(),
+            message, errorCode, message, CancellationToken.None);
+    }
+
+    private static CollectProductPricesResult BuildResult(long runId, RunStatus status, CrawlerRunMetrics metrics,
+        string? errorCode, string? message, long durationMs)
+    {
+        var s = metrics.Snapshot();
+        return new CollectProductPricesResult(runId, status == RunStatus.Ok ? "ok" : "error", s.SelectedCount,
+            s.EnqueuedCount, s.SucceededCount, s.FailedCount, s.RetryCount, s.DeadCount, errorCode, message,
+            s.ProductsCreatedCount, s.ProductsUpdatedCount, s.SnapshotsCreatedCount, s.ErrorsCreatedCount,
+            durationMs, s, metrics.StageTimings());
     }
 
     private static string BuildIdempotencyKey(long runId, long catalogItemId, string normalizedUrl)

@@ -1,3 +1,5 @@
+using VarPrice.Domain.Models;
+
 namespace VarPrice.Application.Models;
 
 public sealed record RefreshProductCatalogResult(
@@ -15,7 +17,10 @@ public sealed record RefreshProductCatalogResult(
     bool DeactivationExecuted,
     string? DeactivationSkipReason,
     string? ErrorCode,
-    string? Message);
+    string? Message,
+    long DurationMs = 0,
+    CrawlerRunStatistics? Statistics = null,
+    IReadOnlyList<CrawlerRunStageTiming>? StageTimings = null);
 
 public enum RefreshProductCatalogStatus
 {

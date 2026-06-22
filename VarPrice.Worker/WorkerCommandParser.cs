@@ -102,6 +102,7 @@ public static class WorkerCommandParser
           VarPrice.Worker vegetables [--once]
           VarPrice.Worker catalog-refresh
           VarPrice.Worker collect-prices
+          VarPrice.Worker run-all
 
         Legacy aliases:
           VarPrice.Worker --job vegetables [--once]
@@ -142,6 +143,12 @@ public static class WorkerCommandParser
             return true;
         }
 
+        if (string.Equals(value, "run-all", StringComparison.OrdinalIgnoreCase))
+        {
+            mode = WorkerRunMode.RunAll;
+            return true;
+        }
+
         mode = WorkerRunMode.Vegetables;
         return false;
     }
@@ -165,6 +172,7 @@ public static class WorkerCommandParser
             WorkerRunMode.Vegetables => "vegetables",
             WorkerRunMode.CatalogRefresh => "catalog-refresh",
             WorkerRunMode.CollectPrices => "collect-prices",
+            WorkerRunMode.RunAll => "run-all",
             _ => mode.ToString()
         };
 }

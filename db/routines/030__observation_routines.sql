@@ -1,3 +1,6 @@
+drop function if exists price_observation_store(
+    bigint, bigint, text, text, text, text, numeric, text, numeric, numeric, boolean, boolean, timestamptz);
+
 create
 or replace function price_observation_store(
     p_run_id bigint,
@@ -16,7 +19,8 @@ or replace function price_observation_store(
 returns table(
     product_id bigint,
     snapshot_id bigint,
-    snapshot_created boolean)
+    snapshot_created boolean,
+    product_created boolean)
 language plpgsql
 as $$
 declare
@@ -38,6 +42,8 @@ bigint;
     v_snapshot_id
 bigint;
     v_snapshot_created
+boolean := false;
+    v_product_created
 boolean := false;
     v_latest_price
 numeric(18, 2);
@@ -97,7 +103,9 @@ else
             v_pack_unit,
             v_observed_at,
             v_observed_at)
-        returning id into v_product_id;
+    returning id into v_product_id;
+    v_product_created
+:= true;
 end if;
 
 select snapshot_row.id,
@@ -152,6 +160,8 @@ end if;
 := v_snapshot_id;
     snapshot_created
 := v_snapshot_created;
+    product_created
+:= v_product_created;
     return
 next;
 end;

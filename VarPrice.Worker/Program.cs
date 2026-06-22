@@ -91,6 +91,7 @@ if (command.Mode == WorkerRunMode.CatalogRefresh)
     try
     {
         var refreshResult = await refreshUseCase.ExecuteAsync(cancellation.Token);
+        PrintCatalogSummary(refreshResult);
         logger.LogInformation(
             "catalog_refresh run_id={RunId}; status={Status}; source={Source}; discovered={Discovered}; accepted={Accepted}; inserted={Inserted}; updated={Updated}; skipped={Skipped}",
             refreshResult.RunId,
@@ -118,6 +119,7 @@ if (command.Mode == WorkerRunMode.CollectPrices)
     try
     {
         var collectResult = await collectUseCase.ExecuteAsync(cancellation.Token);
+        PrintPriceSummary(collectResult);
         logger.LogInformation(
             "collect_prices run_id={RunId}; status={Status}; selected={Selected}; enqueued={Enqueued}; succeeded={Succeeded}; retry={Retry}; dead={Dead}",
             collectResult.RunId,
@@ -134,6 +136,31 @@ if (command.Mode == WorkerRunMode.CollectPrices)
     catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
     {
         logger.LogWarning("Price collection was cancelled.");
+        return WorkerCommandParser.FailedRunExitCode;
+    }
+}
+
+if (command.Mode == WorkerRunMode.RunAll)
+{
+    try
+    {
+        var refresh = await runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>()
+            .ExecuteAsync(cancellation.Token);
+        Console.WriteLine("Catalog refresh:");
+        PrintCatalogSummary(refresh, "  ");
+        if (refresh.Status != RefreshProductCatalogStatus.Ok) return WorkerCommandParser.FailedRunExitCode;
+
+        var prices = await runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>()
+            .ExecuteAsync(cancellation.Token);
+        Console.WriteLine("Price collection:");
+        PrintPriceSummary(prices, "  ");
+        return string.Equals(prices.Status, "ok", StringComparison.OrdinalIgnoreCase)
+            ? WorkerCommandParser.SuccessExitCode
+            : WorkerCommandParser.FailedRunExitCode;
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+    {
+        logger.LogWarning("Run-all was cancelled.");
         return WorkerCommandParser.FailedRunExitCode;
     }
 }
@@ -167,3 +194,34 @@ logger.LogInformation(
 return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase)
     ? WorkerCommandParser.SuccessExitCode
     : WorkerCommandParser.FailedRunExitCode;
+
+static void PrintCatalogSummary(RefreshProductCatalogResult result, string prefix = "")
+{
+    Console.WriteLine($"{prefix}Command: catalog-refresh");
+    Console.WriteLine($"{prefix}Status: {result.Status.ToString().ToLowerInvariant()}");
+    Console.WriteLine($"{prefix}RunId: {result.RunId}");
+    Console.WriteLine($"{prefix}DurationMs: {result.DurationMs}");
+    Console.WriteLine($"{prefix}Discovered: {result.DiscoveredCount}");
+    Console.WriteLine($"{prefix}Accepted: {result.AcceptedCount}");
+    Console.WriteLine($"{prefix}Inserted: {result.InsertedCount}");
+    Console.WriteLine($"{prefix}Updated: {result.UpdatedCount}");
+    Console.WriteLine($"{prefix}Reactivated: {result.ReactivatedCount}");
+    Console.WriteLine($"{prefix}Deactivated: {result.DeactivatedCount}");
+}
+
+static void PrintPriceSummary(CollectProductPricesResult result, string prefix = "")
+{
+    Console.WriteLine($"{prefix}Command: collect-prices");
+    Console.WriteLine($"{prefix}Status: {result.Status}");
+    Console.WriteLine($"{prefix}RunId: {result.RunId}");
+    Console.WriteLine($"{prefix}DurationMs: {result.DurationMs}");
+    Console.WriteLine($"{prefix}Selected: {result.SelectedCount}");
+    Console.WriteLine($"{prefix}Enqueued: {result.EnqueuedCount}");
+    Console.WriteLine($"{prefix}Succeeded: {result.SucceededCount}");
+    Console.WriteLine($"{prefix}Retry: {result.RetryCount}");
+    Console.WriteLine($"{prefix}Dead: {result.DeadCount}");
+    Console.WriteLine($"{prefix}Products created: {result.ProductsCreatedCount}");
+    Console.WriteLine($"{prefix}Products updated: {result.ProductsUpdatedCount}");
+    Console.WriteLine($"{prefix}Snapshots created: {result.SnapshotsCreatedCount}");
+    Console.WriteLine($"{prefix}Errors created: {result.ErrorsCreatedCount}");
+}
