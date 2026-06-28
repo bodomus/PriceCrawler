@@ -114,7 +114,9 @@ internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSp
         var width = GetConsoleWidth();
         var total = snapshot.TotalDiscovered;
         var selected = snapshot.SelectedForCheck;
-        var percent = CrawlerProgressFormatter.CalculatePercent(snapshot.CheckedProducts, selected);
+        var percent = snapshot.DiscoveryTotalSeeds > 0 && selected == 0
+            ? CrawlerProgressFormatter.CalculatePercent(snapshot.DiscoveryProcessedSeeds, snapshot.DiscoveryTotalSeeds)
+            : CrawlerProgressFormatter.CalculatePercent(snapshot.CheckedProducts, selected);
 
         WriteAnsi("\u001b7");
         WriteLine(1, FormatLine("Обнаружено", CrawlerProgressFormatter.FormatNumber(total), width, "\u001b[36m"));

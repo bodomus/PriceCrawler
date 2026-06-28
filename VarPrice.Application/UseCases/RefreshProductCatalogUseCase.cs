@@ -181,6 +181,7 @@ public sealed class RefreshProductCatalogUseCase(
             try
             {
                 progressReporter.SetCurrentStage("Обновление каталога");
+                progressReporter.SetCurrentItem(string.Empty);
                 upsertResult = await productCatalogRepository.UpsertDiscoveredAsync(refreshId, items, ct);
                 upsertWatch.Stop();
                 stages.Add(CrawlerRunStages.CatalogUpsert, upsertWatch.ElapsedMilliseconds,

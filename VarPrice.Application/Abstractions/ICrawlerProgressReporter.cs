@@ -22,5 +22,13 @@ public interface ICrawlerProgressReporter
 
     void SetCurrentItem(string item);
 
+    void SetDiscoveryProgress(
+        int processedSeeds,
+        int totalSeeds,
+        int discoveredProductUrls,
+        string currentSeedName,
+        string currentSeedUrl,
+        int currentPageNumber);
+
     CrawlerProgressSnapshot GetSnapshot();
 }

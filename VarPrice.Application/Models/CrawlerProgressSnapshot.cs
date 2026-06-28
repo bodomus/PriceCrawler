@@ -9,4 +9,10 @@ public sealed record CrawlerProgressSnapshot(
     int SuccessfulProducts,
     int FailedProducts,
     string CurrentStage,
-    string CurrentItem);
+    string CurrentItem,
+    int DiscoveryProcessedSeeds = 0,
+    int DiscoveryTotalSeeds = 0,
+    int DiscoveryDiscoveredProductUrls = 0,
+    string CurrentDiscoverySeedName = "",
+    string CurrentDiscoverySeedUrl = "",
+    int CurrentDiscoveryPageNumber = 0);

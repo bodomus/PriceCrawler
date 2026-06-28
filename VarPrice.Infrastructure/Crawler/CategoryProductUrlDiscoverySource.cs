@@ -12,6 +12,7 @@ public sealed class CategorySeedProductUrlDiscoveryStrategy(
     ICategoryProductLinkExtractor linkExtractor,
     ICategoryPaginationStrategy paginationStrategy,
     IOptions<CrawlerOptions> crawlerOptions,
+    ICrawlerProgressReporter progressReporter,
     ILogger<CategorySeedProductUrlDiscoveryStrategy> logger)
     : IProductUrlDiscoveryStrategy, ICategoryProductUrlDiscoverySource
 {
@@ -39,9 +40,15 @@ public sealed class CategorySeedProductUrlDiscoveryStrategy(
         var discoveredUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var maxPagesPerSeed = Math.Max(1, crawlerOptions.Value.MaxCategoryPagesPerSeed);
 
-        foreach (var seed in seeds)
+        for (var seedIndex = 0; seedIndex < seeds.Count; seedIndex++)
         {
-            await DiscoverSeedProductUrlsAsync(seed, discoveredUrls, maxPagesPerSeed, ct);
+            await DiscoverSeedProductUrlsAsync(
+                seeds[seedIndex],
+                discoveredUrls,
+                maxPagesPerSeed,
+                seedIndex + 1,
+                seeds.Count,
+                ct);
         }
 
         logger.LogInformation(
@@ -56,6 +63,8 @@ public sealed class CategorySeedProductUrlDiscoveryStrategy(
         CategorySeedUrl seed,
         HashSet<string> discoveredUrls,
         int maxPagesPerSeed,
+        int processedSeeds,
+        int totalSeeds,
         CancellationToken ct)
     {
         var pageNumber = 1;
@@ -73,10 +82,12 @@ public sealed class CategorySeedProductUrlDiscoveryStrategy(
                 seed.Url,
                 pageUrl,
                 pageNumber);
+            ReportDiscoveryProgress(processedSeeds, totalSeeds, discoveredUrls.Count, seed, pageNumber);
 
             var page = await pageLoader.LoadAsync(seed, pageUrl, ct);
             if (!page.Success || string.IsNullOrWhiteSpace(page.Html))
             {
+                ReportDiscoveryProgress(processedSeeds, totalSeeds, discoveredUrls.Count, seed, pageNumber);
                 LogCategoryPageProcessed(
                     seed,
                     pageUrl,
@@ -104,6 +115,7 @@ public sealed class CategorySeedProductUrlDiscoveryStrategy(
                 nextPageUrl,
                 pageNumber,
                 maxPagesPerSeed);
+            ReportDiscoveryProgress(processedSeeds, totalSeeds, discoveredUrls.Count, seed, pageNumber);
             LogCategoryPageProcessed(seed, pageUrl, pageNumber, extracted.Count, newUrls, maxPagesPerSeed, stopReason);
 
             if (stopReason is not null)
@@ -114,6 +126,22 @@ public sealed class CategorySeedProductUrlDiscoveryStrategy(
             pageUrl = nextPageUrl!;
             pageNumber++;
         }
+    }
+
+    private void ReportDiscoveryProgress(
+        int processedSeeds,
+        int totalSeeds,
+        int discoveredProductUrls,
+        CategorySeedUrl seed,
+        int pageNumber)
+    {
+        progressReporter.SetDiscoveryProgress(
+            processedSeeds,
+            totalSeeds,
+            discoveredProductUrls,
+            seed.Name,
+            seed.Url.AbsoluteUri,
+            pageNumber);
     }
 
     private void LogCategoryPageProcessed(
