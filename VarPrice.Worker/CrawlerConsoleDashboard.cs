@@ -14,6 +14,19 @@ internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSp
 
     public bool IsEnabled => _enabled;
 
+    public static string GetDisabledReason()
+    {
+        if (Console.IsOutputRedirected)
+        {
+            return "output redirected";
+        }
+
+        var height = GetConsoleHeight();
+        return height <= PanelHeight + 2
+            ? $"console height too small ({height})"
+            : "dashboard disabled";
+    }
+
     public void Start()
     {
         if (_started)
@@ -192,8 +205,10 @@ internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSp
         }
     }
 
-    private static bool CanUseDashboard() =>
-        !Console.IsOutputRedirected && GetConsoleHeight() > PanelHeight + 2;
+    private static bool CanUseDashboard() => string.Equals(
+        GetDisabledReason(),
+        "dashboard disabled",
+        StringComparison.Ordinal);
 
     private void ConfigureScrollRegion()
     {

@@ -795,6 +795,7 @@ public sealed class WorkerIntegrationTests
                 CatalogMinimumExpectedUrls = 1,
                 CatalogMinimumPreviousRatio = 0.5d
             }),
+            new CrawlerProgressState(),
             NullLogger<RefreshProductCatalogUseCase>.Instance);
 
     private static ProductObservation CreateObservation(

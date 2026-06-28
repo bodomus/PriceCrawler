@@ -182,6 +182,31 @@ public sealed class RefreshProductCatalogUseCaseTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ReportsCatalogProgress()
+    {
+        var progress = new CrawlerProgressState();
+        var catalog = new FakeProductCatalogRepository([])
+        {
+            Result = new ProductCatalogUpsertResult(2, 1, 1, 0)
+        };
+        var sut = CreateUseCase(
+            new FakeDiscoveryService([], ["https://varus.ua/product-a", "https://varus.ua/product-b"]),
+            catalog,
+            new FakeRefreshRepository([]),
+            new FakeCrawlerRunRepository([]),
+            progressReporter: progress);
+
+        await sut.ExecuteAsync(CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal(2, snapshot.TotalDiscovered);
+        Assert.Equal(1, snapshot.NewProducts);
+        Assert.Equal(1, snapshot.UpdatedProducts);
+        Assert.Equal("Завершено", snapshot.CurrentStage);
+        Assert.Equal(string.Empty, snapshot.CurrentItem);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Cancelled_DoesNotDeactivateAndMarksSessionCancelled()
     {
         using var cts = new CancellationTokenSource();
@@ -248,7 +273,8 @@ public sealed class RefreshProductCatalogUseCaseTests
         IProductCatalogRepository catalog,
         IProductCatalogRefreshRepository refresh,
         ICrawlerRunRepository crawler,
-        CrawlerOptions? options = null) =>
+        CrawlerOptions? options = null,
+        ICrawlerProgressReporter? progressReporter = null) =>
         new(
             discovery,
             catalog,
@@ -259,6 +285,7 @@ public sealed class RefreshProductCatalogUseCaseTests
                 CatalogMinimumExpectedUrls = 1,
                 CatalogMinimumPreviousRatio = 0.5d
             }),
+            progressReporter ?? new CrawlerProgressState(),
             NullLogger<RefreshProductCatalogUseCase>.Instance);
 
     private sealed class FakeDiscoveryService(

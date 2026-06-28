@@ -87,6 +87,7 @@ using (var scope = host.Services.CreateScope())
 }
 
 using var runScope = host.Services.CreateScope();
+var progressState = runScope.ServiceProvider.GetRequiredService<CrawlerProgressState>();
 using var cancellation = new CancellationTokenSource();
 Console.CancelKeyPress += (_, eventArgs) =>
 {
@@ -96,126 +97,155 @@ Console.CancelKeyPress += (_, eventArgs) =>
 
 if (command.Mode == WorkerRunMode.CatalogRefresh)
 {
-    var refreshUseCase = runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>();
-    try
+    return await RunWithDashboardAsync(async () =>
     {
-        var refreshResult = await refreshUseCase.ExecuteAsync(cancellation.Token);
-        PrintCatalogSummary(refreshResult);
-        logger.LogInformation(
-            "catalog_refresh run_id={RunId}; status={Status}; source={Source}; discovered={Discovered}; accepted={Accepted}; inserted={Inserted}; updated={Updated}; skipped={Skipped}",
-            refreshResult.RunId,
-            refreshResult.Status,
-            refreshResult.Source,
-            refreshResult.DiscoveredCount,
-            refreshResult.AcceptedCount,
-            refreshResult.InsertedCount,
-            refreshResult.UpdatedCount,
-            refreshResult.SkippedCount);
-        return refreshResult.Status == RefreshProductCatalogStatus.Ok
-            ? WorkerCommandParser.SuccessExitCode
-            : WorkerCommandParser.FailedRunExitCode;
-    }
-    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-    {
-        logger.LogWarning("Catalog refresh was cancelled.");
-        return WorkerCommandParser.FailedRunExitCode;
-    }
+        var refreshUseCase = runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>();
+        try
+        {
+            var refreshResult = await refreshUseCase.ExecuteAsync(cancellation.Token);
+            PrintCatalogSummary(refreshResult);
+            logger.LogInformation(
+                "catalog_refresh run_id={RunId}; status={Status}; source={Source}; discovered={Discovered}; accepted={Accepted}; inserted={Inserted}; updated={Updated}; skipped={Skipped}",
+                refreshResult.RunId,
+                refreshResult.Status,
+                refreshResult.Source,
+                refreshResult.DiscoveredCount,
+                refreshResult.AcceptedCount,
+                refreshResult.InsertedCount,
+                refreshResult.UpdatedCount,
+                refreshResult.SkippedCount);
+            return refreshResult.Status == RefreshProductCatalogStatus.Ok
+                ? WorkerCommandParser.SuccessExitCode
+                : WorkerCommandParser.FailedRunExitCode;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            logger.LogWarning("Catalog refresh was cancelled.");
+            return WorkerCommandParser.FailedRunExitCode;
+        }
+    });
 }
 
 if (command.Mode == WorkerRunMode.CollectPrices)
 {
-    var collectUseCase = runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>();
-    try
+    return await RunWithDashboardAsync(async () =>
     {
-        var collectResult = await collectUseCase.ExecuteAsync(cancellation.Token);
-        PrintPriceSummary(collectResult);
-        logger.LogInformation(
-            "collect_prices run_id={RunId}; status={Status}; selected={Selected}; enqueued={Enqueued}; succeeded={Succeeded}; retry={Retry}; dead={Dead}",
-            collectResult.RunId,
-            collectResult.Status,
-            collectResult.SelectedCount,
-            collectResult.EnqueuedCount,
-            collectResult.SucceededCount,
-            collectResult.RetryCount,
-            collectResult.DeadCount);
-        return string.Equals(collectResult.Status, "ok", StringComparison.OrdinalIgnoreCase)
-            ? WorkerCommandParser.SuccessExitCode
-            : WorkerCommandParser.FailedRunExitCode;
-    }
-    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-    {
-        logger.LogWarning("Price collection was cancelled.");
-        return WorkerCommandParser.FailedRunExitCode;
-    }
+        var collectUseCase = runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>();
+        try
+        {
+            var collectResult = await collectUseCase.ExecuteAsync(cancellation.Token);
+            PrintPriceSummary(collectResult);
+            logger.LogInformation(
+                "collect_prices run_id={RunId}; status={Status}; selected={Selected}; enqueued={Enqueued}; succeeded={Succeeded}; retry={Retry}; dead={Dead}",
+                collectResult.RunId,
+                collectResult.Status,
+                collectResult.SelectedCount,
+                collectResult.EnqueuedCount,
+                collectResult.SucceededCount,
+                collectResult.RetryCount,
+                collectResult.DeadCount);
+            return string.Equals(collectResult.Status, "ok", StringComparison.OrdinalIgnoreCase)
+                ? WorkerCommandParser.SuccessExitCode
+                : WorkerCommandParser.FailedRunExitCode;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            logger.LogWarning("Price collection was cancelled.");
+            return WorkerCommandParser.FailedRunExitCode;
+        }
+    });
 }
 
 if (command.Mode == WorkerRunMode.RunAll)
 {
-    try
+    return await RunWithDashboardAsync(async () =>
     {
-        Console.WriteLine($"ExecutionId: {executionId}");
-        var refresh = await runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>()
-            .ExecuteAsync(cancellation.Token);
-        Console.WriteLine("Catalog refresh:");
-        PrintCatalogSummary(refresh, "  ");
-        logger.LogInformation(
-            "Run-all catalog refresh completed. ExecutionId={ExecutionId}; CatalogRunId={CatalogRunId}; CatalogStatus={CatalogStatus}",
-            executionId,
-            refresh.RunId,
-            refresh.Status);
-        if (refresh.Status != RefreshProductCatalogStatus.Ok) return WorkerCommandParser.FailedRunExitCode;
+        try
+        {
+            Console.WriteLine($"ExecutionId: {executionId}");
+            var refresh = await runScope.ServiceProvider.GetRequiredService<IRefreshProductCatalogUseCase>()
+                .ExecuteAsync(cancellation.Token);
+            Console.WriteLine("Catalog refresh:");
+            PrintCatalogSummary(refresh, "  ");
+            logger.LogInformation(
+                "Run-all catalog refresh completed. ExecutionId={ExecutionId}; CatalogRunId={CatalogRunId}; CatalogStatus={CatalogStatus}",
+                executionId,
+                refresh.RunId,
+                refresh.Status);
+            if (refresh.Status != RefreshProductCatalogStatus.Ok) return WorkerCommandParser.FailedRunExitCode;
 
-        var prices = await runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>()
-            .ExecuteAsync(cancellation.Token);
-        Console.WriteLine("Price collection:");
-        PrintPriceSummary(prices, "  ");
-        logger.LogInformation(
-            "Run-all completed. ExecutionId={ExecutionId}; CatalogRunId={CatalogRunId}; CatalogStatus={CatalogStatus}; PriceRunId={PriceRunId}; PriceStatus={PriceStatus}",
-            executionId,
-            refresh.RunId,
-            refresh.Status,
-            prices.RunId,
-            prices.Status);
-        return string.Equals(prices.Status, "ok", StringComparison.OrdinalIgnoreCase)
-            ? WorkerCommandParser.SuccessExitCode
-            : WorkerCommandParser.FailedRunExitCode;
-    }
-    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-    {
-        logger.LogWarning("Run-all was cancelled.");
-        return WorkerCommandParser.FailedRunExitCode;
-    }
+            var prices = await runScope.ServiceProvider.GetRequiredService<ICollectProductPricesUseCase>()
+                .ExecuteAsync(cancellation.Token);
+            Console.WriteLine("Price collection:");
+            PrintPriceSummary(prices, "  ");
+            logger.LogInformation(
+                "Run-all completed. ExecutionId={ExecutionId}; CatalogRunId={CatalogRunId}; CatalogStatus={CatalogStatus}; PriceRunId={PriceRunId}; PriceStatus={PriceStatus}",
+                executionId,
+                refresh.RunId,
+                refresh.Status,
+                prices.RunId,
+                prices.Status);
+            return string.Equals(prices.Status, "ok", StringComparison.OrdinalIgnoreCase)
+                ? WorkerCommandParser.SuccessExitCode
+                : WorkerCommandParser.FailedRunExitCode;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            logger.LogWarning("Run-all was cancelled.");
+            return WorkerCommandParser.FailedRunExitCode;
+        }
+    });
 }
 
 var useCase = runScope.ServiceProvider.GetRequiredService<IRunCrawlerUseCase>();
-var progressState = runScope.ServiceProvider.GetRequiredService<CrawlerProgressState>();
-var dashboard = new CrawlerConsoleDashboard(progressState, TimeSpan.FromMilliseconds(200));
-CrawlerRunResult result;
-dashboard.Start();
-try
+return await RunWithDashboardAsync(async () =>
 {
-    result = await useCase.RunVegetablesAsync(cancellation.Token);
-}
-catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-{
-    logger.LogWarning("Crawler run was cancelled.");
-    return WorkerCommandParser.FailedRunExitCode;
-}
-finally
-{
-    await dashboard.StopAsync();
-}
+    CrawlerRunResult result;
+    try
+    {
+        result = await useCase.RunVegetablesAsync(cancellation.Token);
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+    {
+        logger.LogWarning("Crawler run was cancelled.");
+        return WorkerCommandParser.FailedRunExitCode;
+    }
 
-logger.LogInformation(
-    "run_id={RunId}; status={Status}; processed={Processed}; errors={Errors}",
-    result.RunId,
-    result.Status,
-    result.ProductsProcessed,
-    result.Errors);
+    logger.LogInformation(
+        "run_id={RunId}; status={Status}; processed={Processed}; errors={Errors}",
+        result.RunId,
+        result.Status,
+        result.ProductsProcessed,
+        result.Errors);
 
-return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase)
-    ? WorkerCommandParser.SuccessExitCode
-    : WorkerCommandParser.FailedRunExitCode;
+    return string.Equals(result.Status, "ok", StringComparison.OrdinalIgnoreCase)
+        ? WorkerCommandParser.SuccessExitCode
+        : WorkerCommandParser.FailedRunExitCode;
+});
+
+async Task<int> RunWithDashboardAsync(Func<Task<int>> commandHandler)
+{
+    var dashboard = new CrawlerConsoleDashboard(progressState, TimeSpan.FromMilliseconds(200));
+    dashboard.Start();
+    if (!dashboard.IsEnabled)
+    {
+        var reason = CrawlerConsoleDashboard.GetDisabledReason();
+        logger.LogInformation("Crawler dashboard disabled. Reason={Reason}", reason);
+        if (!Console.IsOutputRedirected)
+        {
+            Console.WriteLine($"Dashboard disabled: {reason}");
+        }
+    }
+
+    try
+    {
+        return await commandHandler();
+    }
+    finally
+    {
+        await dashboard.StopAsync();
+    }
+}
 
 static void PrintCatalogSummary(RefreshProductCatalogResult result, string prefix = "")
 {
