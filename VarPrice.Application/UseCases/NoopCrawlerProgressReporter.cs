@@ -44,5 +44,15 @@ internal sealed class NoopCrawlerProgressReporter : ICrawlerProgressReporter
     {
     }
 
+    public void SetDiscoveryProgress(
+        int processedSeeds,
+        int totalSeeds,
+        int discoveredProductUrls,
+        string currentSeedName,
+        string currentSeedUrl,
+        int currentPageNumber)
+    {
+    }
+
     public CrawlerProgressSnapshot GetSnapshot() => EmptySnapshot;
 }

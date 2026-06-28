@@ -12,8 +12,14 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
     private int _checkedProducts;
     private int _successfulProducts;
     private int _failedProducts;
+    private int _discoveryProcessedSeeds;
+    private int _discoveryTotalSeeds;
+    private int _discoveryDiscoveredProductUrls;
+    private int _currentDiscoveryPageNumber;
     private string _currentStage = string.Empty;
     private string _currentItem = string.Empty;
+    private string _currentDiscoverySeedName = string.Empty;
+    private string _currentDiscoverySeedUrl = string.Empty;
 
     public void SetTotalDiscovered(int value) => Volatile.Write(ref _totalDiscovered, Normalize(value));
 
@@ -45,6 +51,31 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
         }
     }
 
+    public void SetDiscoveryProgress(
+        int processedSeeds,
+        int totalSeeds,
+        int discoveredProductUrls,
+        string currentSeedName,
+        string currentSeedUrl,
+        int currentPageNumber)
+    {
+        Volatile.Write(ref _discoveryProcessedSeeds, Normalize(processedSeeds));
+        Volatile.Write(ref _discoveryTotalSeeds, Normalize(totalSeeds));
+        Volatile.Write(ref _discoveryDiscoveredProductUrls, Normalize(discoveredProductUrls));
+        Volatile.Write(ref _totalDiscovered, Normalize(discoveredProductUrls));
+        Volatile.Write(ref _currentDiscoveryPageNumber, Normalize(currentPageNumber));
+
+        lock (_textLock)
+        {
+            _currentDiscoverySeedName = currentSeedName.Trim();
+            _currentDiscoverySeedUrl = currentSeedUrl.Trim();
+            _currentItem = FormatDiscoveryCurrentItem(
+                _currentDiscoverySeedName,
+                _currentDiscoverySeedUrl,
+                Volatile.Read(ref _currentDiscoveryPageNumber));
+        }
+    }
+
     public CrawlerProgressSnapshot GetSnapshot()
     {
         lock (_textLock)
@@ -58,9 +89,37 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
                 Volatile.Read(ref _successfulProducts),
                 Volatile.Read(ref _failedProducts),
                 _currentStage,
-                _currentItem);
+                _currentItem,
+                Volatile.Read(ref _discoveryProcessedSeeds),
+                Volatile.Read(ref _discoveryTotalSeeds),
+                Volatile.Read(ref _discoveryDiscoveredProductUrls),
+                _currentDiscoverySeedName,
+                _currentDiscoverySeedUrl,
+                Volatile.Read(ref _currentDiscoveryPageNumber));
         }
     }
 
     private static int Normalize(int value) => Math.Max(0, value);
+
+    private static string FormatDiscoveryCurrentItem(string seedName, string seedUrl, int pageNumber)
+    {
+        var page = pageNumber <= 0 ? "-" : pageNumber.ToString();
+
+        if (string.IsNullOrWhiteSpace(seedName) && string.IsNullOrWhiteSpace(seedUrl))
+        {
+            return pageNumber <= 0 ? string.Empty : $"page {page}";
+        }
+
+        if (string.IsNullOrWhiteSpace(seedUrl))
+        {
+            return $"{seedName} | page {page}";
+        }
+
+        if (string.IsNullOrWhiteSpace(seedName))
+        {
+            return $"page {page} | {seedUrl}";
+        }
+
+        return $"{seedName} | page {page} | {seedUrl}";
+    }
 }

@@ -267,6 +267,40 @@ public sealed class ProductUrlDiscoveryTests
     }
 
     [Fact]
+    public async Task CategorySeedSource_ReportsDiscoveryProgressAfterEachPage()
+    {
+        using var temp = new TempDirectory();
+        var seedPath = temp.WriteSeedFile(SeedJson("Fresh", "https://varus.ua/ovochi-svizhi"));
+        using var client = CreateTrackedHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://varus.ua/ovochi-svizhi"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-1">Page 1</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=2">Next</a>
+                """),
+            ["https://varus.ua/ovochi-svizhi?page=2"] = Html(
+                """
+                <div class="product-card"><a href="/product-page-2">Page 2</a></div>
+                """)
+        }, out _);
+        var progress = new CrawlerProgressState();
+
+        await using var source = CreateCategorySource(seedPath, client, maxPagesPerSeed: 5, progressReporter: progress);
+        await source.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal(1, snapshot.DiscoveryProcessedSeeds);
+        Assert.Equal(1, snapshot.DiscoveryTotalSeeds);
+        Assert.Equal(2, snapshot.DiscoveryDiscoveredProductUrls);
+        Assert.Equal(2, snapshot.TotalDiscovered);
+        Assert.Equal("Fresh", snapshot.CurrentDiscoverySeedName);
+        Assert.Equal("https://varus.ua/ovochi-svizhi", snapshot.CurrentDiscoverySeedUrl);
+        Assert.Equal(2, snapshot.CurrentDiscoveryPageNumber);
+        Assert.Contains("Fresh", snapshot.CurrentItem);
+        Assert.Contains("page 2", snapshot.CurrentItem);
+    }
+
+    [Fact]
     public async Task CategorySeedSource_StopsOnNoNewProductUrls()
     {
         using var temp = new TempDirectory();
@@ -527,7 +561,8 @@ public sealed class ProductUrlDiscoveryTests
     private static CategoryProductUrlDiscoverySourceHarness CreateCategorySource(
         string seedPath,
         HttpClient client,
-        int maxPagesPerSeed = 3)
+        int maxPagesPerSeed = 3,
+        ICrawlerProgressReporter? progressReporter = null)
     {
         var crawlerOptions = Options.Create(new CrawlerOptions
         {
@@ -552,6 +587,7 @@ public sealed class ProductUrlDiscoveryTests
             new CategoryProductLinkExtractor(),
             new CategoryPaginationStrategy(),
             crawlerOptions,
+            progressReporter ?? new CrawlerProgressState(),
             NullLogger<CategorySeedProductUrlDiscoveryStrategy>.Instance);
 
         return new CategoryProductUrlDiscoverySourceHarness(source, coordinator);

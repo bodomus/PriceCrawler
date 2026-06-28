@@ -56,6 +56,31 @@ public sealed class CrawlerProgressStateTests
         Assert.Equal(workers * iterations, snapshot.FailedProducts);
     }
 
+    [Fact]
+    public void State_StoresDiscoveryProgressAndCurrentItem()
+    {
+        var state = new CrawlerProgressState();
+
+        state.SetDiscoveryProgress(
+            processedSeeds: 2,
+            totalSeeds: 5,
+            discoveredProductUrls: 137,
+            currentSeedName: " Fresh ",
+            currentSeedUrl: " https://varus.ua/fresh ",
+            currentPageNumber: 3);
+
+        var snapshot = state.GetSnapshot();
+
+        Assert.Equal(137, snapshot.TotalDiscovered);
+        Assert.Equal(2, snapshot.DiscoveryProcessedSeeds);
+        Assert.Equal(5, snapshot.DiscoveryTotalSeeds);
+        Assert.Equal(137, snapshot.DiscoveryDiscoveredProductUrls);
+        Assert.Equal("Fresh", snapshot.CurrentDiscoverySeedName);
+        Assert.Equal("https://varus.ua/fresh", snapshot.CurrentDiscoverySeedUrl);
+        Assert.Equal(3, snapshot.CurrentDiscoveryPageNumber);
+        Assert.Equal("Fresh | page 3 | https://varus.ua/fresh", snapshot.CurrentItem);
+    }
+
     [Theory]
     [InlineData(4100, 5000, 82.0d)]
     [InlineData(1, 0, 0d)]
