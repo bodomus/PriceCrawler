@@ -50,6 +50,30 @@ public sealed class CollectProductPricesUseCaseTests
         Assert.Equal("slug-new", catalog.Checked[0].Slug);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_ReportsPriceCollectionProgress()
+    {
+        var progress = new CrawlerProgressState();
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1), CatalogItem(2)]);
+        var queue = new FakeQueueRepository();
+        var sut = CreateUseCase(
+            catalog,
+            queue,
+            ProductExtractResult.Success(Card(), 200, 1, 1),
+            progressReporter: progress);
+
+        await sut.ExecuteAsync(CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal(2, snapshot.TotalDiscovered);
+        Assert.Equal(2, snapshot.SelectedForCheck);
+        Assert.Equal(2, snapshot.NewProducts);
+        Assert.Equal(2, snapshot.CheckedProducts);
+        Assert.Equal(2, snapshot.SuccessfulProducts);
+        Assert.Equal("Завершено", snapshot.CurrentStage);
+        Assert.Equal(string.Empty, snapshot.CurrentItem);
+    }
+
     [Theory]
     [InlineData(true, false, 1, 0)]
     [InlineData(false, true, 0, 1)]
@@ -212,8 +236,10 @@ public sealed class CollectProductPricesUseCaseTests
         ProductExtractResult extractResult,
         int maxProducts = 10,
         int maxAttempts = 1,
-        ProductObservationWriteResult? writeResult = null)
+        ProductObservationWriteResult? writeResult = null,
+        ICrawlerProgressReporter? progressReporter = null)
     {
+        var progress = progressReporter ?? new CrawlerProgressState();
         var crawlerOptions = Options.Create(new CrawlerOptions
         {
             MaxProductsPerRun = maxProducts,
@@ -238,7 +264,7 @@ public sealed class CollectProductPricesUseCaseTests
             queue,
             snapshot,
             new FakeExtractor(extractResult),
-            new CrawlerProgressState(),
+            progress,
             NullLogger<PriceCollectionQueueProcessor>.Instance);
 
         return new CollectProductPricesUseCase(
@@ -249,6 +275,7 @@ public sealed class CollectProductPricesUseCaseTests
             catalog.Ingestion,
             queue,
             processor,
+            progress,
             NullLogger<CollectProductPricesUseCase>.Instance);
     }
 

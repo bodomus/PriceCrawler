@@ -23,6 +23,7 @@ public sealed class CollectProductPricesUseCase(
     IIngestionRunRepository ingestionRunRepository,
     IPriceCollectQueueRepository queueRepository,
     PriceCollectionQueueProcessor queueProcessor,
+    ICrawlerProgressReporter progressReporter,
     ILogger<CollectProductPricesUseCase> logger) : ICollectProductPricesUseCase
 {
     public async Task<CollectProductPricesResult> ExecuteAsync(CancellationToken ct)
@@ -48,12 +49,18 @@ public sealed class CollectProductPricesUseCase(
             ingestionRunId = await ingestionRunRepository.StartAsync(runId, ct);
             var nowUtc = DateTimeOffset.UtcNow;
             var selectionWatch = Stopwatch.StartNew();
+            progressReporter.SetCurrentStage("Выбор товаров для проверки");
+            progressReporter.SetCurrentItem(string.Empty);
+            progressReporter.SetNewProducts(0);
+            progressReporter.SetUpdatedProducts(0);
             var selected =
                 await productCatalogRepository.GetDueProductsAsync(limit, nowUtc, leaseDuration, workerId, ct);
             selectionWatch.Stop();
             stages.Add(CrawlerRunStages.CatalogSelection, selectionWatch.ElapsedMilliseconds, selected.Count);
             selectedById = selected.ToDictionary(x => x.Id);
             metrics.SetSelection(selected.Count, 0);
+            progressReporter.SetSelectedForCheck(selected.Count);
+            progressReporter.SetTotalDiscovered(selected.Count);
 
             logger.LogInformation(
                 "Catalog products selected. RunId={RunId}; Selected={Selected}; WorkerId={WorkerId}",
@@ -79,6 +86,8 @@ public sealed class CollectProductPricesUseCase(
                     stages.Snapshot(),
                     emptyNote, null, null, ct);
                 duration.Stop();
+                progressReporter.SetCurrentStage("Завершено");
+                progressReporter.SetCurrentItem(string.Empty);
                 return BuildResult(runId, RunStatus.Ok, metrics, stages, null, emptyNote, duration.ElapsedMilliseconds);
             }
 
@@ -96,6 +105,7 @@ public sealed class CollectProductPricesUseCase(
                 enqueueWatch.Stop();
                 stages.Add(CrawlerRunStages.QueueEnqueue, enqueueWatch.ElapsedMilliseconds, enqueued);
                 metrics.SetSelection(selected.Count, enqueued);
+                progressReporter.SetNewProducts(enqueued);
             }
             catch
             {
@@ -160,6 +170,7 @@ public sealed class CollectProductPricesUseCase(
                 });
 
             var processingWatch = Stopwatch.StartNew();
+            progressReporter.SetCurrentStage("Проверка цен");
             await queueProcessor.DrainQueueAsync(runId, opt, queueOpt, callbacks, ct);
             processingWatch.Stop();
             stages.Add(CrawlerRunStages.QueueProcessing, processingWatch.ElapsedMilliseconds, enqueued);
@@ -195,11 +206,16 @@ public sealed class CollectProductPricesUseCase(
                 stats.Retry,
                 stats.Dead);
 
+            progressReporter.SetCurrentStage(runStatus == RunStatus.Ok ? "Завершено" : "Ошибка");
+            progressReporter.SetCurrentItem(string.Empty);
+
             return BuildResult(runId, runStatus, metrics, stages,
                 stats.Dead > 0 ? "price_collection_dead_items" : null, note, duration.ElapsedMilliseconds);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            progressReporter.SetCurrentStage("Ошибка");
+            progressReporter.SetCurrentItem(string.Empty);
             if (ingestionRunId > 0)
             {
                 await ingestionRunRepository.FinishAsync(
@@ -220,6 +236,8 @@ public sealed class CollectProductPricesUseCase(
         catch (Exception ex)
         {
             const string errorCode = "price_collection_failed";
+            progressReporter.SetCurrentStage("Ошибка");
+            progressReporter.SetCurrentItem(string.Empty);
             logger.LogError(ex, "Price collection failed. RunId={RunId}; ErrorCode={ErrorCode}", runId, errorCode);
             if (ingestionRunId > 0)
             {

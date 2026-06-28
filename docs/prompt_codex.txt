@@ -1,16 +1,21 @@
-
-Начинай выполнять с тикета MPC-62 https://bodomus.youtrack.cloud/issue/MPC-62/MPC-62-Dobavit-RefreshProductCatalogUseCase
+Используй диск A как временную папку.
+Если нет возможности сделать что-либо остановись и спроси.
+Во время работы обновляй статусы работы в Youtrack 
+Создай бранч Codex/MPC-70 от master
+Начинай выполнять с тикета MPC-70 
+https://bodomus.youtrack.cloud/issue/MPC-70/MPC-68-Fix-podklyuchit-fiksirovannuyu-progress-panel-k-aktualnym-komandam-Worker
 Используй файл помощи agents.md
 
-Все изменения сделанные в рабочей db varprice сделай в тестовой базе varprice_test 
-После завершения создай файл резюме выполненной работы и сохрани в папке ./review создай файл MPC-62.md с описанием проделанной работы. 
+Если изменения сделанные в рабочей db varprice сделай в тестовой базе varprice_test 
+После завершения создай файл резюме выполненной работы и сохрани в папке ./review создай файл MPC-70.md с описанием проделанной работы. 
 Все тесты проводи только на тестовой базе varprice_test 
 
 После завершения тикета обнови поля в тикете задачи
+Если необходимо оьбнови readme.md 
 
 ------------------------------
 
-Используй диск A как временную папку. 
+
 Следующий branch MPC-66 следует создавать от актуального Codex/MPC-65, Если я сохдал бренч MPC-66 то новый не создавай работай в существующем.
 поскольку текущая цепочка задач последовательная и MPC-65 ещё не вливается в master.
 Начинай выполнять тикет MPC-66 https://bodomus.youtrack.cloud/projects/MPC/issues/MPC-66/MPC-66-Dobavit-statistiku-i-nablyudaemost-zapuskov-kraulera

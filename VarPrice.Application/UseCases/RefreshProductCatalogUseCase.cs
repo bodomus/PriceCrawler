@@ -18,6 +18,7 @@ public sealed class RefreshProductCatalogUseCase(
     IProductCatalogRefreshRepository refreshRepository,
     ICrawlerRunRepository crawlerRunRepository,
     IOptions<CrawlerOptions> crawlerOptions,
+    ICrawlerProgressReporter progressReporter,
     ILogger<RefreshProductCatalogUseCase> logger) : IRefreshProductCatalogUseCase
 {
     private const string CatalogRunSource = "catalog-refresh";
@@ -85,6 +86,8 @@ public sealed class RefreshProductCatalogUseCase(
             var discoveryWatch = Stopwatch.StartNew();
             try
             {
+                progressReporter.SetCurrentStage("Обнаружение товаров");
+                progressReporter.SetCurrentItem(string.Empty);
                 discovery = await productUrlDiscoveryService.DiscoverProductUrlsAsync(ct);
                 discoveryWatch.Stop();
                 stages.Add(CrawlerRunStages.Discovery, discoveryWatch.ElapsedMilliseconds, discovery.Urls.Count);
@@ -129,6 +132,7 @@ public sealed class RefreshProductCatalogUseCase(
             }
 
             discoveredCount = discovery.Urls.Count;
+            progressReporter.SetTotalDiscovered(discoveredCount);
             try
             {
                 discoverySource = ToDiscoverySource(discovery.SourceKind);
@@ -176,6 +180,7 @@ public sealed class RefreshProductCatalogUseCase(
             var upsertWatch = Stopwatch.StartNew();
             try
             {
+                progressReporter.SetCurrentStage("Обновление каталога");
                 upsertResult = await productCatalogRepository.UpsertDiscoveredAsync(refreshId, items, ct);
                 upsertWatch.Stop();
                 stages.Add(CrawlerRunStages.CatalogUpsert, upsertWatch.ElapsedMilliseconds,
@@ -206,6 +211,8 @@ public sealed class RefreshProductCatalogUseCase(
             updatedCount = upsertResult.UpdatedCount;
             reactivatedCount = upsertResult.ReactivatedCount;
             skippedCount = Math.Max(0, discoveredCount - acceptedCount);
+            progressReporter.SetNewProducts(insertedCount);
+            progressReporter.SetUpdatedProducts(updatedCount);
             metrics.SetCatalog(discoveredCount, acceptedCount, insertedCount, updatedCount, reactivatedCount,
                 deactivatedCount);
 
@@ -367,6 +374,9 @@ public sealed class RefreshProductCatalogUseCase(
                 reactivatedCount,
                 deactivatedCount);
 
+            progressReporter.SetCurrentStage("Завершено");
+            progressReporter.SetCurrentItem(string.Empty);
+
             return new RefreshProductCatalogResult(
                 runId,
                 refreshId,
@@ -389,6 +399,8 @@ public sealed class RefreshProductCatalogUseCase(
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            progressReporter.SetCurrentStage("Ошибка");
+            progressReporter.SetCurrentItem(string.Empty);
             if (refreshId > 0)
             {
                 await TryFailRefreshAndRunAsync(
@@ -430,6 +442,8 @@ public sealed class RefreshProductCatalogUseCase(
         Exception? exception,
         CancellationToken ct)
     {
+        progressReporter.SetCurrentStage("Ошибка");
+        progressReporter.SetCurrentItem(string.Empty);
         var statistics = new CrawlerRunStatistics(discoveredCount, acceptedCount, insertedCount, updatedCount,
             reactivatedCount, deactivatedCount);
         var note = BuildNote(
