@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DevExpress_License: ${{ secrets.DEVEXPRESS_LICENSE }}
+      Telerik_NuGet_Username: ${{ secrets.TELERIK_NUGET_USERNAME }}
+      Telerik_NuGet_Password: ${{ secrets.TELERIK_NUGET_PASSWORD }}
 
     steps:
       - name: Checkout
@@ -44,6 +46,31 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.311
+
+      - name: Validate Telerik NuGet secrets
+        shell: bash
+        run: |
+          if [ -z "${Telerik_NuGet_Username}" ]; then
+            echo "Missing GitHub Actions secret TELERIK_NUGET_USERNAME." >&2
+            echo "Use your Telerik account email or 'api-key' when using a Telerik NuGet API key." >&2
+            exit 1
+          fi
+
+          if [ -z "${Telerik_NuGet_Password}" ]; then
+            echo "Missing GitHub Actions secret TELERIK_NUGET_PASSWORD." >&2
+            echo "Use your Telerik account password or Telerik NuGet API key." >&2
+            exit 1
+          fi
+
+      - name: Add Telerik NuGet feed
+        shell: bash
+        run: |
+          dotnet nuget remove source telerik 2>/dev/null || true
+          dotnet nuget add source "https://nuget.telerik.com/v3/index.json" \
+            --name telerik \
+            --username "${Telerik_NuGet_Username}" \
+            --password "${Telerik_NuGet_Password}" \
+            --store-password-in-clear-text
 
       - name: Restore
         run: dotnet restore
