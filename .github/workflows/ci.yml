@@ -1,9 +1,5 @@
 name: ci
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 on:
   push:
     branches: [ main, master ]
@@ -24,7 +20,7 @@ jobs:
         env:
           POSTGRES_USER: var
           POSTGRES_PASSWORD: myPassword
-          POSTGRES_DB: varprice
+          POSTGRES_DB: varprice_test
         ports:
           - 55432:5432
         options: >-
