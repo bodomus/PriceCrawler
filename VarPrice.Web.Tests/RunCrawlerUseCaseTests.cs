@@ -221,6 +221,7 @@ public sealed class RunCrawlerUseCaseTests
             queue,
             snapshot,
             extractor,
+            new FakeListingPageExtractor(),
             progress,
             NullLogger<PriceCollectionQueueProcessor>.Instance);
 

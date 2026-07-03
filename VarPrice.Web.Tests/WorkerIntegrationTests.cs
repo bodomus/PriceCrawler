@@ -767,6 +767,7 @@ public sealed class WorkerIntegrationTests
             queueRepository,
             snapshotRepository,
             extractor,
+            new FakeListingPageExtractor(),
             progress,
             NullLogger<PriceCollectionQueueProcessor>.Instance);
 

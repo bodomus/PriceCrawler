@@ -1,6 +1,12 @@
+using VarPrice.Domain.Enums;
+
 namespace VarPrice.Domain.Models;
 
-public sealed record QueueEnqueueItem(string Url, string IdempotencyKey, long? ProductCatalogId = null);
+public sealed record QueueEnqueueItem(
+    string Url,
+    string IdempotencyKey,
+    long? ProductCatalogId = null,
+    QueueItemKind PageKind = QueueItemKind.ProductPage);
 
 public sealed record ReservedQueueItem(
     long Id,
@@ -8,7 +14,8 @@ public sealed record ReservedQueueItem(
     int Attempt,
     int MaxAttempts,
     string IdempotencyKey,
-    long? ProductCatalogId = null);
+    long? ProductCatalogId = null,
+    QueueItemKind PageKind = QueueItemKind.ProductPage);
 
 public sealed record QueueRunStats(
     int Pending,

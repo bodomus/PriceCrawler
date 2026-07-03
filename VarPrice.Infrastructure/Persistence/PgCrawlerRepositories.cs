@@ -208,13 +208,15 @@ public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecu
         var urls = items.Select(x => Truncate(x.Url, 1024)).ToArray();
         var idempotencyKeys = items.Select(x => Truncate(x.IdempotencyKey, 128)).ToArray();
         var productCatalogIds = items.Select(x => x.ProductCatalogId).ToArray();
+        var pageKinds = items.Select(x => ToStorage(x.PageKind)).ToArray();
         return await routineExecutor.ExecuteScalarAsync<int?>(
                    DbRoutineCall.ScalarFunction("price_collect_queue_enqueue")
                        .AddParameter("p_run_id", runId)
                        .AddParameter("p_urls", urls)
                        .AddParameter("p_idempotency_keys", idempotencyKeys)
                        .AddParameter("p_max_attempts", Math.Max(1, maxAttempts))
-                       .AddParameter("p_product_catalog_ids", productCatalogIds),
+                       .AddParameter("p_product_catalog_ids", productCatalogIds)
+                       .AddParameter("p_page_kinds", pageKinds),
                    ct)
                ?? 0;
     }
@@ -241,7 +243,8 @@ public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecu
                 reader.GetInt32(2),
                 reader.GetInt32(3),
                 reader.GetString(4),
-                reader.IsDBNull(5) ? null : reader.GetInt64(5)),
+                reader.IsDBNull(5) ? null : reader.GetInt64(5),
+                FromStorage(reader.IsDBNull(6) ? null : reader.GetString(6))),
             ct);
     }
 
@@ -312,4 +315,26 @@ public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecu
         var trimmed = value.Trim();
         return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
+
+    private static string ToStorage(QueueItemKind kind) =>
+        kind switch
+        {
+            QueueItemKind.ListingPage => "listing_page",
+            QueueItemKind.CategoryPage => "category_page",
+            QueueItemKind.SitemapPage => "sitemap_page",
+            QueueItemKind.ApiPage => "api_page",
+            QueueItemKind.Unknown => "unknown",
+            _ => "product_page"
+        };
+
+    private static QueueItemKind FromStorage(string? value) =>
+        value?.Trim().ToLowerInvariant() switch
+        {
+            "listing_page" => QueueItemKind.ListingPage,
+            "category_page" => QueueItemKind.CategoryPage,
+            "sitemap_page" => QueueItemKind.SitemapPage,
+            "api_page" => QueueItemKind.ApiPage,
+            "unknown" => QueueItemKind.Unknown,
+            _ => QueueItemKind.ProductPage
+        };
 }

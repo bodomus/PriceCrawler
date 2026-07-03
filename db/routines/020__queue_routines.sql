@@ -15,6 +15,7 @@ $$;
 
 drop function if exists price_collect_queue_enqueue(bigint, text[], text[], integer);
 drop function if exists price_collect_queue_enqueue(bigint, text[], text[], integer, bigint[]);
+drop function if exists price_collect_queue_enqueue(bigint, text[], text[], integer, bigint[], text[]);
 
 create
 or replace function price_collect_queue_enqueue(
@@ -22,7 +23,8 @@ or replace function price_collect_queue_enqueue(
     p_urls text[],
     p_idempotency_keys text[],
     p_max_attempts integer,
-    p_product_catalog_ids bigint[] default null)
+    p_product_catalog_ids bigint[] default null,
+    p_page_kinds text[] default null)
 returns integer
 language plpgsql
 as $$
@@ -30,6 +32,8 @@ declare
 v_count integer;
 v_catalog_ids
 bigint[];
+v_page_kinds
+text[];
 v_expected
 integer;
 begin
@@ -43,10 +47,16 @@ end if;
 
 v_catalog_ids
 := coalesce(p_product_catalog_ids, array_fill(null::bigint, array[v_expected]));
+v_page_kinds
+:= coalesce(p_page_kinds, array_fill('product_page'::text, array[v_expected]));
 
 if
 v_expected <> coalesce(array_length(v_catalog_ids, 1), 0) then
     raise exception 'p_urls and p_product_catalog_ids length mismatch';
+end if;
+if
+v_expected <> coalesce(array_length(v_page_kinds, 1), 0) then
+    raise exception 'p_urls and p_page_kinds length mismatch';
 end if;
 
 with inserted as (
@@ -54,6 +64,7 @@ insert
 into price_collect_queue(run_id,
                          product_catalog_id,
                          url,
+                         page_kind,
                          status,
                          attempt,
                          max_attempts,
@@ -64,6 +75,7 @@ into price_collect_queue(run_id,
 select p_run_id,
        x.product_catalog_id,
        routine_support_trim_required(x.url, 1024),
+       routine_support_trim_required(coalesce(nullif(btrim(x.page_kind), ''), 'product_page'), 32),
        routine_support_queue_status('pending'),
        0,
        greatest(coalesce(p_max_attempts, 0), 1),
@@ -71,17 +83,12 @@ select p_run_id,
        routine_support_trim_required(x.idempotency_key, 128),
        now(),
        now()
-from unnest(p_urls, p_idempotency_keys, v_catalog_ids) as x(url, idempotency_key, product_catalog_id) on conflict (run_id, url) do nothing
+from unnest(p_urls, p_idempotency_keys, v_catalog_ids, v_page_kinds) as x(url, idempotency_key, product_catalog_id, page_kind) on conflict (run_id, url) do nothing
         returning 1
     )
 select count(*)
 into v_count
 from inserted;
-
-if
-coalesce(v_count, 0) <> v_expected then
-    raise exception 'price_collect_queue_enqueue inserted % of % items', coalesce(v_count, 0), v_expected;
-end if;
 
 return coalesce(v_count, 0);
 end;
@@ -101,7 +108,8 @@ returns table(
     attempt integer,
     max_attempts integer,
     idempotency_key varchar(128),
-    product_catalog_id bigint)
+    product_catalog_id bigint,
+    page_kind varchar(32))
 language sql
 as $$
     with candidates as (
@@ -125,14 +133,15 @@ as $$
             updated_at = now()
         from candidates
         where queue.id = candidates.id
-        returning queue.id, queue.url, queue.attempt, queue.max_attempts, queue.idempotency_key, queue.product_catalog_id
+        returning queue.id, queue.url, queue.attempt, queue.max_attempts, queue.idempotency_key, queue.product_catalog_id, queue.page_kind
     )
 select updated.id,
        updated.url,
        updated.attempt,
        updated.max_attempts,
        coalesce(updated.idempotency_key, ''),
-       updated.product_catalog_id
+       updated.product_catalog_id,
+       coalesce(updated.page_kind, 'product_page')
 from updated
 order by updated.id;
 $$;

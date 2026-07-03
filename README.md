@@ -250,8 +250,11 @@ dotnet run --project VarPrice.Worker -- collect-prices
 - создает `crawler_run` с source `price-collection`;
 - создает связанный `ingestion_run`;
 - выбирает due-товары из `product_catalog` по oldest-first;
-- ставит выбранные URL в `price_collect_queue` вместе с `product_catalog_id`;
-- обрабатывает очередь через текущий `IProductCardExtractor`;
+- ставит выбранные URL в `price_collect_queue` вместе с `product_catalog_id` и `page_kind`;
+- классифицирует URL очереди: product pages идут в `IProductCardExtractor`, Varus listing/filter URLs
+  вроде `~brand_` идут в listing extractor;
+- listing/filter страницы извлекают product links, нормализуют/дедуплицируют их и добавляют найденные URL обратно
+  в очередь как `product_page`;
 - пишет `product`, `price_snapshot`, `crawl_error` через существующий observation flow;
 - обновляет scheduling state `product_catalog` после финального success/dead;
 - не запускает discovery, category seed или catalog upsert.
@@ -393,6 +396,11 @@ limit 20;
 - `timeout`
 - `http_5xx`
 - `parse_failed`
+- `listing_page_sent_to_product_extractor`
+- `listing_no_products_found`
+- `listing_parsed`
+- `product_links_discovered`
+- `unsupported_page_type`
 - `ProductUrlDiscoveryUnavailable`
 - `unknown`
 
@@ -406,6 +414,9 @@ limit 20;
   `collect-prices` выбирает активные due rows по oldest-first и обновляет `last_checked_at`, `next_check_at`,
   `consecutive_errors`, `external_id` и `slug` после финального результата обработки.
 - `price_collect_queue.product_catalog_id` связывает queue item с исходной записью каталога для scheduling updates.
+- `price_collect_queue.page_kind` хранит тип queue item (`product_page`, `listing_page`, `category_page`,
+  `sitemap_page`, `api_page`, `unknown`). Listing/filter страницы считаются успешно обработанными после parsing
+  ссылок и не записываются как product `parse_failed`.
 - `price_snapshot` работает как append-only журнал значимых изменений состояния товара.
 - Новый `price_snapshot` создается только если изменилось хотя бы одно из полей:
   `price`, `old_price`, `promo_flag`, `in_stock`.

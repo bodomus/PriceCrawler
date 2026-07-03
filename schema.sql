@@ -350,6 +350,10 @@ create table if not exists price_collect_queue (
     run_id              bigint not null references crawler_run(id),
     product_catalog_id bigint null,
     url                 varchar(1024) not null,
+    page_kind varchar
+(
+    32
+) not null default 'product_page',
     status              varchar(32) not null,
     attempt             integer not null default 0,
     max_attempts        integer not null default 0,
@@ -420,6 +424,8 @@ alter table product_catalog
     add column if not exists reactivated_at timestamptz null;
 alter table price_collect_queue
     add column if not exists product_catalog_id bigint null;
+alter table price_collect_queue
+    add column if not exists page_kind varchar (32) not null default 'product_page';
 
 do
 $$

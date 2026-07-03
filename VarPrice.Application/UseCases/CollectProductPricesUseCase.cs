@@ -95,7 +95,8 @@ public sealed class CollectProductPricesUseCase(
                 .Select(item => new QueueEnqueueItem(
                     item.Url,
                     BuildIdempotencyKey(runId, item.Id, item.NormalizedUrl),
-                    item.Id))
+                    item.Id,
+                    VarusPageKindClassifier.Classify(item.Url)))
                 .ToList();
             int enqueued;
             try

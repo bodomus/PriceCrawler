@@ -52,6 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductUrlDiscoveryStrategyFactory, ProductUrlDiscoveryStrategyFactory>();
         services.AddScoped<CategorySeedProductUrlDiscoveryStrategy>();
         services.AddScoped<ICategoryProductUrlDiscoverySource, CategoryProductUrlDiscoverySource>();
+        services.AddScoped<IListingPageExtractor, VarusListingPageExtractor>();
         services.AddSingleton<VarusRequestCoordinator>();
         services.AddScoped<VarusProductCardExtractor>();
         services.AddScoped<StubProductCardExtractor>();

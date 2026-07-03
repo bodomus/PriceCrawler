@@ -81,6 +81,7 @@ public sealed class VarPriceDbContext(DbContextOptions<VarPriceDbContext> option
             entity.Property(x => x.RunId).HasColumnName("run_id");
             entity.Property(x => x.ProductCatalogId).HasColumnName("product_catalog_id");
             entity.Property(x => x.Url).HasColumnName("url").HasMaxLength(1024);
+            entity.Property(x => x.PageKind).HasColumnName("page_kind").HasMaxLength(32);
             entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(32);
             entity.Property(x => x.Attempt).HasColumnName("attempt");
             entity.Property(x => x.MaxAttempts).HasColumnName("max_attempts");
@@ -196,6 +197,8 @@ public sealed class PriceCollectQueueEntity
     public long? ProductCatalogId { get; set; }
 
     public string Url { get; set; } = string.Empty;
+
+    public string PageKind { get; set; } = "product_page";
 
     public string Status { get; set; } = string.Empty;
 

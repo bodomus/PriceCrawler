@@ -117,6 +117,22 @@ public sealed class VarusProductCardExtractorResiliencyTests
     }
 
     [Fact]
+    public async Task ExtractAsync_WhenListingUrlReachesProductExtractor_ReturnsExplicitUnsupportedPageType()
+    {
+        await using var harness = CreateHarness(
+            new SequenceHttpMessageHandler((_, _) => Task.FromResult(Response(HttpStatusCode.OK, ValidProductHtml))));
+
+        var result = await harness.Extractor.ExtractAsync(
+            "https://varus.ua/kovbasi~brand_espana",
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(CrawlerErrorCodes.ListingPageSentToProductExtractor, result.ErrorCode);
+        Assert.False(result.IsTransient);
+        Assert.Equal(0, harness.Handler.CallCount);
+    }
+
+    [Fact]
     public async Task ExtractAsync_WhenBreakerOpened_WaitsBeforeNextRequest()
     {
         await using var harness = CreateHarness(

@@ -264,6 +264,7 @@ public sealed class CollectProductPricesUseCaseTests
             queue,
             snapshot,
             new FakeExtractor(extractResult),
+            new FakeListingPageExtractor(),
             progress,
             NullLogger<PriceCollectionQueueProcessor>.Instance);
 

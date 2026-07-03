@@ -1,7 +1,11 @@
+using System.Security.Cryptography;
+using System.Text;
+
 using Microsoft.Extensions.Logging;
 
 using VarPrice.Application.Abstractions;
 using VarPrice.Application.Models;
+using VarPrice.Domain.Enums;
 using VarPrice.Domain.Interfaces;
 using VarPrice.Domain.Models;
 
@@ -16,6 +20,7 @@ public sealed class PriceCollectionQueueProcessor(
     IPriceCollectQueueRepository queueRepository,
     IPriceSnapshotRepository priceSnapshotRepository,
     IProductCardExtractor extractor,
+    IListingPageExtractor listingExtractor,
     ICrawlerProgressReporter progressReporter,
     ILogger<PriceCollectionQueueProcessor> logger)
 {
@@ -86,6 +91,13 @@ public sealed class PriceCollectionQueueProcessor(
         try
         {
             progressReporter.SetCurrentItem(item.Url);
+            var pageKind = ResolvePageKind(item);
+            if (pageKind == QueueItemKind.ListingPage || pageKind == QueueItemKind.CategoryPage)
+            {
+                await ProcessListingQueueItemAsync(runId, item, pageKind, queueOpt, callbacks, ct);
+                return;
+            }
+
             var extractResult = await extractor.ExtractAsync(item.Url, ct);
             if (!extractResult.HasCard || extractResult.Card is null)
             {
@@ -263,6 +275,87 @@ public sealed class PriceCollectionQueueProcessor(
         return true;
     }
 
+    private async Task ProcessListingQueueItemAsync(
+        long runId,
+        ReservedQueueItem item,
+        QueueItemKind pageKind,
+        QueueOptions queueOpt,
+        PriceCollectionQueueCallbacks? callbacks,
+        CancellationToken ct)
+    {
+        var result = await listingExtractor.ExtractAsync(item.Url, ct);
+        var issue = NormalizeIssue(result.Issue, isCritical: result.FoundCount == 0);
+
+        if (result.Issue is not null &&
+            !string.Equals(result.Issue.ErrorCode, CrawlerErrorCodes.ListingNoProductsFound,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var finalFailure = await FinalizeFailedItemAsync(runId, item, issue, queueOpt, callbacks, ct);
+            logger.LogWarning(
+                "Listing queue item failed run_id={RunId} queue_id={QueueId} url={Url} page_kind={PageKind} extractor={Extractor} http_status={HttpStatus} error_code={ErrorCode} transient={Transient}",
+                runId,
+                item.Id,
+                item.Url,
+                pageKind,
+                nameof(IListingPageExtractor),
+                issue.HttpStatus,
+                issue.ErrorCode,
+                issue.IsTransient);
+
+            if (finalFailure)
+            {
+                progressReporter.IncrementChecked();
+                progressReporter.IncrementFailed();
+            }
+
+            return;
+        }
+
+        if (result.Issue is not null)
+        {
+            await priceSnapshotRepository.InsertCrawlErrorAsync(
+                new CrawlErrorRecord(
+                    runId,
+                    item.Id,
+                    null,
+                    item.Url,
+                    DateTimeOffset.UtcNow,
+                    issue.ErrorCode,
+                    issue.HttpStatus,
+                    issue.Message),
+                ct);
+        }
+
+        var discoveredItems = result.ProductUrls
+            .Select(url => new QueueEnqueueItem(
+                url,
+                BuildDiscoveredProductIdempotencyKey(runId, item.Id, url),
+                null,
+                QueueItemKind.ProductPage))
+            .ToList();
+
+        var enqueued = discoveredItems.Count == 0
+            ? 0
+            : await queueRepository.EnqueueAsync(runId, discoveredItems, Math.Max(1, queueOpt.MaxAttempts), ct);
+
+        await queueRepository.MarkSucceededAsync(item.Id, ct);
+        progressReporter.IncrementChecked();
+        progressReporter.IncrementSuccessful();
+
+        logger.LogInformation(
+            "Listing page parsed run_id={RunId} queue_id={QueueId} url={Url} page_kind={PageKind} extractor={Extractor} http_status={HttpStatus} found_product_links={FoundProductLinks} enqueued_product_links={EnqueuedProductLinks} error_code={ErrorCode} transient={Transient}",
+            runId,
+            item.Id,
+            item.Url,
+            pageKind,
+            nameof(IListingPageExtractor),
+            result.HttpStatus,
+            result.FoundCount,
+            enqueued,
+            result.Issue?.ErrorCode ?? CrawlerErrorCodes.ListingParsed,
+            result.IsTransient);
+    }
+
     public static string BuildWorkerId()
         => $"{Environment.MachineName}:{Environment.ProcessId}";
 
@@ -274,6 +367,11 @@ public sealed class PriceCollectionQueueProcessor(
             CrawlerErrorCodes.Timeout => CrawlerErrorCodes.Timeout,
             CrawlerErrorCodes.Http5xx => CrawlerErrorCodes.Http5xx,
             CrawlerErrorCodes.ParseFailed => CrawlerErrorCodes.ParseFailed,
+            CrawlerErrorCodes.ListingParsed => CrawlerErrorCodes.ListingParsed,
+            CrawlerErrorCodes.ListingNoProductsFound => CrawlerErrorCodes.ListingNoProductsFound,
+            CrawlerErrorCodes.ProductLinksDiscovered => CrawlerErrorCodes.ProductLinksDiscovered,
+            CrawlerErrorCodes.ListingPageSentToProductExtractor => CrawlerErrorCodes.ListingPageSentToProductExtractor,
+            CrawlerErrorCodes.UnsupportedPageType => CrawlerErrorCodes.UnsupportedPageType,
             _ => CrawlerErrorCodes.Unknown
         };
 
@@ -310,5 +408,24 @@ public sealed class PriceCollectionQueueProcessor(
             Message = TrimMessage(issue.Message),
             IsCritical = isCritical
         };
+    }
+
+    private static QueueItemKind ResolvePageKind(ReservedQueueItem item)
+    {
+        var urlKind = VarusPageKindClassifier.Classify(item.Url);
+        if (urlKind == QueueItemKind.ListingPage)
+        {
+            return QueueItemKind.ListingPage;
+        }
+
+        return item.PageKind == QueueItemKind.Unknown ? urlKind : item.PageKind;
+    }
+
+    private static string BuildDiscoveredProductIdempotencyKey(long runId, long listingQueueId, string normalizedUrl)
+    {
+        using var sha = SHA256.Create();
+        var bytes = Encoding.UTF8.GetBytes($"{runId}:listing:{listingQueueId}:{normalizedUrl.Trim()}");
+        var hash = sha.ComputeHash(bytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }

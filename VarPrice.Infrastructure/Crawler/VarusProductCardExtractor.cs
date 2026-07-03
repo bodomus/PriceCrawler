@@ -24,6 +24,22 @@ public sealed class VarusProductCardExtractor(
 
     public async Task<ProductExtractResult> ExtractAsync(string url, CancellationToken ct)
     {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+            VarusPageKindClassifier.LooksLikeVarusListingUrl(uri))
+        {
+            log.LogWarning(
+                "Unsupported page type for product extractor url={Url} error_code={ErrorCode} transient=false",
+                url,
+                CrawlerErrorCodes.ListingPageSentToProductExtractor);
+            return ProductExtractResult.Fail(
+                CrawlerErrorCodes.ListingPageSentToProductExtractor,
+                null,
+                "Listing/filter page was sent to the product extractor.",
+                0,
+                requestCoordinator.GetApproximateRps(),
+                false);
+        }
+
         var maxAttempts = Math.Max(1, _options.RetryCount + 1);
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
