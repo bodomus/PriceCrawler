@@ -42,6 +42,7 @@ public sealed class RefreshProductCatalogUseCase(
         var deactivatedCount = 0;
         var skippedCount = 0;
 
+        progressReporter.Reset();
         logger.LogInformation("Product catalog refresh started. RunId={RunId}", runId);
 
         try

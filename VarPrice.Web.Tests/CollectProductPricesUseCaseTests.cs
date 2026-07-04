@@ -67,7 +67,8 @@ public sealed class CollectProductPricesUseCaseTests
         var snapshot = progress.GetSnapshot();
         Assert.Equal(2, snapshot.TotalDiscovered);
         Assert.Equal(2, snapshot.SelectedForCheck);
-        Assert.Equal(2, snapshot.NewProducts);
+        Assert.Equal(0, snapshot.NewProducts);
+        Assert.Equal(2, snapshot.QueueLinksRequested);
         Assert.Equal(2, snapshot.CheckedProducts);
         Assert.Equal(2, snapshot.SuccessfulProducts);
         Assert.Equal("Завершено", snapshot.CurrentStage);

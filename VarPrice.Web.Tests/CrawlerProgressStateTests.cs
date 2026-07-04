@@ -13,6 +13,8 @@ public sealed class CrawlerProgressStateTests
         state.SetNewProducts(137);
         state.SetUpdatedProducts(38284);
         state.SetSelectedForCheck(5000);
+        state.SetQueueLinksRequested(5000);
+        state.IncrementQueueLinksRequested(12);
         state.IncrementChecked();
         state.IncrementSuccessful();
         state.IncrementFailed();
@@ -25,6 +27,7 @@ public sealed class CrawlerProgressStateTests
         Assert.Equal(137, snapshot.NewProducts);
         Assert.Equal(38284, snapshot.UpdatedProducts);
         Assert.Equal(5000, snapshot.SelectedForCheck);
+        Assert.Equal(5012, snapshot.QueueLinksRequested);
         Assert.Equal(1, snapshot.CheckedProducts);
         Assert.Equal(1, snapshot.SuccessfulProducts);
         Assert.Equal(1, snapshot.FailedProducts);
@@ -79,6 +82,42 @@ public sealed class CrawlerProgressStateTests
         Assert.Equal("https://varus.ua/fresh", snapshot.CurrentDiscoverySeedUrl);
         Assert.Equal(3, snapshot.CurrentDiscoveryPageNumber);
         Assert.Equal("Fresh | page 3 | https://varus.ua/fresh", snapshot.CurrentItem);
+    }
+
+    [Fact]
+    public void Reset_ClearsCountersAndText()
+    {
+        var state = new CrawlerProgressState();
+        state.SetTotalDiscovered(10);
+        state.SetQueueLinksRequested(5);
+        state.IncrementChecked();
+        state.SetCurrentStage("stage");
+        state.SetCurrentItem("item");
+
+        state.Reset();
+
+        var snapshot = state.GetSnapshot();
+
+        Assert.Equal(0, snapshot.TotalDiscovered);
+        Assert.Equal(0, snapshot.QueueLinksRequested);
+        Assert.Equal(0, snapshot.CheckedProducts);
+        Assert.Equal(string.Empty, snapshot.CurrentStage);
+        Assert.Equal(string.Empty, snapshot.CurrentItem);
+    }
+
+    [Fact]
+    public void QueueRequestedLinks_CanGrowWhenListingsDiscoverProducts()
+    {
+        var state = new CrawlerProgressState();
+        state.SetSelectedForCheck(2);
+        state.SetQueueLinksRequested(2);
+
+        state.IncrementQueueLinksRequested(7);
+
+        var snapshot = state.GetSnapshot();
+
+        Assert.Equal(2, snapshot.SelectedForCheck);
+        Assert.Equal(9, snapshot.QueueLinksRequested);
     }
 
     [Theory]

@@ -9,6 +9,7 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
     private int _newProducts;
     private int _updatedProducts;
     private int _selectedForCheck;
+    private int _queueLinksRequested;
     private int _checkedProducts;
     private int _successfulProducts;
     private int _failedProducts;
@@ -21,6 +22,30 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
     private string _currentDiscoverySeedName = string.Empty;
     private string _currentDiscoverySeedUrl = string.Empty;
 
+    public void Reset()
+    {
+        Volatile.Write(ref _totalDiscovered, 0);
+        Volatile.Write(ref _newProducts, 0);
+        Volatile.Write(ref _updatedProducts, 0);
+        Volatile.Write(ref _selectedForCheck, 0);
+        Volatile.Write(ref _queueLinksRequested, 0);
+        Volatile.Write(ref _checkedProducts, 0);
+        Volatile.Write(ref _successfulProducts, 0);
+        Volatile.Write(ref _failedProducts, 0);
+        Volatile.Write(ref _discoveryProcessedSeeds, 0);
+        Volatile.Write(ref _discoveryTotalSeeds, 0);
+        Volatile.Write(ref _discoveryDiscoveredProductUrls, 0);
+        Volatile.Write(ref _currentDiscoveryPageNumber, 0);
+
+        lock (_textLock)
+        {
+            _currentStage = string.Empty;
+            _currentItem = string.Empty;
+            _currentDiscoverySeedName = string.Empty;
+            _currentDiscoverySeedUrl = string.Empty;
+        }
+    }
+
     public void SetTotalDiscovered(int value) => Volatile.Write(ref _totalDiscovered, Normalize(value));
 
     public void SetNewProducts(int value) => Volatile.Write(ref _newProducts, Normalize(value));
@@ -28,6 +53,19 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
     public void SetUpdatedProducts(int value) => Volatile.Write(ref _updatedProducts, Normalize(value));
 
     public void SetSelectedForCheck(int value) => Volatile.Write(ref _selectedForCheck, Normalize(value));
+
+    public void SetQueueLinksRequested(int value) => Volatile.Write(ref _queueLinksRequested, Normalize(value));
+
+    public void IncrementQueueLinksRequested(int value)
+    {
+        var normalized = Normalize(value);
+        if (normalized == 0)
+        {
+            return;
+        }
+
+        Interlocked.Add(ref _queueLinksRequested, normalized);
+    }
 
     public void IncrementChecked() => Interlocked.Increment(ref _checkedProducts);
 
@@ -90,6 +128,7 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
                 Volatile.Read(ref _failedProducts),
                 _currentStage,
                 _currentItem,
+                Volatile.Read(ref _queueLinksRequested),
                 Volatile.Read(ref _discoveryProcessedSeeds),
                 Volatile.Read(ref _discoveryTotalSeeds),
                 Volatile.Read(ref _discoveryDiscoveredProductUrls),

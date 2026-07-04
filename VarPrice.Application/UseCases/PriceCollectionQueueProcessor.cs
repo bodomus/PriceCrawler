@@ -337,6 +337,7 @@ public sealed class PriceCollectionQueueProcessor(
         var enqueued = discoveredItems.Count == 0
             ? 0
             : await queueRepository.EnqueueAsync(runId, discoveredItems, Math.Max(1, queueOpt.MaxAttempts), ct);
+        progressReporter.IncrementQueueLinksRequested(enqueued);
 
         await queueRepository.MarkSucceededAsync(item.Id, ct);
         progressReporter.IncrementChecked();

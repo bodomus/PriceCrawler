@@ -4,6 +4,8 @@ namespace VarPrice.Application.Abstractions;
 
 public interface ICrawlerProgressReporter
 {
+    void Reset();
+
     void SetTotalDiscovered(int value);
 
     void SetNewProducts(int value);
@@ -11,6 +13,10 @@ public interface ICrawlerProgressReporter
     void SetUpdatedProducts(int value);
 
     void SetSelectedForCheck(int value);
+
+    void SetQueueLinksRequested(int value);
+
+    void IncrementQueueLinksRequested(int value);
 
     void IncrementChecked();
 

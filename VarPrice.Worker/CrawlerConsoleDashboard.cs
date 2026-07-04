@@ -4,7 +4,7 @@ namespace VarPrice.Worker;
 
 internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSpan refreshInterval)
 {
-    private const int PanelHeight = 11;
+    private const int PanelHeight = 12;
     private readonly object _syncRoot = new();
     private CancellationTokenSource? _cts;
     private Task? _renderLoop;
@@ -114,9 +114,11 @@ internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSp
         var width = GetConsoleWidth();
         var total = snapshot.TotalDiscovered;
         var selected = snapshot.SelectedForCheck;
+        var queueTotal = snapshot.QueueLinksRequested > 0 ? snapshot.QueueLinksRequested : selected;
+        var queueProcessed = snapshot.CheckedProducts;
         var percent = snapshot.DiscoveryTotalSeeds > 0 && selected == 0
             ? CrawlerProgressFormatter.CalculatePercent(snapshot.DiscoveryProcessedSeeds, snapshot.DiscoveryTotalSeeds)
-            : CrawlerProgressFormatter.CalculatePercent(snapshot.CheckedProducts, selected);
+            : CrawlerProgressFormatter.CalculatePercent(queueProcessed, queueTotal);
 
         WriteAnsi("\u001b7");
         WriteLine(1, FormatLine("Обнаружено", CrawlerProgressFormatter.FormatNumber(total), width, "\u001b[36m"));
@@ -130,23 +132,26 @@ internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSp
             FormatLine("Выбрано на проверку", CrawlerProgressFormatter.FormatCurrentOverTotal(selected, total), width,
                 "\u001b[36m"));
         WriteLine(5,
-            FormatLine("Проверено", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.CheckedProducts, selected),
-                width, "\u001b[33m"));
+            FormatLine("Ссылок в очереди", CrawlerProgressFormatter.FormatNumber(queueTotal), width,
+                "\u001b[36m"));
         WriteLine(6,
-            FormatLine("Успешно",
-                CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.SuccessfulProducts, selected), width,
-                "\u001b[32m"));
+            FormatLine("Обработано ссылок", CrawlerProgressFormatter.FormatCurrentOverTotal(queueProcessed, queueTotal),
+                width, "\u001b[33m"));
         WriteLine(7,
-            FormatLine("Ошибок", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.FailedProducts, selected),
-                width, "\u001b[31m"));
+            FormatLine("Успешно",
+                CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.SuccessfulProducts, queueTotal), width,
+                "\u001b[32m"));
         WriteLine(8,
+            FormatLine("Ошибок", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.FailedProducts, queueTotal),
+                width, "\u001b[31m"));
+        WriteLine(9,
             FormatLine("Текущий этап", string.IsNullOrWhiteSpace(snapshot.CurrentStage) ? "-" : snapshot.CurrentStage,
                 width, "\u001b[33m"));
-        WriteLine(9,
-            FormatLine("Текущий товар", string.IsNullOrWhiteSpace(snapshot.CurrentItem) ? "-" : snapshot.CurrentItem,
+        WriteLine(10,
+            FormatLine("Текущая ссылка", string.IsNullOrWhiteSpace(snapshot.CurrentItem) ? "-" : snapshot.CurrentItem,
                 width, "\u001b[37m"));
-        WriteLine(10, FormatLine("Выполнение", CrawlerProgressFormatter.FormatPercent(percent), width, "\u001b[36m"));
-        WriteLine(11, new string('-', Math.Max(1, width - 1)));
+        WriteLine(11, FormatLine("Выполнение", CrawlerProgressFormatter.FormatPercent(percent), width, "\u001b[36m"));
+        WriteLine(12, new string('-', Math.Max(1, width - 1)));
         WriteAnsi("\u001b8");
         _originalOut?.Flush();
     }

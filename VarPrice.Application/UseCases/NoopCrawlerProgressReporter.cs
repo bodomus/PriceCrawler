@@ -8,6 +8,10 @@ internal sealed class NoopCrawlerProgressReporter : ICrawlerProgressReporter
     private static readonly CrawlerProgressSnapshot
         EmptySnapshot = new(0, 0, 0, 0, 0, 0, 0, string.Empty, string.Empty);
 
+    public void Reset()
+    {
+    }
+
     public void SetTotalDiscovered(int value)
     {
     }
@@ -21,6 +25,14 @@ internal sealed class NoopCrawlerProgressReporter : ICrawlerProgressReporter
     }
 
     public void SetSelectedForCheck(int value)
+    {
+    }
+
+    public void SetQueueLinksRequested(int value)
+    {
+    }
+
+    public void IncrementQueueLinksRequested(int value)
     {
     }
 

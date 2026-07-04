@@ -10,6 +10,7 @@ public sealed record CrawlerProgressSnapshot(
     int FailedProducts,
     string CurrentStage,
     string CurrentItem,
+    int QueueLinksRequested = 0,
     int DiscoveryProcessedSeeds = 0,
     int DiscoveryTotalSeeds = 0,
     int DiscoveryDiscoveredProductUrls = 0,

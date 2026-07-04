@@ -30,6 +30,8 @@ public sealed class RunCrawlerUseCase(
         var queueOpt = queueOptions.Value;
         ProductUrlDiscoveryResult discovery;
 
+        progressReporter.Reset();
+
         try
         {
             progressReporter.SetCurrentStage("Обнаружение товаров");
@@ -63,6 +65,7 @@ public sealed class RunCrawlerUseCase(
             progressReporter.SetNewProducts(enqueued);
             progressReporter.SetUpdatedProducts(Math.Max(0, queueItems.Count - enqueued));
             progressReporter.SetSelectedForCheck(enqueued);
+            progressReporter.SetQueueLinksRequested(enqueued);
 
             logger.LogInformation(
                 "Queue seeded run_id={RunId} urls_total={UrlsTotal} enqueued={Enqueued} max_attempts={MaxAttempts}",

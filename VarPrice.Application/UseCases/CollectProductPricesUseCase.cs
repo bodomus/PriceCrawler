@@ -42,6 +42,7 @@ public sealed class CollectProductPricesUseCase(
 
         try
         {
+            progressReporter.Reset();
             runId = await crawlerRunRepository.StartAsync(
                 CrawlerRunTypes.PriceCollection, CrawlerRunTypes.PriceCollection, null, ct);
             logger.LogInformation("Price collection started. RunId={RunId}; Limit={Limit}", runId, limit);
@@ -106,7 +107,7 @@ public sealed class CollectProductPricesUseCase(
                 enqueueWatch.Stop();
                 stages.Add(CrawlerRunStages.QueueEnqueue, enqueueWatch.ElapsedMilliseconds, enqueued);
                 metrics.SetSelection(selected.Count, enqueued);
-                progressReporter.SetNewProducts(enqueued);
+                progressReporter.SetQueueLinksRequested(enqueued);
             }
             catch
             {
