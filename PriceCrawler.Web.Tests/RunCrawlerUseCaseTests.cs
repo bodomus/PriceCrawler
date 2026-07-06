@@ -392,7 +392,7 @@ public sealed class RunCrawlerUseCaseTests
                 }
             }
 
-            return Task.FromResult(new QueueEnqueueResult(added, productAdded, listingAdded));
+            return Task.FromResult(new QueueEnqueueResult(added, productAdded, listingAdded, []));
         }
 
         public int TotalEnqueued => _rows.Count;

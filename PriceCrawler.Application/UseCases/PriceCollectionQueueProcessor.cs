@@ -334,7 +334,7 @@ public sealed class PriceCollectionQueueProcessor(
             .ToList();
 
         var enqueueResult = discoveredItems.Count == 0
-            ? new QueueEnqueueResult(0, 0, 0)
+            ? new QueueEnqueueResult(0, 0, 0, [])
             : await queueRepository.EnqueueAsync(runId, discoveredItems, Math.Max(1, queueOpt.MaxAttempts), ct);
         progressReporter.IncrementProductLinksDiscoveredFromListings(result.FoundCount);
         progressReporter.IncrementProductLinksEnqueuedFromListings(enqueueResult.ProductAccepted);

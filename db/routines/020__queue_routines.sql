@@ -107,7 +107,8 @@ or replace function price_collect_queue_enqueue_result(
 returns table(
     total_accepted integer,
     product_accepted integer,
-    listing_accepted integer)
+    listing_accepted integer,
+    accepted_product_catalog_ids bigint[])
 language plpgsql
 as $$
 declare
@@ -166,11 +167,12 @@ select p_run_id,
        now(),
        now()
 from unnest(p_urls, p_idempotency_keys, v_catalog_ids, v_page_kinds) as x(url, idempotency_key, product_catalog_id, page_kind) on conflict (run_id, url) do nothing
-        returning price_collect_queue.page_kind
+        returning price_collect_queue.page_kind, price_collect_queue.product_catalog_id
     )
 select count(*)::integer,
        count(*) filter (where inserted.page_kind = 'product_page')::integer,
-       count(*) filter (where inserted.page_kind in ('listing_page', 'category_page'))::integer
+       count(*) filter (where inserted.page_kind in ('listing_page', 'category_page'))::integer,
+       coalesce(array_agg(inserted.product_catalog_id) filter (where inserted.product_catalog_id is not null), array[]::bigint[])
 from inserted;
 end;
 $$;

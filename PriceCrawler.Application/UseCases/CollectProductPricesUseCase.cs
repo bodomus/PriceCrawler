@@ -118,7 +118,11 @@ public sealed class CollectProductPricesUseCase(
 
             if (enqueueResult.TotalAccepted < selected.Count)
             {
-                await ReleaseCatalogReservationsAsync(selected.Skip(enqueueResult.TotalAccepted).ToList(), ct);
+                var acceptedCatalogIds = enqueueResult.AcceptedProductCatalogIds.ToHashSet();
+                var notAccepted = selected
+                    .Where(x => !acceptedCatalogIds.Contains(x.Id))
+                    .ToList();
+                await ReleaseCatalogReservationsAsync(notAccepted, ct);
             }
 
             logger.LogInformation(

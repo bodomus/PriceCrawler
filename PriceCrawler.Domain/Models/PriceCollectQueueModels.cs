@@ -11,7 +11,8 @@ public sealed record QueueEnqueueItem(
 public sealed record QueueEnqueueResult(
     int TotalAccepted,
     int ProductAccepted,
-    int ListingAccepted);
+    int ListingAccepted,
+    IReadOnlyCollection<long> AcceptedProductCatalogIds);
 
 public sealed record ReservedQueueItem(
     long Id,

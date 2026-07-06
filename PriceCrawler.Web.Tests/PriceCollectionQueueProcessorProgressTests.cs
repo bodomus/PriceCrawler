@@ -364,7 +364,7 @@ public sealed class PriceCollectionQueueProcessorProgressTests
             CancellationToken ct)
         {
             var accepted = Math.Min(_enqueueReturn, items.Count);
-            return Task.FromResult(new QueueEnqueueResult(accepted, accepted, 0));
+            return Task.FromResult(new QueueEnqueueResult(accepted, accepted, 0, []));
         }
 
         public Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(

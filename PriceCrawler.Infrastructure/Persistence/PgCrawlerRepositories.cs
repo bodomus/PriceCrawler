@@ -202,7 +202,7 @@ public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecu
     {
         if (items.Count == 0)
         {
-            return new QueueEnqueueResult(0, 0, 0);
+            return new QueueEnqueueResult(0, 0, 0, []);
         }
 
         var urls = items.Select(x => Truncate(x.Url, 1024)).ToArray();
@@ -217,9 +217,13 @@ public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecu
                        .AddParameter("p_max_attempts", Math.Max(1, maxAttempts))
                        .AddParameter("p_product_catalog_ids", productCatalogIds)
                        .AddParameter("p_page_kinds", pageKinds),
-                   reader => new QueueEnqueueResult(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2)),
+                   reader => new QueueEnqueueResult(
+                       reader.GetInt32(0),
+                       reader.GetInt32(1),
+                       reader.GetInt32(2),
+                       reader.IsDBNull(3) ? [] : reader.GetFieldValue<long[]>(3)),
                    ct)
-               ?? new QueueEnqueueResult(0, 0, 0);
+               ?? new QueueEnqueueResult(0, 0, 0, []);
     }
 
     public async Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(

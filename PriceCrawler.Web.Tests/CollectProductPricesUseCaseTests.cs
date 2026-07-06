@@ -147,6 +147,19 @@ public sealed class CollectProductPricesUseCaseTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_PartialEnqueue_ReleasesByActualAcceptedCatalogIds()
+    {
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1), CatalogItem(2), CatalogItem(3)]);
+        var queue = new FakeQueueRepository { AcceptedCatalogIdsOverride = [2] };
+        var sut = CreateUseCase(catalog, queue, ProductExtractResult.Success(Card(), 200, 1, 1));
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(1, result.EnqueuedCount);
+        Assert.Equal([1, 3], catalog.ReleasedCatalogItemIds);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_EnqueueThrows_ReleasesAllSelectedCatalogReservations()
     {
         var catalog = new FakeProductCatalogRepository([CatalogItem(1), CatalogItem(2)]);
@@ -436,6 +449,7 @@ public sealed class CollectProductPricesUseCaseTests
         private long _nextId = 1;
         public int TotalEnqueued => _rows.Count;
         public int? EnqueueLimit { get; init; }
+        public IReadOnlyCollection<long>? AcceptedCatalogIdsOverride { get; init; }
         public bool ThrowOnEnqueue { get; init; }
         public QueueRunStats? StatsOverride { get; init; }
 
@@ -452,10 +466,14 @@ public sealed class CollectProductPricesUseCaseTests
                 throw new InvalidOperationException("enqueue failed");
             }
 
-            var itemsToInsert = (EnqueueLimit is null
+            var itemsToInsert = AcceptedCatalogIdsOverride is not null
+                ? items
+                    .Where(x => x.ProductCatalogId is not null &&
+                                AcceptedCatalogIdsOverride.Contains(x.ProductCatalogId.Value))
+                    .ToList()
+                : (EnqueueLimit is null
                     ? items
-                    : items.Take(EnqueueLimit.Value))
-                .ToList();
+                    : items.Take(EnqueueLimit.Value)).ToList();
             var productAccepted = 0;
             var listingAccepted = 0;
             foreach (var item in itemsToInsert)
@@ -481,7 +499,11 @@ public sealed class CollectProductPricesUseCaseTests
                 }
             }
 
-            return Task.FromResult(new QueueEnqueueResult(itemsToInsert.Count, productAccepted, listingAccepted));
+            return Task.FromResult(new QueueEnqueueResult(
+                itemsToInsert.Count,
+                productAccepted,
+                listingAccepted,
+                itemsToInsert.Where(x => x.ProductCatalogId is not null).Select(x => x.ProductCatalogId!.Value).ToArray()));
         }
 
         public Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(

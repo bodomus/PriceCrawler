@@ -29,6 +29,19 @@ Validation after fixes:
 - dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter "CrawlerProgressStateTests|PriceCollectionQueueProcessorProgressTests|RunCrawlerUseCaseTests" - passed, 35 tests.
 - dotnet test PriceCrawler.sln - passed, Worker.Tests 21 and Web.Tests 226.
 
+## Partial enqueue reservation release fix
+- Removed the remaining prefix assumption in partial enqueue reservation release.
+- QueueEnqueueResult now carries AcceptedProductCatalogIds from the actual inserted queue rows.
+- CollectProductPricesUseCase releases only selected catalog items whose ids are absent from AcceptedProductCatalogIds.
+- Added a regression test where the accepted catalog id is not the first selected item.
+- Updated price_collect_queue_enqueue_result in db/routines/020__queue_routines.sql to return accepted_product_catalog_ids.
+- Applied the updated routine to varprice_test and verified the result shape includes accepted_product_catalog_ids bigint[].
+
+Validation after reservation release fix:
+- dotnet build PriceCrawler.sln - passed, 0 warnings, 0 errors.
+- dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter "CollectProductPricesUseCaseTests|CrawlerProgressStateTests|PriceCollectionQueueProcessorProgressTests|RunCrawlerUseCaseTests" - passed, 53 tests.
+- dotnet test PriceCrawler.sln - passed, Worker.Tests 21 and Web.Tests 227.
+
 ## Notes
 - No database schema or production data was changed.
 - Tests were run through the solution test projects only; no production crawler run was executed.
