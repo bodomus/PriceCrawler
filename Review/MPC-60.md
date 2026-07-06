@@ -6,24 +6,24 @@ Refactored product URL discovery so Varus category seeds are the default phase-1
 
 ## Files changed
 
-- `VarPrice.Application/Abstractions/IProductUrlDiscoveryStrategy.cs`
-- `VarPrice.Application/Abstractions/IProductUrlDiscoveryStrategyFactory.cs`
-- `VarPrice.Application/Models/ProductDiscoveryItem.cs`
-- `VarPrice.Application/Models/ProductUrlDiscoveryModes.cs`
-- `VarPrice.Application/Models/CrawlerOptions.cs`
-- `VarPrice.Application/Models/ProductUrlDiscoveryResult.cs`
-- `VarPrice.Application/UseCases/ProductUrlDiscoveryService.cs`
-- `VarPrice.Application/UseCases/SitemapProductUrlDiscoveryStrategy.cs`
-- `VarPrice.Application/UseCases/ApiProductUrlDiscoveryStrategy.cs`
-- `VarPrice.Application/UseCases/SitemapProductUrlDiscoverySource.cs`
-- `VarPrice.Application/UseCases/RunCrawlerUseCase.cs`
-- `VarPrice.Infrastructure/Crawler/ProductUrlDiscoveryStrategyFactory.cs`
-- `VarPrice.Infrastructure/Crawler/CategoryProductUrlDiscoverySource.cs`
-- `VarPrice.Infrastructure/Crawler/CategorySeedProvider.cs`
-- `VarPrice.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs`
-- `VarPrice.Web.Tests/ProductUrlDiscoveryTests.cs`
-- `VarPrice.Worker/appsettings.json`
-- `VarPrice.Web/appsettings.json`
+- `PriceCrawler.Application/Abstractions/IProductUrlDiscoveryStrategy.cs`
+- `PriceCrawler.Application/Abstractions/IProductUrlDiscoveryStrategyFactory.cs`
+- `PriceCrawler.Application/Models/ProductDiscoveryItem.cs`
+- `PriceCrawler.Application/Models/ProductUrlDiscoveryModes.cs`
+- `PriceCrawler.Application/Models/CrawlerOptions.cs`
+- `PriceCrawler.Application/Models/ProductUrlDiscoveryResult.cs`
+- `PriceCrawler.Application/UseCases/ProductUrlDiscoveryService.cs`
+- `PriceCrawler.Application/UseCases/SitemapProductUrlDiscoveryStrategy.cs`
+- `PriceCrawler.Application/UseCases/ApiProductUrlDiscoveryStrategy.cs`
+- `PriceCrawler.Application/UseCases/SitemapProductUrlDiscoverySource.cs`
+- `PriceCrawler.Application/UseCases/RunCrawlerUseCase.cs`
+- `PriceCrawler.Infrastructure/Crawler/ProductUrlDiscoveryStrategyFactory.cs`
+- `PriceCrawler.Infrastructure/Crawler/CategoryProductUrlDiscoverySource.cs`
+- `PriceCrawler.Infrastructure/Crawler/CategorySeedProvider.cs`
+- `PriceCrawler.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs`
+- `PriceCrawler.Web.Tests/ProductUrlDiscoveryTests.cs`
+- `PriceCrawler.Worker/appsettings.json`
+- `PriceCrawler.Web/appsettings.json`
 - `README.md`
 
 ## New interfaces/classes added
@@ -52,7 +52,7 @@ Refactored product URL discovery so Varus category seeds are the default phase-1
 - Added `Crawler:DiscoveryMode`.
 - Default discovery mode is `CategorySeeds`.
 - Updated `Crawler:MaxCategoryPagesPerSeed` default from `3` to `10`.
-- Updated configured seed file path to `VarPrice.Worker/config/category-seed-urls.varus.json`.
+- Updated configured seed file path to `PriceCrawler.Worker/config/category-seed-urls.varus.json`.
 - Root `config/category-seed-urls.varus.json` is no longer used.
 
 ## Tests added/updated
@@ -72,5 +72,5 @@ Both commands emitted `NU1900` warnings because NuGet vulnerability metadata cou
 ## Risks and notes
 
 - `Crawler:DiscoveryMode=Api` is intentionally not implemented yet.
-- The Worker and Web configs both point to the Worker seed file location so `VarPrice.Worker/config/category-seed-urls.varus.json` is the single active category seed file.
+- The Worker and Web configs both point to the Worker seed file location so `PriceCrawler.Worker/config/category-seed-urls.varus.json` is the single active category seed file.
 - Existing compatibility interfaces for sitemap/category source discovery remain so older tests or callers can still resolve them.

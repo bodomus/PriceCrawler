@@ -24,13 +24,13 @@ Implemented live category seed discovery progress for the Worker console dashboa
 ## Validation
 
 ```powershell
-dotnet test VarPrice.Web.Tests\VarPrice.Web.Tests.csproj --filter "FullyQualifiedName~CrawlerProgressStateTests|FullyQualifiedName~ProductUrlDiscoveryTests|FullyQualifiedName~RefreshProductCatalogUseCaseTests"
+dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter "FullyQualifiedName~CrawlerProgressStateTests|FullyQualifiedName~ProductUrlDiscoveryTests|FullyQualifiedName~RefreshProductCatalogUseCaseTests"
 ```
 
 Result: passed, 47 tests.
 
 ```powershell
-dotnet build VarPrice.sln
+dotnet build PriceCrawler.sln
 ```
 
 Result: build succeeded, 0 warnings, 0 errors.

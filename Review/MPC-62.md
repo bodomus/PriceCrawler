@@ -38,7 +38,7 @@ Commands run:
 dotnet restore
 dotnet build --no-restore
 dotnet test --no-build
-dotnet run --no-build --project VarPrice.Worker -- catalog-refresh
+dotnet run --no-build --project PriceCrawler.Worker -- catalog-refresh
 ```
 
 Results:
@@ -69,19 +69,19 @@ Ingestion runs: 0
 
 ## Files Changed
 
-- `VarPrice.Application/Abstractions/IRefreshProductCatalogUseCase.cs`
-- `VarPrice.Application/Models/RefreshProductCatalogResult.cs`
-- `VarPrice.Application/UseCases/RefreshProductCatalogUseCase.cs`
-- `VarPrice.Application/Abstractions/IProductUrlFilter.cs`
-- `VarPrice.Application/UseCases/ProductUrlDiscoveryService.cs`
-- `VarPrice.Application/UseCases/ProductUrlFilter.cs`
-- `VarPrice.Application/UseCases/RunCrawlerUseCase.cs`
-- `VarPrice.Application/DependencyInjection/ServiceCollectionExtensions.cs`
-- `VarPrice.Worker/Program.cs`
-- `VarPrice.Web.Tests/RefreshProductCatalogUseCaseTests.cs`
-- `VarPrice.Web.Tests/ProductUrlDiscoveryTests.cs`
-- `VarPrice.Web.Tests/RunCrawlerUseCaseTests.cs`
-- `VarPrice.Web.Tests/WorkerIntegrationTests.cs`
+- `PriceCrawler.Application/Abstractions/IRefreshProductCatalogUseCase.cs`
+- `PriceCrawler.Application/Models/RefreshProductCatalogResult.cs`
+- `PriceCrawler.Application/UseCases/RefreshProductCatalogUseCase.cs`
+- `PriceCrawler.Application/Abstractions/IProductUrlFilter.cs`
+- `PriceCrawler.Application/UseCases/ProductUrlDiscoveryService.cs`
+- `PriceCrawler.Application/UseCases/ProductUrlFilter.cs`
+- `PriceCrawler.Application/UseCases/RunCrawlerUseCase.cs`
+- `PriceCrawler.Application/DependencyInjection/ServiceCollectionExtensions.cs`
+- `PriceCrawler.Worker/Program.cs`
+- `PriceCrawler.Web.Tests/RefreshProductCatalogUseCaseTests.cs`
+- `PriceCrawler.Web.Tests/ProductUrlDiscoveryTests.cs`
+- `PriceCrawler.Web.Tests/RunCrawlerUseCaseTests.cs`
+- `PriceCrawler.Web.Tests/WorkerIntegrationTests.cs`
 - `README.md`
 - `docs/architecture.md`
 - `Tickets/MPC-62.md`

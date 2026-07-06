@@ -2,13 +2,13 @@
 
 ## Layer responsibilities
 
-### VarPrice.Domain
+### PriceCrawler.Domain
 - Core entities: `CrawlerRun`, `IngestionRun`, `Product`, `ProductCatalogItem`, `PriceSnapshot`, `CrawlError`.
 - Domain enums/value objects: `RunStatus`, `ErrorInfo`.
 - Repository ports: `ICrawlerRunRepository`, `IIngestionRunRepository`, `IPriceCollectQueueRepository`,
   `IPriceSnapshotRepository`, `IProductCatalogRepository`, `IProductCatalogRefreshRepository`.
 
-### VarPrice.Application
+### PriceCrawler.Application
 - `RunCrawlerUseCase` orchestrates:
   1. Discover and filter product urls.
   2. Start `crawler_run`.
@@ -80,7 +80,7 @@ product_catalog
 - Catalog reservation uses `reserved_at`, `reserved_until`, `reserved_by`, and `FOR UPDATE SKIP LOCKED`; expired leases
   become selectable again.
 
-### VarPrice.Infrastructure
+### PriceCrawler.Infrastructure
 - `PgCrawlerRunRepository`, `PgIngestionRunRepository`, `PgPriceSnapshotRepository`, `PgProductCatalogRepository`,
   `PgProductCatalogRefreshRepository`.
 - All write-side business operations now execute through DB routines instead of inline DML.
@@ -104,9 +104,9 @@ product_catalog
   tracks them in `db_routine_script`, and migrates legacy tables into the normalized schema.
 - `PgRoutineExecutor` provides reusable function/procedure invocation helpers for future write-side DB routines.
 - HTTP adapters: `SitemapReader`, `VarusProductCardExtractor`.
-- Composition root extension: `AddVarPriceInfrastructure(configuration)`.
+- Composition root extension: `AddPriceCrawlerInfrastructure(configuration)`.
 
-### VarPrice.Web
+### PriceCrawler.Web
 - MVC dashboard uses query sources and triggers `RunCrawlerUseCase`.
 - No direct write-side DB access from the UI layer.
 - Read-side data for grids is served through dedicated query sources over EF Core.
@@ -114,7 +114,7 @@ product_catalog
   product card, history, and chart analytics by `snapshotId`.
 - Manual live product refresh reuses `IProductCardExtractor` explicitly from the web layer, but stays read-only and does not persist a new snapshot by itself.
 
-### VarPrice.Worker
+### PriceCrawler.Worker
 - Standalone console runner.
 - Parses CLI args and invokes `RunCrawlerUseCase` for `vegetables`, `RefreshProductCatalogUseCase` for
   `catalog-refresh`, or `CollectProductPricesUseCase` for `collect-prices` / `--collect-prices`.
@@ -150,7 +150,7 @@ implementation must explicitly support the observability contract, preventing si
 
 ## Verification
 
-- `VarPrice.Web.Tests/WorkerIntegrationTests` covers the key DB routine flows:
+- `PriceCrawler.Web.Tests/WorkerIntegrationTests` covers the key DB routine flows:
   runs start/finish, observation writes, crawl errors, queue lifecycle, reaper, stats, and end-to-end crawler execution.
 - Catalog refresh integration tests cover refresh sessions, `product_catalog` insert/update/reactivation/deactivation
   behavior, concurrent running refresh protection, schema idempotency, and absence of price queue/snapshot/product/ingestion writes.
@@ -159,7 +159,7 @@ implementation must explicitly support the observability contract, preventing si
 
 Both executable apps use:
 
-- `AddVarPriceApplication(configuration)`
-- `AddVarPriceInfrastructure(configuration)`
+- `AddPriceCrawlerApplication(configuration)`
+- `AddPriceCrawlerInfrastructure(configuration)`
 
 This keeps workflow/business logic reusable for future UI replacements (desktop/other hosts).

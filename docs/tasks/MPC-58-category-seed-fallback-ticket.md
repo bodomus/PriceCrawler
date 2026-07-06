@@ -2,7 +2,7 @@
 
 ## Goal
 
-Добавить резервный механизм обнаружения product URLs для VarPrice.Worker.
+Добавить резервный механизм обнаружения product URLs для PriceCrawler.Worker.
 
 Основной путь остаётся прежним:
 
@@ -469,13 +469,13 @@ dotnet build
 Run targeted tests, for example:
 
 ```bat
-dotnet test VarPrice.Web.Tests\VarPrice.Web.Tests.csproj --filter "FullyQualifiedName~CategorySeed|FullyQualifiedName~ProductUrlDiscovery|FullyQualifiedName~RunCrawlerUseCase"
+dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter "FullyQualifiedName~CategorySeed|FullyQualifiedName~ProductUrlDiscovery|FullyQualifiedName~RunCrawlerUseCase"
 ```
 
 Then run local smoke test with required local configuration:
 
 ```bat
-dotnet run --project VarPrice.Worker -- --once --job vegetables
+dotnet run --project PriceCrawler.Worker -- --once --job vegetables
 ```
 
 Expected behavior:
@@ -491,7 +491,7 @@ Expected behavior:
 
 ## Expected Result
 
-VarPrice.Worker should no longer depend exclusively on sitemap availability.
+PriceCrawler.Worker should no longer depend exclusively on sitemap availability.
 
 If Varus breaks or removes sitemap again, Worker should be able to continue by using configured seed category pages as a controlled fallback source of product URLs.
 

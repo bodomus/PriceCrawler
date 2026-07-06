@@ -94,6 +94,89 @@ return coalesce(v_count, 0);
 end;
 $$;
 
+drop function if exists price_collect_queue_enqueue_result(bigint, text[], text[], integer, bigint[], text[]);
+
+create
+or replace function price_collect_queue_enqueue_result(
+    p_run_id bigint,
+    p_urls text[],
+    p_idempotency_keys text[],
+    p_max_attempts integer,
+    p_product_catalog_ids bigint[] default null,
+    p_page_kinds text[] default null)
+returns table(
+    total_accepted integer,
+    product_accepted integer,
+    listing_accepted integer,
+    accepted_product_catalog_ids bigint[])
+language plpgsql
+as $$
+declare
+v_catalog_ids
+bigint[];
+v_page_kinds
+text[];
+v_expected
+integer;
+begin
+v_expected
+:= coalesce(array_length(p_urls, 1), 0);
+
+if
+v_expected <> coalesce(array_length(p_idempotency_keys, 1), 0) then
+    raise exception 'p_urls and p_idempotency_keys length mismatch';
+end if;
+
+v_catalog_ids
+:= coalesce(p_product_catalog_ids, array_fill(null::bigint, array[v_expected]));
+v_page_kinds
+:= coalesce(p_page_kinds, array_fill('product_page'::text, array[v_expected]));
+
+if
+v_expected <> coalesce(array_length(v_catalog_ids, 1), 0) then
+    raise exception 'p_urls and p_product_catalog_ids length mismatch';
+end if;
+if
+v_expected <> coalesce(array_length(v_page_kinds, 1), 0) then
+    raise exception 'p_urls and p_page_kinds length mismatch';
+end if;
+
+return query
+with inserted as (
+insert
+into price_collect_queue(run_id,
+                         product_catalog_id,
+                         url,
+                         page_kind,
+                         status,
+                         attempt,
+                         max_attempts,
+                         next_attempt_at,
+                         idempotency_key,
+                         created_at,
+                         updated_at)
+select p_run_id,
+       x.product_catalog_id,
+       routine_support_trim_required(x.url, 1024),
+       routine_support_trim_required(coalesce(nullif(btrim(x.page_kind), ''), 'product_page'), 32),
+       routine_support_queue_status('pending'),
+       0,
+       greatest(coalesce(p_max_attempts, 0), 1),
+       now(),
+       routine_support_trim_required(x.idempotency_key, 128),
+       now(),
+       now()
+from unnest(p_urls, p_idempotency_keys, v_catalog_ids, v_page_kinds) as x(url, idempotency_key, product_catalog_id, page_kind) on conflict (run_id, url) do nothing
+        returning price_collect_queue.page_kind, price_collect_queue.product_catalog_id
+    )
+select count(*)::integer,
+       count(*) filter (where inserted.page_kind = 'product_page')::integer,
+       count(*) filter (where inserted.page_kind in ('listing_page', 'category_page'))::integer,
+       coalesce(array_agg(inserted.product_catalog_id) filter (where inserted.product_catalog_id is not null), array[]::bigint[])
+from inserted;
+end;
+$$;
+
 drop function if exists price_collect_queue_reserve_batch(bigint, integer, text, integer);
 
 create

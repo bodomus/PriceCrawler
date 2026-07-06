@@ -1,11 +1,11 @@
-﻿# Statuses in VarPrice
+﻿# Statuses in PriceCrawler
 
 This file lists the status values that are actively used in the application after the
 `crawler_run` / `price_snapshot` refactor.
 
 ## 1. Queue item statuses (`price_collect_queue`)
 
-Source: `VarPrice.Domain.Constants.QueueItemStatuses`
+Source: `PriceCrawler.Domain.Constants.QueueItemStatuses`
 
 ### `pending`
 - Applied right after a URL is inserted into the queue.
@@ -44,7 +44,7 @@ Source: `VarPrice.Domain.Constants.QueueItemStatuses`
 
 ## 2. Domain run statuses
 
-Source: `VarPrice.Domain.Enums.RunStatus`
+Source: `PriceCrawler.Domain.Enums.RunStatus`
 
 ### `Running`
 - Applied when `crawler_run` and `ingestion_run` are started.
@@ -80,7 +80,7 @@ There is no separate table of crawler run statuses.
 
 ## 4. Status values returned from the use case
 
-Source: `VarPrice.Application.UseCases.RunCrawlerUseCase`
+Source: `PriceCrawler.Application.UseCases.RunCrawlerUseCase`
 
 ### `ok`
 - Returned in `CrawlerRunResult.Status` when the run finishes successfully.
@@ -112,7 +112,7 @@ Important:
 
 ## 6. UI status bar levels
 
-Source: `VarPrice.Web.Controllers.RunsController`, `VarPrice.Web.ViewModels.Shared.StatusBarViewModel`
+Source: `PriceCrawler.Web.Controllers.RunsController`, `PriceCrawler.Web.ViewModels.Shared.StatusBarViewModel`
 
 ### `info`
 - Shown in the UI after a successful ingestion run.
@@ -124,8 +124,8 @@ Source: `VarPrice.Web.Controllers.RunsController`, `VarPrice.Web.ViewModels.Shar
 
 ## 7. Runs dashboard TreeList and snapshot UI statuses
 
-Source: `VarPrice.Web.Controllers.RunsController`, `VarPrice.Web.ViewModels.Runs.RunTreeNodeVm`,
-`VarPrice.Web.wwwroot.js.runs-dashboard.js`
+Source: `PriceCrawler.Web.Controllers.RunsController`, `PriceCrawler.Web.ViewModels.Runs.RunTreeNodeVm`,
+`PriceCrawler.Web.wwwroot.js.runs-dashboard.js`
 
 ### TreeList node types
 
@@ -187,8 +187,8 @@ Important:
 
 ## 8. Manual live refresh result statuses
 
-Source: `VarPrice.Web.Controllers.RunsController`, `VarPrice.Application.Models.ProductExtractResult`,
-`VarPrice.Web.wwwroot.js.runs-dashboard.js`
+Source: `PriceCrawler.Web.Controllers.RunsController`, `PriceCrawler.Application.Models.ProductExtractResult`,
+`PriceCrawler.Web.wwwroot.js.runs-dashboard.js`
 
 ### `success`
 - Returned by `RefreshLiveProduct` when VARUS extraction yields a complete product card without an issue.

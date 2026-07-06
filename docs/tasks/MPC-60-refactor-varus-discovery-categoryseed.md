@@ -488,7 +488,7 @@ dotnet test
 If the project has a worker smoke command, also run the existing once/job command, for example:
 
 ```bash
-dotnet run --project VarPrice.Worker -- --once --job vegetables
+dotnet run --project PriceCrawler.Worker -- --once --job vegetables
 ```
 
 Adjust the command if the worker project path or job name differs.

@@ -1,24 +1,24 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY VarPrice.Web/VarPrice.Web.csproj VarPrice.Web/
-COPY VarPrice.Domain/VarPrice.Domain.csproj VarPrice.Domain/
-COPY VarPrice.Application/VarPrice.Application.csproj VarPrice.Application/
-COPY VarPrice.Infrastructure/VarPrice.Infrastructure.csproj VarPrice.Infrastructure/
+COPY PriceCrawler.Web/PriceCrawler.Web.csproj PriceCrawler.Web/
+COPY PriceCrawler.Domain/PriceCrawler.Domain.csproj PriceCrawler.Domain/
+COPY PriceCrawler.Application/PriceCrawler.Application.csproj PriceCrawler.Application/
+COPY PriceCrawler.Infrastructure/PriceCrawler.Infrastructure.csproj PriceCrawler.Infrastructure/
 
-RUN dotnet restore VarPrice.Web/VarPrice.Web.csproj
+RUN dotnet restore PriceCrawler.Web/PriceCrawler.Web.csproj
 
 COPY . .
 
 RUN ls -la
-RUN ls -la VarPrice.Web
-RUN ls -la VarPrice.Domain
-RUN ls -la VarPrice.Application
-RUN ls -la VarPrice.Infrastructure
+RUN ls -la PriceCrawler.Web
+RUN ls -la PriceCrawler.Domain
+RUN ls -la PriceCrawler.Application
+RUN ls -la PriceCrawler.Infrastructure
 
-RUN dotnet publish VarPrice.Web/VarPrice.Web.csproj -c Release -o /app/publish -v diag
+RUN dotnet publish PriceCrawler.Web/PriceCrawler.Web.csproj -c Release -o /app/publish -v diag
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "VarPrice.Web.dll"]
+ENTRYPOINT ["dotnet", "PriceCrawler.Web.dll"]

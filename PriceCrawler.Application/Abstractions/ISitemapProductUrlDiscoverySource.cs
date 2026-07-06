@@ -1,0 +1,3 @@
+namespace PriceCrawler.Application.Abstractions;
+
+public interface ISitemapProductUrlDiscoverySource : IProductUrlDiscoverySource;
