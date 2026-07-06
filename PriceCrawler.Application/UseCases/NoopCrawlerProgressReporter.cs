@@ -6,7 +6,7 @@ namespace PriceCrawler.Application.UseCases;
 internal sealed class NoopCrawlerProgressReporter : ICrawlerProgressReporter
 {
     private static readonly CrawlerProgressSnapshot
-        EmptySnapshot = new(0, 0, 0, 0, 0, 0, 0, string.Empty, string.Empty);
+        EmptySnapshot = new(0, 0, 0, 0, string.Empty, string.Empty);
 
     public void Reset()
     {

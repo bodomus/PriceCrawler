@@ -197,28 +197,29 @@ public sealed class PgPriceSnapshotRepository(PgRoutineExecutor routineExecutor)
 
 public sealed class PgPriceCollectQueueRepository(PgRoutineExecutor routineExecutor) : IPriceCollectQueueRepository
 {
-    public async Task<int> EnqueueAsync(long runId, IReadOnlyCollection<QueueEnqueueItem> items, int maxAttempts,
+    public async Task<QueueEnqueueResult> EnqueueAsync(long runId, IReadOnlyCollection<QueueEnqueueItem> items, int maxAttempts,
         CancellationToken ct)
     {
         if (items.Count == 0)
         {
-            return 0;
+            return new QueueEnqueueResult(0, 0, 0);
         }
 
         var urls = items.Select(x => Truncate(x.Url, 1024)).ToArray();
         var idempotencyKeys = items.Select(x => Truncate(x.IdempotencyKey, 128)).ToArray();
         var productCatalogIds = items.Select(x => x.ProductCatalogId).ToArray();
         var pageKinds = items.Select(x => ToStorage(x.PageKind)).ToArray();
-        return await routineExecutor.ExecuteScalarAsync<int?>(
-                   DbRoutineCall.ScalarFunction("price_collect_queue_enqueue")
+        return await routineExecutor.QuerySingleOrDefaultAsync(
+                   DbRoutineCall.SetReturningFunction("price_collect_queue_enqueue_result")
                        .AddParameter("p_run_id", runId)
                        .AddParameter("p_urls", urls)
                        .AddParameter("p_idempotency_keys", idempotencyKeys)
                        .AddParameter("p_max_attempts", Math.Max(1, maxAttempts))
                        .AddParameter("p_product_catalog_ids", productCatalogIds)
                        .AddParameter("p_page_kinds", pageKinds),
+                   reader => new QueueEnqueueResult(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2)),
                    ct)
-               ?? 0;
+               ?? new QueueEnqueueResult(0, 0, 0);
     }
 
     public async Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(

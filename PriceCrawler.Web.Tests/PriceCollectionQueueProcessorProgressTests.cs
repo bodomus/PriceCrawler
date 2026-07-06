@@ -183,16 +183,105 @@ public sealed class PriceCollectionQueueProcessorProgressTests
         Assert.Equal(0, snapshot.ProductProcessed);
     }
 
+    [Fact]
+    public async Task ListingExtractorThrows_IncrementsOnlyListingFailureCounters()
+    {
+        var progress = new CrawlerProgressState();
+        progress.SetListingQueueTotal(1);
+        var queue = FakeQueueRepository.WithItem(QueueItemKind.ListingPage, maxAttempts: 1);
+        var sut = CreateProcessor(queue, progress, listingException: new InvalidOperationException("listing boom"));
+
+        await sut.DrainQueueAsync(1, CrawlerOptions(), QueueOptions(maxAttempts: 1), null, CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal(1, snapshot.ListingProcessed);
+        Assert.Equal(1, snapshot.ListingFailed);
+        Assert.Equal(0, snapshot.ProductProcessed);
+        Assert.Equal(0, snapshot.ProductFailed);
+    }
+
+    [Fact]
+    public async Task CategoryListingFlowThrows_IncrementsOnlyListingFailureCounters()
+    {
+        var progress = new CrawlerProgressState();
+        progress.SetListingQueueTotal(1);
+        var queue = FakeQueueRepository.WithItem(QueueItemKind.CategoryPage, maxAttempts: 1);
+        var sut = CreateProcessor(queue, progress, listingException: new InvalidOperationException("category boom"));
+
+        await sut.DrainQueueAsync(1, CrawlerOptions(), QueueOptions(maxAttempts: 1), null, CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal(1, snapshot.ListingProcessed);
+        Assert.Equal(1, snapshot.ListingFailed);
+        Assert.Equal(0, snapshot.ProductProcessed);
+        Assert.Equal(0, snapshot.ProductFailed);
+    }
+
+    [Fact]
+    public async Task ProductExtractorThrows_IncrementsOnlyProductFailureCounters()
+    {
+        var progress = new CrawlerProgressState();
+        progress.SetProductQueueTotal(1);
+        var queue = FakeQueueRepository.WithItem(QueueItemKind.ProductPage, maxAttempts: 1);
+        var sut = CreateProcessor(queue, progress, productException: new InvalidOperationException("product boom"));
+
+        await sut.DrainQueueAsync(1, CrawlerOptions(), QueueOptions(maxAttempts: 1), null, CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal(1, snapshot.ProductProcessed);
+        Assert.Equal(1, snapshot.ProductFailed);
+        Assert.Equal(0, snapshot.ListingProcessed);
+        Assert.Equal(0, snapshot.ListingFailed);
+    }
+
+    [Fact]
+    public async Task ListingThrownExceptionRetry_DoesNotIncrementTerminalCounters()
+    {
+        var progress = new CrawlerProgressState();
+        progress.SetListingQueueTotal(1);
+        var queue = FakeQueueRepository.WithItem(QueueItemKind.ListingPage, maxAttempts: 2);
+        var sut = CreateProcessor(queue, progress, listingException: new InvalidOperationException("retry listing"));
+
+        await sut.DrainQueueAsync(1, CrawlerOptions(), QueueOptions(maxAttempts: 2), null, CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal(0, snapshot.ProductProcessed);
+        Assert.Equal(0, snapshot.ProductFailed);
+        Assert.Equal(0, snapshot.ListingProcessed);
+        Assert.Equal(0, snapshot.ListingFailed);
+    }
+
+    [Fact]
+    public async Task ProductThrownExceptionRetry_DoesNotIncrementTerminalCounters()
+    {
+        var progress = new CrawlerProgressState();
+        progress.SetProductQueueTotal(1);
+        var queue = FakeQueueRepository.WithItem(QueueItemKind.ProductPage, maxAttempts: 2);
+        var sut = CreateProcessor(queue, progress, productException: new InvalidOperationException("retry product"));
+
+        await sut.DrainQueueAsync(1, CrawlerOptions(), QueueOptions(maxAttempts: 2), null, CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal(0, snapshot.ProductProcessed);
+        Assert.Equal(0, snapshot.ProductFailed);
+        Assert.Equal(0, snapshot.ListingProcessed);
+        Assert.Equal(0, snapshot.ListingFailed);
+    }
+
     private static PriceCollectionQueueProcessor CreateProcessor(
         FakeQueueRepository queue,
         ICrawlerProgressReporter progress,
         ProductExtractResult? productResult = null,
-        ListingExtractionResult? listingResult = null)
+        ListingExtractionResult? listingResult = null,
+        Exception? productException = null,
+        Exception? listingException = null)
         => new(
             queue,
             new FakePriceSnapshotRepository(),
-            new FakeProductExtractor(productResult ?? ProductExtractResult.Success(Card(), 200, 1, 1)),
-            new FakeListingExtractor(listingResult ?? ListingExtractionResult.Success("https://example/listing", [], 200, 1, 1)),
+            new FakeProductExtractor(productResult ?? ProductExtractResult.Success(Card(), 200, 1, 1), productException),
+            new FakeListingExtractor(
+                listingResult ?? ListingExtractionResult.Success("https://example/listing", [], 200, 1, 1),
+                listingException),
             progress,
             NullLogger<PriceCollectionQueueProcessor>.Instance);
 
@@ -212,14 +301,16 @@ public sealed class PriceCollectionQueueProcessorProgressTests
     private static ProductCard Card() =>
         new("sku", "name", "https://example/product", "slug", 10m, 12m, false, true, null, null);
 
-    private sealed class FakeProductExtractor(ProductExtractResult result) : IProductCardExtractor
+    private sealed class FakeProductExtractor(ProductExtractResult result, Exception? exception) : IProductCardExtractor
     {
-        public Task<ProductExtractResult> ExtractAsync(string url, CancellationToken ct) => Task.FromResult(result);
+        public Task<ProductExtractResult> ExtractAsync(string url, CancellationToken ct) =>
+            exception is not null ? Task.FromException<ProductExtractResult>(exception) : Task.FromResult(result);
     }
 
-    private sealed class FakeListingExtractor(ListingExtractionResult result) : IListingPageExtractor
+    private sealed class FakeListingExtractor(ListingExtractionResult result, Exception? exception) : IListingPageExtractor
     {
-        public Task<ListingExtractionResult> ExtractAsync(string url, CancellationToken ct) => Task.FromResult(result);
+        public Task<ListingExtractionResult> ExtractAsync(string url, CancellationToken ct) =>
+            exception is not null ? Task.FromException<ListingExtractionResult>(exception) : Task.FromResult(result);
     }
 
     private sealed class FakePriceSnapshotRepository : IPriceSnapshotRepository
@@ -266,12 +357,15 @@ public sealed class PriceCollectionQueueProcessorProgressTests
                 ],
                 enqueueReturn);
 
-        public Task<int> EnqueueAsync(
+        public Task<QueueEnqueueResult> EnqueueAsync(
             long runId,
             IReadOnlyCollection<QueueEnqueueItem> items,
             int maxAttempts,
-            CancellationToken ct) =>
-            Task.FromResult(Math.Min(_enqueueReturn, items.Count));
+            CancellationToken ct)
+        {
+            var accepted = Math.Min(_enqueueReturn, items.Count);
+            return Task.FromResult(new QueueEnqueueResult(accepted, accepted, 0));
+        }
 
         public Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(
             long runId,

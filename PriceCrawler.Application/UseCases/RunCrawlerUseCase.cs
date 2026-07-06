@@ -61,18 +61,18 @@ public sealed class RunCrawlerUseCase(
             var queueItems = selectedUrls
                 .Select(url => new QueueEnqueueItem(url, BuildIdempotencyKey(runId, url)))
                 .ToList();
-            var enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
-            progressReporter.SetNewProducts(enqueued);
-            progressReporter.SetUpdatedProducts(Math.Max(0, queueItems.Count - enqueued));
-            progressReporter.SetSelectedForCheck(enqueued);
-            progressReporter.SetProductQueueTotal(enqueued);
-            progressReporter.SetListingQueueTotal(0);
+            var enqueueResult = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
+            progressReporter.SetNewProducts(enqueueResult.TotalAccepted);
+            progressReporter.SetUpdatedProducts(Math.Max(0, queueItems.Count - enqueueResult.TotalAccepted));
+            progressReporter.SetSelectedForCheck(enqueueResult.TotalAccepted);
+            progressReporter.SetProductQueueTotal(enqueueResult.ProductAccepted);
+            progressReporter.SetListingQueueTotal(enqueueResult.ListingAccepted);
 
             logger.LogInformation(
                 "Queue seeded run_id={RunId} urls_total={UrlsTotal} enqueued={Enqueued} max_attempts={MaxAttempts}",
                 runId,
                 queueItems.Count,
-                enqueued,
+                enqueueResult.TotalAccepted,
                 Math.Max(1, queueOpt.MaxAttempts));
 
             progressReporter.SetCurrentStage("Проверка товаров");
@@ -81,7 +81,7 @@ public sealed class RunCrawlerUseCase(
             var stats = await queueRepository.GetRunStatsAsync(runId, ct);
             var runStatus = stats.Dead > 0 ? RunStatus.Error : RunStatus.Ok;
             var note =
-                $"queued={queueItems.Count}, enqueued={enqueued}, succeeded={stats.Succeeded}, dead={stats.Dead}, pending={stats.Pending}, retry={stats.Retry}";
+                $"queued={queueItems.Count}, enqueued={enqueueResult.TotalAccepted}, succeeded={stats.Succeeded}, dead={stats.Dead}, pending={stats.Pending}, retry={stats.Retry}";
             logger.LogInformation("Crawler finished run_id={RunId} status={Status} {Note}", runId, runStatus, note);
             progressReporter.SetCurrentStage("Завершено");
             progressReporter.SetCurrentItem(string.Empty);
@@ -116,7 +116,6 @@ public sealed class RunCrawlerUseCase(
         CancellationToken ct)
     {
         progressReporter.SetCurrentStage("Ошибка обнаружения");
-        progressReporter.IncrementProductFailed();
         var runId = await crawlerRunRepository.StartAsync("discovery", ct);
         var ingestionRunId = await ingestionRunRepository.StartAsync(runId, ct);
         var errorInfo = new ErrorInfo(errorCode, message);

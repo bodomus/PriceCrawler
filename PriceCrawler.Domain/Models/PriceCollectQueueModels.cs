@@ -8,6 +8,11 @@ public sealed record QueueEnqueueItem(
     long? ProductCatalogId = null,
     QueueItemKind PageKind = QueueItemKind.ProductPage);
 
+public sealed record QueueEnqueueResult(
+    int TotalAccepted,
+    int ProductAccepted,
+    int ListingAccepted);
+
 public sealed record ReservedQueueItem(
     long Id,
     string Url,

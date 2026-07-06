@@ -99,17 +99,16 @@ public sealed class CollectProductPricesUseCase(
                     item.Id,
                     VarusPageKindClassifier.Classify(item.Url)))
                 .ToList();
-            int enqueued;
+            QueueEnqueueResult enqueueResult;
             try
             {
                 var enqueueWatch = Stopwatch.StartNew();
-                enqueued = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
+                enqueueResult = await queueRepository.EnqueueAsync(runId, queueItems, Math.Max(1, queueOpt.MaxAttempts), ct);
                 enqueueWatch.Stop();
-                stages.Add(CrawlerRunStages.QueueEnqueue, enqueueWatch.ElapsedMilliseconds, enqueued);
-                metrics.SetSelection(selected.Count, enqueued);
-                var acceptedInitialItems = queueItems.Take(enqueued).ToList();
-                progressReporter.SetProductQueueTotal(acceptedInitialItems.Count(IsProductQueueItem));
-                progressReporter.SetListingQueueTotal(acceptedInitialItems.Count(IsListingQueueItem));
+                stages.Add(CrawlerRunStages.QueueEnqueue, enqueueWatch.ElapsedMilliseconds, enqueueResult.TotalAccepted);
+                metrics.SetSelection(selected.Count, enqueueResult.TotalAccepted);
+                progressReporter.SetProductQueueTotal(enqueueResult.ProductAccepted);
+                progressReporter.SetListingQueueTotal(enqueueResult.ListingAccepted);
             }
             catch
             {
@@ -117,16 +116,16 @@ public sealed class CollectProductPricesUseCase(
                 throw;
             }
 
-            if (enqueued < selected.Count)
+            if (enqueueResult.TotalAccepted < selected.Count)
             {
-                await ReleaseCatalogReservationsAsync(selected.Skip(enqueued).ToList(), ct);
+                await ReleaseCatalogReservationsAsync(selected.Skip(enqueueResult.TotalAccepted).ToList(), ct);
             }
 
             logger.LogInformation(
                 "Price collection queue seeded. RunId={RunId}; Selected={Selected}; Enqueued={Enqueued}",
                 runId,
                 selected.Count,
-                enqueued);
+                enqueueResult.TotalAccepted);
 
             var callbacks = new PriceCollectionQueueCallbacks(
                 OnItemSucceeded: async (item, card, write, extract, itemCt) =>
@@ -177,13 +176,13 @@ public sealed class CollectProductPricesUseCase(
             progressReporter.SetCurrentStage("Проверка цен");
             await queueProcessor.DrainQueueAsync(runId, opt, queueOpt, callbacks, ct);
             processingWatch.Stop();
-            stages.Add(CrawlerRunStages.QueueProcessing, processingWatch.ElapsedMilliseconds, enqueued);
+            stages.Add(CrawlerRunStages.QueueProcessing, processingWatch.ElapsedMilliseconds, enqueueResult.TotalAccepted);
             var stats = await queueRepository.GetRunStatsAsync(runId, ct);
             metrics.SetQueue(stats.Succeeded, stats.Retry, stats.Dead);
             var runStatus = stats.Dead > 0 ? RunStatus.Error : RunStatus.Ok;
             var failedCount = stats.Retry + stats.Dead;
             var note =
-                $"selected={selected.Count}, enqueued={enqueued}, succeeded={stats.Succeeded}, retry={stats.Retry}, dead={stats.Dead}";
+                $"selected={selected.Count}, enqueued={enqueueResult.TotalAccepted}, succeeded={stats.Succeeded}, retry={stats.Retry}, dead={stats.Dead}";
 
             var finalizationWatch = Stopwatch.StartNew();
             try
@@ -205,7 +204,7 @@ public sealed class CollectProductPricesUseCase(
                 "Price collection completed. RunId={RunId}; Selected={Selected}; Enqueued={Enqueued}; Succeeded={Succeeded}; Retry={Retry}; Dead={Dead}",
                 runId,
                 selected.Count,
-                enqueued,
+                enqueueResult.TotalAccepted,
                 stats.Succeeded,
                 stats.Retry,
                 stats.Dead);
@@ -297,11 +296,6 @@ public sealed class CollectProductPricesUseCase(
         var hash = sha.ComputeHash(bytes);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
-
-    private static bool IsProductQueueItem(QueueEnqueueItem item) => item.PageKind == QueueItemKind.ProductPage;
-
-    private static bool IsListingQueueItem(QueueEnqueueItem item) =>
-        item.PageKind is QueueItemKind.ListingPage or QueueItemKind.CategoryPage;
 
     private async Task ReleaseCatalogReservationsAsync(
         IReadOnlyCollection<ProductCatalogItem> catalogItems,

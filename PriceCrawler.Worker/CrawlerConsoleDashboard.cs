@@ -119,60 +119,60 @@ internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSp
             : CrawlerProgressFormatter.CalculatePercent(snapshot.ProductProcessed, snapshot.ProductQueueTotal);
 
         WriteAnsi("\u001b7");
-        WriteLine(1, FormatLine("Discovered products", CrawlerProgressFormatter.FormatNumber(total), width, "\u001b[36m"));
+        WriteLine(1, FormatLine("Обнаружено товаров", CrawlerProgressFormatter.FormatNumber(total), width, "\u001b[36m"));
         WriteLine(2,
-            FormatLine("New products", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.NewProducts, total), width,
+            FormatLine("Новых товаров", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.NewProducts, total), width,
                 "\u001b[37m"));
         WriteLine(3,
-            FormatLine("Updated products", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.UpdatedProducts, total),
+            FormatLine("Обновлено товаров", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.UpdatedProducts, total),
                 width, "\u001b[37m"));
         WriteLine(4,
-            FormatLine("Selected catalog", CrawlerProgressFormatter.FormatCurrentOverTotal(selected, total), width,
+            FormatLine("Выбрано из каталога", CrawlerProgressFormatter.FormatCurrentOverTotal(selected, total), width,
                 "\u001b[36m"));
         WriteLine(5,
-            FormatLine("Listing queue", CrawlerProgressFormatter.FormatNumber(snapshot.ListingQueueTotal), width,
+            FormatLine("Listing в очереди", CrawlerProgressFormatter.FormatNumber(snapshot.ListingQueueTotal), width,
                 "\u001b[33m"));
         WriteLine(6,
-            FormatLine("Listing processed",
+            FormatLine("Listing обработано",
                 CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.ListingProcessed, snapshot.ListingQueueTotal),
                 width, "\u001b[33m"));
         WriteLine(7,
-            FormatLine("Listing succeeded", CrawlerProgressFormatter.FormatNumber(snapshot.ListingSucceeded), width,
+            FormatLine("Listing успешно", CrawlerProgressFormatter.FormatNumber(snapshot.ListingSucceeded), width,
                 "\u001b[32m"));
         WriteLine(8,
-            FormatLine("Listing failed", CrawlerProgressFormatter.FormatNumber(snapshot.ListingFailed), width,
+            FormatLine("Listing ошибок", CrawlerProgressFormatter.FormatNumber(snapshot.ListingFailed), width,
                 "\u001b[31m"));
         WriteLine(9,
-            FormatLine("Product URLs found",
+            FormatLine("Product URL найдено",
                 CrawlerProgressFormatter.FormatNumber(snapshot.ProductLinksDiscoveredFromListings), width,
                 "\u001b[36m"));
         WriteLine(10,
-            FormatLine("Product URLs enqueued",
+            FormatLine("Product URL добавлено",
                 CrawlerProgressFormatter.FormatNumber(snapshot.ProductLinksEnqueuedFromListings), width,
                 "\u001b[36m"));
         WriteLine(11,
-            FormatLine("Product queue", CrawlerProgressFormatter.FormatNumber(snapshot.ProductQueueTotal), width,
+            FormatLine("Товаров в очереди", CrawlerProgressFormatter.FormatNumber(snapshot.ProductQueueTotal), width,
                 "\u001b[36m"));
         WriteLine(12,
-            FormatLine("Products processed",
+            FormatLine("Товаров обработано",
                 CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.ProductProcessed, snapshot.ProductQueueTotal),
                 width, "\u001b[33m"));
         WriteLine(13,
-            FormatLine("Products succeeded",
+            FormatLine("Товаров успешно",
                 CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.ProductSucceeded, snapshot.ProductQueueTotal),
                 width, "\u001b[32m"));
         WriteLine(14,
-            FormatLine("Products failed",
+            FormatLine("Ошибок товаров",
                 CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.ProductFailed, snapshot.ProductQueueTotal),
                 width, "\u001b[31m"));
         WriteLine(15,
-            FormatLine("Current stage", string.IsNullOrWhiteSpace(snapshot.CurrentStage) ? "-" : snapshot.CurrentStage,
+            FormatLine("Текущий этап", string.IsNullOrWhiteSpace(snapshot.CurrentStage) ? "-" : snapshot.CurrentStage,
                 width, "\u001b[33m"));
         WriteLine(16,
-            FormatLine("Current item", string.IsNullOrWhiteSpace(snapshot.CurrentItem) ? "-" : snapshot.CurrentItem,
+            FormatLine("Текущая ссылка", string.IsNullOrWhiteSpace(snapshot.CurrentItem) ? "-" : snapshot.CurrentItem,
                 width, "\u001b[37m"));
         WriteLine(17,
-            FormatLine("Product progress", CrawlerProgressFormatter.FormatPercent(percent), width, "\u001b[36m"));
+            FormatLine("Выполнение товаров", CrawlerProgressFormatter.FormatPercent(percent), width, "\u001b[36m"));
         WriteAnsi("\u001b8");
         _originalOut?.Flush();
     }

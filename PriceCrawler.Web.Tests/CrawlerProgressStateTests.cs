@@ -156,6 +156,27 @@ public sealed class CrawlerProgressStateTests
         Assert.Equal(9, snapshot.ProductQueueTotal);
     }
 
+    [Fact]
+    public void Snapshot_LegacyCompatibilityProperties_AreDerivedAliases()
+    {
+        var snapshot = new CrawlerProgressSnapshot(
+            TotalDiscovered: 0,
+            NewProducts: 0,
+            UpdatedProducts: 0,
+            SelectedForCheck: 0,
+            CurrentStage: string.Empty,
+            CurrentItem: string.Empty,
+            ProductQueueTotal: 7,
+            ProductProcessed: 5,
+            ProductSucceeded: 4,
+            ProductFailed: 1);
+
+        Assert.Equal(snapshot.ProductQueueTotal, snapshot.QueueLinksRequested);
+        Assert.Equal(snapshot.ProductProcessed, snapshot.CheckedProducts);
+        Assert.Equal(snapshot.ProductSucceeded, snapshot.SuccessfulProducts);
+        Assert.Equal(snapshot.ProductFailed, snapshot.FailedProducts);
+    }
+
     [Theory]
     [InlineData(4100, 5000, 82.0d)]
     [InlineData(1, 0, 0d)]

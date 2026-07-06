@@ -88,10 +88,10 @@ public sealed class PriceCollectionQueueProcessor(
         PriceCollectionQueueCallbacks? callbacks,
         CancellationToken ct)
     {
+        var pageKind = ResolvePageKind(item);
         try
         {
             progressReporter.SetCurrentItem(item.Url);
-            var pageKind = ResolvePageKind(item);
             if (pageKind == QueueItemKind.ListingPage || pageKind == QueueItemKind.CategoryPage)
             {
                 await ProcessListingQueueItemAsync(runId, item, pageKind, queueOpt, callbacks, ct);
@@ -202,11 +202,10 @@ public sealed class PriceCollectionQueueProcessor(
                     issue,
                     queueOpt,
                     callbacks,
-                    ct);
+                ct);
                 if (finalFailure)
                 {
-                    progressReporter.IncrementProductProcessed();
-                    progressReporter.IncrementProductFailed();
+                    IncrementTerminalFailure(pageKind);
                 }
             }
             catch (Exception persistEx)
@@ -334,12 +333,12 @@ public sealed class PriceCollectionQueueProcessor(
                 QueueItemKind.ProductPage))
             .ToList();
 
-        var enqueued = discoveredItems.Count == 0
-            ? 0
+        var enqueueResult = discoveredItems.Count == 0
+            ? new QueueEnqueueResult(0, 0, 0)
             : await queueRepository.EnqueueAsync(runId, discoveredItems, Math.Max(1, queueOpt.MaxAttempts), ct);
         progressReporter.IncrementProductLinksDiscoveredFromListings(result.FoundCount);
-        progressReporter.IncrementProductLinksEnqueuedFromListings(enqueued);
-        progressReporter.IncrementProductQueueTotal(enqueued);
+        progressReporter.IncrementProductLinksEnqueuedFromListings(enqueueResult.ProductAccepted);
+        progressReporter.IncrementProductQueueTotal(enqueueResult.ProductAccepted);
 
         await queueRepository.MarkSucceededAsync(item.Id, ct);
         progressReporter.IncrementListingProcessed();
@@ -354,9 +353,22 @@ public sealed class PriceCollectionQueueProcessor(
             nameof(IListingPageExtractor),
             result.HttpStatus,
             result.FoundCount,
-            enqueued,
+            enqueueResult.ProductAccepted,
             result.Issue?.ErrorCode ?? CrawlerErrorCodes.ListingParsed,
             result.IsTransient);
+    }
+
+    private void IncrementTerminalFailure(QueueItemKind pageKind)
+    {
+        if (pageKind is QueueItemKind.ListingPage or QueueItemKind.CategoryPage)
+        {
+            progressReporter.IncrementListingProcessed();
+            progressReporter.IncrementListingFailed();
+            return;
+        }
+
+        progressReporter.IncrementProductProcessed();
+        progressReporter.IncrementProductFailed();
     }
 
     public static string BuildWorkerId()

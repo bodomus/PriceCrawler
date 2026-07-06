@@ -441,7 +441,7 @@ public sealed class CollectProductPricesUseCaseTests
 
         public int CountByStatus(string status) => _rows.Values.Count(x => x.Status == status);
 
-        public Task<int> EnqueueAsync(
+        public Task<QueueEnqueueResult> EnqueueAsync(
             long runId,
             IReadOnlyCollection<QueueEnqueueItem> items,
             int maxAttempts,
@@ -456,6 +456,8 @@ public sealed class CollectProductPricesUseCaseTests
                     ? items
                     : items.Take(EnqueueLimit.Value))
                 .ToList();
+            var productAccepted = 0;
+            var listingAccepted = 0;
             foreach (var item in itemsToInsert)
             {
                 _rows[_nextId] = new QueueRow
@@ -469,9 +471,17 @@ public sealed class CollectProductPricesUseCaseTests
                     ProductCatalogId = item.ProductCatalogId
                 };
                 _nextId++;
+                if (item.PageKind is QueueItemKind.ListingPage or QueueItemKind.CategoryPage)
+                {
+                    listingAccepted++;
+                }
+                else if (item.PageKind == QueueItemKind.ProductPage)
+                {
+                    productAccepted++;
+                }
             }
 
-            return Task.FromResult(itemsToInsert.Count);
+            return Task.FromResult(new QueueEnqueueResult(itemsToInsert.Count, productAccepted, listingAccepted));
         }
 
         public Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(

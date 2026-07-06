@@ -103,6 +103,33 @@ public sealed class RunCrawlerUseCaseTests
     }
 
     [Fact]
+    public async Task DiscoveryFailure_DoesNotIncrementProductFailureCounters()
+    {
+        var crawlerRepo = new FakeCrawlerRunRepository();
+        var ingestionRepo = new FakeIngestionRunRepository();
+        var queueRepo = new FakeQueueRepository();
+        var snapshotRepo = new FakePriceSnapshotRepository();
+        var progress = new CrawlerProgressState();
+        var source = new ThrowingDiscoveryService();
+        var extractor =
+            new FakeExtractor(ProductExtractResult.Fail(CrawlerErrorCodes.Unknown, null, "unused", 10, 1.0d, false));
+
+        var sut = CreateUseCase(crawlerRepo, ingestionRepo, queueRepo, snapshotRepo, source, extractor, progress);
+        var result = await sut.RunVegetablesAsync(CancellationToken.None);
+
+        var snapshot = progress.GetSnapshot();
+        Assert.Equal("error", result.Status);
+        Assert.Equal(0, snapshot.ProductQueueTotal);
+        Assert.Equal(0, snapshot.ProductProcessed);
+        Assert.Equal(0, snapshot.ProductSucceeded);
+        Assert.Equal(0, snapshot.ProductFailed);
+        Assert.Equal(0, snapshot.ListingQueueTotal);
+        Assert.Equal(0, snapshot.ListingProcessed);
+        Assert.Equal(0, snapshot.ListingSucceeded);
+        Assert.Equal(0, snapshot.ListingFailed);
+    }
+
+    [Fact]
     public async Task RunVegetablesAsync_CriticalItemFailure_MarksRunAsErrorAndPersistsCrawlError()
     {
         var crawlerRepo = new FakeCrawlerRunRepository();
@@ -198,7 +225,8 @@ public sealed class RunCrawlerUseCaseTests
         IPriceCollectQueueRepository queue,
         IPriceSnapshotRepository snapshot,
         IProductUrlDiscoveryService source,
-        IProductCardExtractor extractor)
+        IProductCardExtractor extractor,
+        CrawlerProgressState? progressReporter = null)
     {
         var crawlerOptions = Options.Create(new CrawlerOptions
         {
@@ -216,7 +244,7 @@ public sealed class RunCrawlerUseCaseTests
             RetryMaxDelayMs = 20,
             ReaperIntervalSeconds = 1
         });
-        var progress = new CrawlerProgressState();
+        var progress = progressReporter ?? new CrawlerProgressState();
         var processor = new PriceCollectionQueueProcessor(
             queue,
             snapshot,
@@ -330,10 +358,12 @@ public sealed class RunCrawlerUseCaseTests
         private readonly Dictionary<long, QueueRow> _rows = [];
         private long _nextId = 1;
 
-        public Task<int> EnqueueAsync(long runId, IReadOnlyCollection<QueueEnqueueItem> items, int maxAttempts,
+        public Task<QueueEnqueueResult> EnqueueAsync(long runId, IReadOnlyCollection<QueueEnqueueItem> items, int maxAttempts,
             CancellationToken ct)
         {
             var added = 0;
+            var productAdded = 0;
+            var listingAdded = 0;
             foreach (var item in items)
             {
                 if (_rows.Values.Any(x => x.RunId == runId && string.Equals(x.Url, item.Url, StringComparison.Ordinal)))
@@ -352,9 +382,17 @@ public sealed class RunCrawlerUseCaseTests
                 };
                 _nextId++;
                 added++;
+                if (item.PageKind is QueueItemKind.ListingPage or QueueItemKind.CategoryPage)
+                {
+                    listingAdded++;
+                }
+                else if (item.PageKind == QueueItemKind.ProductPage)
+                {
+                    productAdded++;
+                }
             }
 
-            return Task.FromResult(added);
+            return Task.FromResult(new QueueEnqueueResult(added, productAdded, listingAdded));
         }
 
         public int TotalEnqueued => _rows.Count;

@@ -631,7 +631,9 @@ public sealed class WorkerIntegrationTests
             maxAttempts: 0,
             CancellationToken.None);
 
-        Assert.Equal(3, inserted);
+        Assert.Equal(3, inserted.TotalAccepted);
+        Assert.Equal(3, inserted.ProductAccepted);
+        Assert.Equal(0, inserted.ListingAccepted);
 
         var reserved = await queueRepo.ReserveBatchAsync(
             runId,
@@ -690,6 +692,38 @@ public sealed class WorkerIntegrationTests
             await ScalarAsync(conn,
                 "select count(*) from price_collect_queue where status='succeeded' and finished_at is not null"));
         Assert.Equal(2, await ScalarAsync(conn, "select count(*) from price_collect_queue where status='dead'"));
+    }
+
+    [Fact]
+    public async Task QueueRepository_EnqueueResult_CountsActualAcceptedItemsByKind()
+    {
+        var factory = CreateFactory();
+        await PrepareSchemaAsync();
+
+        var crawlerRepo = CreateCrawlerRunRepository(factory);
+        var queueRepo = CreatePriceCollectQueueRepository(factory);
+        var runId = await crawlerRepo.StartAsync("integration", CancellationToken.None);
+
+        await queueRepo.EnqueueAsync(
+            runId,
+            [new QueueEnqueueItem("https://varus.ua/existing-product", "existing", null, QueueItemKind.ProductPage)],
+            maxAttempts: 3,
+            CancellationToken.None);
+
+        var result = await queueRepo.EnqueueAsync(
+            runId,
+            [
+                new QueueEnqueueItem("https://varus.ua/existing-product", "duplicate", null, QueueItemKind.ProductPage),
+                new QueueEnqueueItem("https://varus.ua/listing", "listing", null, QueueItemKind.ListingPage),
+                new QueueEnqueueItem("https://varus.ua/new-product", "product", null, QueueItemKind.ProductPage),
+                new QueueEnqueueItem("https://varus.ua/category", "category", null, QueueItemKind.CategoryPage)
+            ],
+            maxAttempts: 3,
+            CancellationToken.None);
+
+        Assert.Equal(3, result.TotalAccepted);
+        Assert.Equal(1, result.ProductAccepted);
+        Assert.Equal(2, result.ListingAccepted);
     }
 
     [Fact]

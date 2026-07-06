@@ -5,12 +5,8 @@ public sealed record CrawlerProgressSnapshot(
     int NewProducts,
     int UpdatedProducts,
     int SelectedForCheck,
-    int CheckedProducts,
-    int SuccessfulProducts,
-    int FailedProducts,
     string CurrentStage,
     string CurrentItem,
-    int QueueLinksRequested = 0,
     int DiscoveryProcessedSeeds = 0,
     int DiscoveryTotalSeeds = 0,
     int DiscoveryDiscoveredProductUrls = 0,
@@ -28,6 +24,14 @@ public sealed record CrawlerProgressSnapshot(
     int ProductLinksDiscoveredFromListings = 0,
     int ProductLinksEnqueuedFromListings = 0)
 {
+    public int QueueLinksRequested => ProductQueueTotal;
+
+    public int CheckedProducts => ProductProcessed;
+
+    public int SuccessfulProducts => ProductSucceeded;
+
+    public int FailedProducts => ProductFailed;
+
     public int TotalQueueItems => ProductQueueTotal + ListingQueueTotal;
 
     public int TotalProcessedQueueItems => ProductProcessed + ListingProcessed;

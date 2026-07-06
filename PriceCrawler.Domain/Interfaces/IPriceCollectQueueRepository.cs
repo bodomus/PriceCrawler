@@ -4,7 +4,7 @@ namespace PriceCrawler.Domain.Interfaces;
 
 public interface IPriceCollectQueueRepository
 {
-    Task<int> EnqueueAsync(long runId, IReadOnlyCollection<QueueEnqueueItem> items, int maxAttempts,
+    Task<QueueEnqueueResult> EnqueueAsync(long runId, IReadOnlyCollection<QueueEnqueueItem> items, int maxAttempts,
         CancellationToken ct);
 
     Task<IReadOnlyList<ReservedQueueItem>> ReserveBatchAsync(

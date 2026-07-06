@@ -13,6 +13,22 @@
 - dotnet build PriceCrawler.sln - passed, 0 warnings, 0 errors.
 - dotnet test PriceCrawler.sln - passed, Worker.Tests 21 and Web.Tests 218.
 
+## Fixes after review
+- ListingPage and CategoryPage thrown-exception paths now increment only listing terminal counters.
+- ProductPage thrown-exception paths now increment only product terminal counters.
+- Retry paths after thrown exceptions do not increment terminal product/listing counters.
+- Discovery failure no longer increments ProductFailed or any other queue terminal counter.
+- Legacy compatibility counters are derived aliases on CrawlerProgressSnapshot and cannot diverge from ProductQueueTotal/ProductProcessed/ProductSucceeded/ProductFailed.
+- Initial mixed enqueue accounting no longer relies on Take(enqueued); enqueue now returns actual accepted counts by queue item kind.
+- Dashboard metric labels are Russian/consistent with the existing Worker UI.
+- Added thrown-exception tests for product, listing, category, and retry paths.
+- Added discovery-failure progress test and DB enqueue-result test for mixed accepted item kinds.
+
+Validation after fixes:
+- dotnet build PriceCrawler.sln - passed, 0 warnings, 0 errors.
+- dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter "CrawlerProgressStateTests|PriceCollectionQueueProcessorProgressTests|RunCrawlerUseCaseTests" - passed, 35 tests.
+- dotnet test PriceCrawler.sln - passed, Worker.Tests 21 and Web.Tests 226.
+
 ## Notes
 - No database schema or production data was changed.
 - Tests were run through the solution test projects only; no production crawler run was executed.
