@@ -16,8 +16,8 @@
 
 ## Key implementation points
 
-- Guard implementation: `VarPrice.Infrastructure/Persistence/StageSafetyGuard.cs`.
-- DI registration: `AddVarPriceInfrastructure`.
+- Guard implementation: `PriceCrawler.Infrastructure/Persistence/StageSafetyGuard.cs`.
+- DI registration: `AddPriceCrawlerInfrastructure`.
 - `SchemaBootstrapper` now requires `StageSafetyGuard` and checks it before schema changes.
 - Web/Worker startup uses `ShouldRunStartupSchemaBootstrap()`:
   - Dev: schema bootstrap runs as before.
@@ -28,8 +28,8 @@
 ## Validation
 
 - `dotnet build` passed.
-- `dotnet test VarPrice.Web.Tests\VarPrice.Web.Tests.csproj --filter StageSafetyGuardTests` passed.
-- `dotnet test VarPrice.Web.Tests\VarPrice.Web.Tests.csproj --filter TargetDatabaseResolverTests` passed.
+- `dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter StageSafetyGuardTests` passed.
+- `dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter TargetDatabaseResolverTests` passed.
 
 ## Notes for next tickets
 

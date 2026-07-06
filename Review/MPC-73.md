@@ -26,9 +26,9 @@ Fixed Worker console progress metrics so discovery/catalog counters are not mixe
 
 ## Validation
 
-- `dotnet build VarPrice.sln`
-- `dotnet test VarPrice.Web.Tests\VarPrice.Web.Tests.csproj --filter CrawlerProgressStateTests`
-- `dotnet test VarPrice.sln`
+- `dotnet build PriceCrawler.sln`
+- `dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter CrawlerProgressStateTests`
+- `dotnet test PriceCrawler.sln`
 
 All tests passed. Integration tests use `varprice_test` through `PostgresIntegrationFixture`.
 

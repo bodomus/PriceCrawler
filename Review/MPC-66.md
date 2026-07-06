@@ -45,8 +45,8 @@ details, recent filters/limit и aggregate диапазон. Добавлены 
   (`running`, `ok`, `error`); неизвестные значения возвращают `400`, а не неоднозначный пустой `200`.
 - Worker создаёт один `ExecutionId` на invocation и помещает его в Serilog context/console/file output; `run-all`
   выводит ID и логирует оба независимых run IDs с общей correlation, не меняя DB schema.
-- `dotnet build VarPrice.sln --no-restore`: успешно, 0 ошибок.
-- Полный suite: 219 passed, 0 failed (`VarPrice.Web.Tests` 198; `VarPrice.Worker.Tests` 21).
+- `dotnet build PriceCrawler.sln --no-restore`: успешно, 0 ошибок.
+- Полный suite: 219 passed, 0 failed (`PriceCrawler.Web.Tests` 198; `PriceCrawler.Worker.Tests` 21).
 - Controlled catalog (`varprice_test`): RunId 1, duration 43 ms, discovered 2, accepted 2, inserted 2, updated 0,
   reactivated 0, deactivated 0.
 - Worker collect-prices со stub и batch=2 (`varprice_test`): RunId 2, selected 2, enqueued 2, succeeded 2,

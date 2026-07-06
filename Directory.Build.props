@@ -8,7 +8,7 @@
     <TreatWarningsAsErrors Condition="'$(Configuration)'=='Release'">true</TreatWarningsAsErrors>
 
     <Company>Varus</Company>
-    <Product>VarPrice</Product>
+    <Product>PriceCrawler</Product>
     <RepositoryUrl>https://github.com/bodomus/PriceCrawler.git</RepositoryUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

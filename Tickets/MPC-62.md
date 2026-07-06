@@ -22,7 +22,7 @@
 - Добавить ручной запуск:
 
 ```bash
-dotnet run --project VarPrice.Worker -- catalog-refresh
+dotnet run --project PriceCrawler.Worker -- catalog-refresh
 ```
 
 ## Required Verification
@@ -31,7 +31,7 @@ dotnet run --project VarPrice.Worker -- catalog-refresh
 dotnet restore
 dotnet build --no-restore
 dotnet test --no-build
-dotnet run --project VarPrice.Worker -- catalog-refresh
+dotnet run --project PriceCrawler.Worker -- catalog-refresh
 ```
 
 Все тесты и ручная проверка должны выполняться только на тестовой базе `varprice_test`.

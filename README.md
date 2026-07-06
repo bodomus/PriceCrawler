@@ -4,11 +4,11 @@
 
 ## Состав решения
 
-- `VarPrice.Domain` - доменные сущности и контракты.
-- `VarPrice.Application` - use-case и orchestration.
-- `VarPrice.Infrastructure` - Postgres-репозитории, queue pipeline, bootstrap схемы, HTTP crawler adapters.
-- `VarPrice.Web` - web/API хост.
-- `VarPrice.Worker` - консольный запуск crawler.
+- `PriceCrawler.Domain` - доменные сущности и контракты.
+- `PriceCrawler.Application` - use-case и orchestration.
+- `PriceCrawler.Infrastructure` - Postgres-репозитории, queue pipeline, bootstrap схемы, HTTP crawler adapters.
+- `PriceCrawler.Web` - web/API хост.
+- `PriceCrawler.Worker` - консольный запуск crawler.
 
 ## Runs Dashboard (MVC + Kendo Analytics)
 
@@ -32,7 +32,7 @@
 
 ### Слои
 
-- `VarPrice.Web`
+- `PriceCrawler.Web`
   - `Controllers/RunsController.cs`
   - `ViewModels/Runs/RunsDashboardVm.cs`
   - `ViewModels/Shared/StatusBarViewModel.cs`
@@ -41,14 +41,14 @@
   - `Views/Shared/_StatusBar.cshtml`
   - `wwwroot/js/runs-dashboard.js`
   - `wwwroot/vendor/devextreme/*`
-- `VarPrice.Application`
+- `PriceCrawler.Application`
   - `Grids/Runs/IRunsGridQuerySource.cs`
   - `Grids/Runs/ISnapshotsGridQuerySource.cs`
   - `Grids/Runs/IProductAnalysisService.cs`
   - `Grids/Runs/IProductDetailsQuerySource.cs`
   - `Grids/Runs/IProductPriceHistoryQuerySource.cs`
   - `Grids/Runs/Dto/*` - DTO для JSON-контракта dashboard API
-- `VarPrice.Infrastructure`
+- `PriceCrawler.Infrastructure`
   - `Queries/Runs/RunsGridQuerySource.cs` - EF query для runs
   - `Queries/Runs/SnapshotsGridQuerySource.cs` - EF query для snapshots
   - `Queries/Runs/ProductAnalysisService.cs` - единый агрегатор product card + history + analytics
@@ -73,7 +73,7 @@
 ### Где теперь находится data access для dashboard
 
 - `Web` слой не делает EF/SQL запросы для `Runs`.
-- Весь доступ к данным для экрана находится в `VarPrice.Infrastructure/Queries/Runs`.
+- Весь доступ к данным для экрана находится в `PriceCrawler.Infrastructure/Queries/Runs`.
 - `/Runs` использует единый application-level контракт `ProductAnalysis` для аналитической панели выбранного товара.
 - Фильтрация/сортировка/пагинация для Kendo grid выполняются через `DataSourceRequest`/`ToDataSourceResultAsync`.
 - Ручной live refresh использует существующий `IProductCardExtractor`, но не делает write-side действий в БД.
@@ -94,7 +94,7 @@ docker compose up -d postgres
 ### 2) Запустить Web
 
 ```bash
-dotnet run --project VarPrice.Web
+dotnet run --project PriceCrawler.Web
 ```
 
 Health endpoint: `http://localhost:8080/health` (в Docker) или локальный порт Kestrel.
@@ -102,19 +102,19 @@ Health endpoint: `http://localhost:8080/health` (в Docker) или локаль�
 ### 3) Запустить Worker
 
 ```bash
-dotnet run --project VarPrice.Worker -- vegetables --once
+dotnet run --project PriceCrawler.Worker -- vegetables --once
 ```
 
 Для ручного обновления постоянного каталога товаров без сбора цен:
 
 ```bash
-dotnet run --project VarPrice.Worker -- catalog-refresh
+dotnet run --project PriceCrawler.Worker -- catalog-refresh
 ```
 
 Для ежедневного сбора цен из постоянного каталога без discovery:
 
 ```bash
-dotnet run --project VarPrice.Worker -- collect-prices
+dotnet run --project PriceCrawler.Worker -- collect-prices
 ```
 
 В интерактивной консоли Worker показывает фиксированную верхнюю панель прогресса
@@ -124,7 +124,7 @@ dotnet run --project VarPrice.Worker -- collect-prices
 выполнения. Discovery/catalog счетчики не смешиваются с queue-счетчиками:
 `выбрано на проверку` показывает исходный batch, а `ссылок в очереди` растет,
 если listing/filter страницы добавляют найденные product URLs в очередь. Нижняя часть консоли продолжает
-показывать обычный Serilog-поток. Файловый лог `logs/varprice-worker.log`, его
+показывать обычный Serilog-поток. Файловый лог `logs/pricecrawler-worker.log`, его
 формат, ротация и уровень логирования не меняются; обновления панели пишутся
 только в консоль и не попадают в файл. Если stdout перенаправлен или терминал не
 поддерживает динамическую перерисовку, панель автоматически отключается и Worker
@@ -189,8 +189,8 @@ Long-running daemon/scheduler mode пока не реализован.
 Команда:
 
 ```bash
-dotnet run --project VarPrice.Worker -- vegetables
-dotnet run --project VarPrice.Worker -- vegetables --once
+dotnet run --project PriceCrawler.Worker -- vegetables
+dotnet run --project PriceCrawler.Worker -- vegetables --once
 ```
 
 Поведение:
@@ -204,7 +204,7 @@ dotnet run --project VarPrice.Worker -- vegetables --once
 Команда:
 
 ```bash
-dotnet run --project VarPrice.Worker -- catalog-refresh
+dotnet run --project PriceCrawler.Worker -- catalog-refresh
 ```
 
 Поведение:
@@ -245,7 +245,7 @@ discovered -> active -> missing during refresh -> grace period -> inactive -> di
 Команда:
 
 ```bash
-dotnet run --project VarPrice.Worker -- collect-prices
+dotnet run --project PriceCrawler.Worker -- collect-prices
 ```
 
 Поведение:
@@ -273,11 +273,11 @@ Inactive rows, future `next_check_at` и rows с активным `reserved_unti
 Примеры:
 
 ```bash
-dotnet run --project VarPrice.Worker -- vegetables
-dotnet run --project VarPrice.Worker -- vegetables --once
-dotnet run --project VarPrice.Worker -- catalog-refresh
-dotnet run --project VarPrice.Worker -- collect-prices
-dotnet run --project VarPrice.Worker -- --help
+dotnet run --project PriceCrawler.Worker -- vegetables
+dotnet run --project PriceCrawler.Worker -- vegetables --once
+dotnet run --project PriceCrawler.Worker -- catalog-refresh
+dotnet run --project PriceCrawler.Worker -- collect-prices
+dotnet run --project PriceCrawler.Worker -- --help
 ```
 
 ## Коды завершения Worker
@@ -323,7 +323,7 @@ dotnet run --project VarPrice.Worker -- --help
 - `Queue:RetryMaxDelayMs` (default `30000`)
 - `Queue:ReaperIntervalSeconds` (default `15`)
 
-Default Varus category seeds are stored in `VarPrice.Worker/config/category-seed-urls.varus.json`.
+Default Varus category seeds are stored in `PriceCrawler.Worker/config/category-seed-urls.varus.json`.
 
 Limit semantics:
 
@@ -494,12 +494,12 @@ order by id;
   проверку meaningful change, conditional insert `price_snapshot`
   и возврат `(productId, snapshotId, snapshotCreated)`.
 - Общие SQL helper-объекты для будущих routines допускают префикс `routine_support_*`.
-- `schema.sql` и `db/routines/**/*.sql` копируются в output/publish для `VarPrice.Web` и `VarPrice.Worker`,
+- `schema.sql` и `db/routines/**/*.sql` копируются в output/publish для `PriceCrawler.Web` и `PriceCrawler.Worker`,
   поэтому bootstrap работает как из репозитория, так и из опубликованного приложения.
 
 ## Integration tests for DB routines
 
-- Ключевые write-side сценарии покрыты в `VarPrice.Web.Tests/WorkerIntegrationTests.cs`.
+- Ключевые write-side сценарии покрыты в `PriceCrawler.Web.Tests/WorkerIntegrationTests.cs`.
 - Тесты проверяют:
   `crawler_run`, `ingestion_run`, `price_observation_store`,
   `crawl_error_add`, queue lifecycle, reaper, stats и полную use-case интеграцию.
@@ -569,16 +569,16 @@ git push --tags
 Как проверить вычисленную версию локально:
 
 ```bash
-dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:Version
-dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:AssemblyVersion
-dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:FileVersion
-dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:AssemblyInformationalVersion
+dotnet msbuild PriceCrawler.Application/PriceCrawler.Application.csproj -t:GetBuildVersion -getProperty:Version
+dotnet msbuild PriceCrawler.Application/PriceCrawler.Application.csproj -t:GetBuildVersion -getProperty:AssemblyVersion
+dotnet msbuild PriceCrawler.Application/PriceCrawler.Application.csproj -t:GetBuildVersion -getProperty:FileVersion
+dotnet msbuild PriceCrawler.Application/PriceCrawler.Application.csproj -t:GetBuildVersion -getProperty:AssemblyInformationalVersion
 ```
 
 ## Тесты
 
 ```bash
-dotnet test VarPrice.sln
+dotnet test PriceCrawler.sln
 ```
 
 

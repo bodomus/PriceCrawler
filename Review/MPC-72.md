@@ -31,8 +31,8 @@ Implemented explicit handling for Varus listing/filter URLs in the price collect
   - `CollectProductPricesUseCaseTests`
   - `RunCrawlerUseCaseTests`
 - Full test suite passed:
-  - `VarPrice.Worker.Tests`: 21 passed
-  - `VarPrice.Web.Tests`: 209 passed
+  - `PriceCrawler.Worker.Tests`: 21 passed
+  - `PriceCrawler.Web.Tests`: 209 passed
 
 ## Database
 

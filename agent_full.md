@@ -43,12 +43,12 @@ The project already has a separated multi-project structure and is moving toward
 
 The solution contains 6 projects:
 
-- `VarPrice.Domain`
-- `VarPrice.Application`
-- `VarPrice.Infrastructure`
-- `VarPrice.Web`
-- `VarPrice.Worker`
-- `VarPrice.Web.Tests`
+- `PriceCrawler.Domain`
+- `PriceCrawler.Application`
+- `PriceCrawler.Infrastructure`
+- `PriceCrawler.Web`
+- `PriceCrawler.Worker`
+- `PriceCrawler.Web.Tests`
 
 ## 4. Architectural Approach
 
@@ -70,7 +70,7 @@ It is **not** a full DDD/Clean Architecture implementation in the strict sense, 
 
 ### Layer responsibilities
 
-#### `VarPrice.Domain`
+#### `PriceCrawler.Domain`
 
 Contains:
 
@@ -81,7 +81,7 @@ Contains:
 
 This layer defines the business vocabulary and persistence contracts, but keeps logic relatively light.
 
-#### `VarPrice.Application`
+#### `PriceCrawler.Application`
 
 Contains:
 
@@ -92,7 +92,7 @@ Contains:
 
 This is the orchestration layer. The main business process is concentrated in `RunCrawlerUseCase`.
 
-#### `VarPrice.Infrastructure`
+#### `PriceCrawler.Infrastructure`
 
 Contains:
 
@@ -104,7 +104,7 @@ Contains:
 
 This layer implements all technical concerns: database access, DB routine execution, HTTP crawling, throttling, parsing, and dashboard query building.
 
-#### `VarPrice.Web`
+#### `PriceCrawler.Web`
 
 Contains:
 
@@ -114,7 +114,7 @@ Contains:
 - logging bootstrap
 - dashboard endpoints for runs, snapshots, analytics, and manual live refresh
 
-#### `VarPrice.Worker`
+#### `PriceCrawler.Worker`
 
 Contains:
 
@@ -130,7 +130,7 @@ This is the main batch/ingestion host.
 
 Main path:
 
-1. `VarPrice.Worker/Program.cs`
+1. `PriceCrawler.Worker/Program.cs`
 2. `RunCrawlerUseCase`
 3. `SitemapReader`
 4. enqueue URLs into `price_collect_queue`
@@ -152,7 +152,7 @@ Important characteristics:
 
 Main UI path:
 
-1. `VarPrice.Web/Program.cs`
+1. `PriceCrawler.Web/Program.cs`
 2. `RunsController`
 3. MVC views + Kendo UI widgets
 4. query sources plus a unified product analysis service for run/snapshot/product analytics data
@@ -166,7 +166,7 @@ This path uses the same queue-based orchestration as the worker host and starts 
 
 ## 6. Project-by-Project Class Map
 
-### 6.1 `VarPrice.Domain`
+### 6.1 `PriceCrawler.Domain`
 
 #### Entities
 
@@ -197,7 +197,7 @@ Observation:
 
 `IClock` and `IUnitOfWork` exist, but they are not central to the current implementation. The project relies more on explicit repository boundaries, DB routines for write-side operations, and query services for dashboard read models.
 
-### 6.2 `VarPrice.Application`
+### 6.2 `PriceCrawler.Application`
 
 #### Abstractions
 
@@ -240,7 +240,7 @@ This class is the heart of the modern ingestion flow. It:
 - `IProductAnalysisService`
 - DTO and QueryRow classes under `Grids/Runs/*`
 
-### 6.3 `VarPrice.Infrastructure`
+### 6.3 `PriceCrawler.Infrastructure`
 
 #### Crawler adapters
 
@@ -265,7 +265,7 @@ Responsibilities:
 - `PgIngestionRunRepository`
 - `PgPriceSnapshotRepository`
 - `PgPriceCollectQueueRepository`
-- `VarPriceDbContext`
+- `PriceCrawlerDbContext`
 
 Important detail:
 
@@ -285,7 +285,7 @@ the project uses **two persistence styles at once**:
 
 This is effectively a read-model layer tailored for the UI, including a unified `ProductAnalysis` payload for the analytics panel.
 
-### 6.4 `VarPrice.Web`
+### 6.4 `PriceCrawler.Web`
 
 #### Hosting and composition
 
@@ -310,13 +310,13 @@ Observation:
 
 The dashboard now loads product card, history, and chart analytics through one application-level analysis contract, while manual live refresh remains a separate explicit action.
 
-### 6.5 `VarPrice.Worker`
+### 6.5 `PriceCrawler.Worker`
 
 Contains a thin host:
 
 - builds `HostApplicationBuilder`
-- registers `AddVarPriceApplication`
-- registers `AddVarPriceInfrastructure`
+- registers `AddPriceCrawlerApplication`
+- registers `AddPriceCrawlerInfrastructure`
 - ensures schema
 - parses CLI args (`--once`, `--job`)
 - runs `RunCrawlerUseCase`
@@ -407,8 +407,8 @@ Main configuration sections:
 
 Loaded from:
 
-- `VarPrice.Web/config/url-filters.json`
-- `VarPrice.Worker/config/url-filters.json`
+- `PriceCrawler.Web/config/url-filters.json`
+- `PriceCrawler.Worker/config/url-filters.json`
 
 Current example filters:
 
@@ -430,7 +430,7 @@ The application is not using formal CQRS tooling, but the design direction is si
 
 ## 10. Testing
 
-Test project: `VarPrice.Web.Tests`
+Test project: `PriceCrawler.Web.Tests`
 
 Current coverage areas include:
 
@@ -484,17 +484,17 @@ The project is a **layered .NET 8 crawler system with a clean-ish separation of 
 If a new agent or developer needs fast onboarding, start here:
 
 - `README.md`
-- `VarPrice.Worker/Program.cs`
-- `VarPrice.Application/UseCases/RunCrawlerUseCase.cs`
-- `VarPrice.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs`
-- `VarPrice.Infrastructure/Crawler/SitemapReader.cs`
-- `VarPrice.Infrastructure/Crawler/VarusProductCardExtractor.cs`
-- `VarPrice.Infrastructure/Crawler/VarusRequestCoordinator.cs`
-- `VarPrice.Infrastructure/Persistence/PgCrawlerRepositories.cs`
-- `VarPrice.Infrastructure/Persistence/SchemaBootstrapper.cs`
-- `VarPrice.Infrastructure/Persistence/VarPriceDbContext.cs`
-- `VarPrice.Web/Program.cs`
-- `VarPrice.Web/Controllers/RunsController.cs`
+- `PriceCrawler.Worker/Program.cs`
+- `PriceCrawler.Application/UseCases/RunCrawlerUseCase.cs`
+- `PriceCrawler.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs`
+- `PriceCrawler.Infrastructure/Crawler/SitemapReader.cs`
+- `PriceCrawler.Infrastructure/Crawler/VarusProductCardExtractor.cs`
+- `PriceCrawler.Infrastructure/Crawler/VarusRequestCoordinator.cs`
+- `PriceCrawler.Infrastructure/Persistence/PgCrawlerRepositories.cs`
+- `PriceCrawler.Infrastructure/Persistence/SchemaBootstrapper.cs`
+- `PriceCrawler.Infrastructure/Persistence/PriceCrawlerDbContext.cs`
+- `PriceCrawler.Web/Program.cs`
+- `PriceCrawler.Web/Controllers/RunsController.cs`
 - `schema.sql`
 
 ## 13. Practical Conclusion

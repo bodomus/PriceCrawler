@@ -13,7 +13,7 @@ The dashboard is now started through a shared Worker wrapper and stopped in a `f
 
 ## Changes
 
-- Added shared dashboard execution wrapper in `VarPrice.Worker/Program.cs`.
+- Added shared dashboard execution wrapper in `PriceCrawler.Worker/Program.cs`.
 - Added dashboard disabled diagnostics for redirected stdout and too-small consoles.
 - Preserved file Serilog sink path and output template.
 - Added `ICrawlerProgressReporter` updates to `RefreshProductCatalogUseCase`:
@@ -37,19 +37,19 @@ The dashboard is now started through a shared Worker wrapper and stopped in a `f
 All commands were run with `TEMP` and `TMP` set to `A:\` and build/test artifacts redirected to `A:\`.
 
 ```powershell
-dotnet test VarPrice.Web.Tests\VarPrice.Web.Tests.csproj --filter "FullyQualifiedName~RefreshProductCatalogUseCaseTests|FullyQualifiedName~CollectProductPricesUseCaseTests" --artifacts-path A:\varprice-mpc70-artifacts
+dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter "FullyQualifiedName~RefreshProductCatalogUseCaseTests|FullyQualifiedName~CollectProductPricesUseCaseTests" --artifacts-path A:\pricecrawler-mpc70-artifacts
 ```
 
 Result: passed, 28 tests.
 
 ```powershell
-dotnet test VarPrice.Worker.Tests\VarPrice.Worker.Tests.csproj --artifacts-path A:\varprice-mpc70-worker-artifacts
+dotnet test PriceCrawler.Worker.Tests\PriceCrawler.Worker.Tests.csproj --artifacts-path A:\pricecrawler-mpc70-worker-artifacts
 ```
 
 Result: passed, 21 tests.
 
 ```powershell
-dotnet build VarPrice.sln --artifacts-path A:\varprice-mpc70-build-artifacts
+dotnet build PriceCrawler.sln --artifacts-path A:\pricecrawler-mpc70-build-artifacts
 ```
 
 Result: build succeeded, 0 warnings, 0 errors.
@@ -58,4 +58,4 @@ Result: build succeeded, 0 warnings, 0 errors.
 
 - No database schema changes were made.
 - No writes were made to the working `varprice` database.
-- A running `VarPrice.Worker` process was holding default `bin\Debug` outputs, so validation used `--artifacts-path` on `A:\` instead of stopping that process.
+- A running `PriceCrawler.Worker` process was holding default `bin\Debug` outputs, so validation used `--artifacts-path` on `A:\` instead of stopping that process.

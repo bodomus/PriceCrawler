@@ -2,7 +2,7 @@
 
 ## Goal
 
-Сделать загрузку sitemap в VarPrice.Worker устойчивой к битым ссылкам в `robots.txt`, HTML-ответам вместо XML, `404/403/429/5xx`, изменению sitemap URL и soft-404 страницам.
+Сделать загрузку sitemap в PriceCrawler.Worker устойчивой к битым ссылкам в `robots.txt`, HTML-ответам вместо XML, `404/403/429/5xx`, изменению sitemap URL и soft-404 страницам.
 
 Сейчас Worker использует sitemap URL:
 

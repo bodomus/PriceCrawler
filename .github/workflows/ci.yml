@@ -113,8 +113,8 @@ jobs:
       - name: Version Check
         run: |
           dotnet --info
-          dotnet msbuild VarPrice.Application/VarPrice.Application.csproj -t:GetBuildVersion -getProperty:Version -getProperty:AssemblyVersion -getProperty:FileVersion -getProperty:AssemblyInformationalVersion
-          dotnet pack VarPrice.Application/VarPrice.Application.csproj --configuration Release --no-build --output ./artifacts
+          dotnet msbuild PriceCrawler.Application/PriceCrawler.Application.csproj -t:GetBuildVersion -getProperty:Version -getProperty:AssemblyVersion -getProperty:FileVersion -getProperty:AssemblyInformationalVersion
+          dotnet pack PriceCrawler.Application/PriceCrawler.Application.csproj --configuration Release --no-build --output ./artifacts
 
       - name: Test
         env:

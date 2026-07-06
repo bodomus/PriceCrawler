@@ -6,17 +6,17 @@
 
 ## Files changed
 
-- `VarPrice.Domain/Models/ProductCatalogItem.cs` — immutable модель записи каталога.
-- `VarPrice.Domain/Models/ProductCatalogUpsertItem.cs` — input-модель batch upsert.
-- `VarPrice.Domain/Models/ProductCatalogUpsertResult.cs` — результат batch upsert.
-- `VarPrice.Domain/Interfaces/IProductCatalogRepository.cs` — repository contract.
-- `VarPrice.Infrastructure/Persistence/ProductCatalogBatchPreparer.cs` — trim, validation и deterministic deduplication входного batch.
-- `VarPrice.Infrastructure/Persistence/PgProductCatalogRepository.cs` — PostgreSQL implementation через `PgRoutineExecutor` и `DbRoutineCall`.
-- `VarPrice.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs` — DI registration.
-- `VarPrice.Infrastructure/Properties/AssemblyInfo.cs` — доступ тестов к internal batch preparer.
+- `PriceCrawler.Domain/Models/ProductCatalogItem.cs` — immutable модель записи каталога.
+- `PriceCrawler.Domain/Models/ProductCatalogUpsertItem.cs` — input-модель batch upsert.
+- `PriceCrawler.Domain/Models/ProductCatalogUpsertResult.cs` — результат batch upsert.
+- `PriceCrawler.Domain/Interfaces/IProductCatalogRepository.cs` — repository contract.
+- `PriceCrawler.Infrastructure/Persistence/ProductCatalogBatchPreparer.cs` — trim, validation и deterministic deduplication входного batch.
+- `PriceCrawler.Infrastructure/Persistence/PgProductCatalogRepository.cs` — PostgreSQL implementation через `PgRoutineExecutor` и `DbRoutineCall`.
+- `PriceCrawler.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs` — DI registration.
+- `PriceCrawler.Infrastructure/Properties/AssemblyInfo.cs` — доступ тестов к internal batch preparer.
 - `schema.sql` — таблица `product_catalog`, constraints и индексы.
 - `db/routines/040__product_catalog_routines.sql` — DB routines каталога.
-- `VarPrice.Web.Tests/ProductCatalogRepositoryTests.cs` — unit и PostgreSQL integration tests.
+- `PriceCrawler.Web.Tests/ProductCatalogRepositoryTests.cs` — unit и PostgreSQL integration tests.
 - `docs/architecture.md` — ownership и planned flow.
 - `README.md` — persistence entities и routines.
 

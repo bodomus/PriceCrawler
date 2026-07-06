@@ -8,23 +8,23 @@ Thanks for your interest in improving VARUS Price Crawler.
 
 ## Build
 ```bash
-dotnet build VarPrice.sln
+dotnet build PriceCrawler.sln
 ```
 
 ## Run
 ```bash
-dotnet run --project VarPrice.Web
+dotnet run --project PriceCrawler.Web
 ```
 
 ## Tests
-Automated tests already exist in `VarPrice.Web.Tests`. Before submitting changes, run:
+Automated tests already exist in `PriceCrawler.Web.Tests`. Before submitting changes, run:
 ```bash
-dotnet test VarPrice.sln
+dotnet test PriceCrawler.sln
 ```
 
 If you touch write-side DB routines or repository persistence, prefer the focused integration suite first:
 ```bash
-dotnet test VarPrice.Web.Tests\VarPrice.Web.Tests.csproj --filter "FullyQualifiedName~WorkerIntegrationTests"
+dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter "FullyQualifiedName~WorkerIntegrationTests"
 ```
 
 If you touch crawler persistence, also check that docs stay in sync with the normalized `product.id` /
@@ -34,7 +34,7 @@ If you touch crawler persistence, also check that docs stay in sync with the nor
 The project relies on built-in .NET analyzers (see `Directory.Build.props`) and formatting via `.editorconfig`.
 A standard check is:
 ```bash
-dotnet build VarPrice.sln
+dotnet build PriceCrawler.sln
 ```
 
 ## Pull requests
