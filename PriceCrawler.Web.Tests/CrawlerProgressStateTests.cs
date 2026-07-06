@@ -13,11 +13,16 @@ public sealed class CrawlerProgressStateTests
         state.SetNewProducts(137);
         state.SetUpdatedProducts(38284);
         state.SetSelectedForCheck(5000);
-        state.SetQueueLinksRequested(5000);
-        state.IncrementQueueLinksRequested(12);
-        state.IncrementChecked();
-        state.IncrementSuccessful();
-        state.IncrementFailed();
+        state.SetProductQueueTotal(5000);
+        state.IncrementProductQueueTotal(12);
+        state.IncrementProductProcessed();
+        state.IncrementProductSucceeded();
+        state.IncrementProductFailed();
+        state.SetListingQueueTotal(3);
+        state.IncrementListingProcessed();
+        state.IncrementListingSucceeded();
+        state.IncrementProductLinksDiscoveredFromListings(541);
+        state.IncrementProductLinksEnqueuedFromListings(12);
         state.SetCurrentStage(" Проверка товаров ");
         state.SetCurrentItem(" sku-1 ");
 
@@ -31,6 +36,16 @@ public sealed class CrawlerProgressStateTests
         Assert.Equal(1, snapshot.CheckedProducts);
         Assert.Equal(1, snapshot.SuccessfulProducts);
         Assert.Equal(1, snapshot.FailedProducts);
+        Assert.Equal(5012, snapshot.ProductQueueTotal);
+        Assert.Equal(1, snapshot.ProductProcessed);
+        Assert.Equal(1, snapshot.ProductSucceeded);
+        Assert.Equal(1, snapshot.ProductFailed);
+        Assert.Equal(3, snapshot.ListingQueueTotal);
+        Assert.Equal(1, snapshot.ListingProcessed);
+        Assert.Equal(1, snapshot.ListingSucceeded);
+        Assert.Equal(0, snapshot.ListingFailed);
+        Assert.Equal(541, snapshot.ProductLinksDiscoveredFromListings);
+        Assert.Equal(12, snapshot.ProductLinksEnqueuedFromListings);
         Assert.Equal("Проверка товаров", snapshot.CurrentStage);
         Assert.Equal("sku-1", snapshot.CurrentItem);
     }
@@ -46,9 +61,12 @@ public sealed class CrawlerProgressStateTests
         {
             for (var i = 0; i < iterations; i++)
             {
-                state.IncrementChecked();
-                state.IncrementSuccessful();
-                state.IncrementFailed();
+                state.IncrementProductProcessed();
+                state.IncrementProductSucceeded();
+                state.IncrementProductFailed();
+                state.IncrementListingProcessed();
+                state.IncrementListingSucceeded();
+                state.IncrementListingFailed();
             }
         })));
 
@@ -57,6 +75,9 @@ public sealed class CrawlerProgressStateTests
         Assert.Equal(workers * iterations, snapshot.CheckedProducts);
         Assert.Equal(workers * iterations, snapshot.SuccessfulProducts);
         Assert.Equal(workers * iterations, snapshot.FailedProducts);
+        Assert.Equal(workers * iterations, snapshot.ListingProcessed);
+        Assert.Equal(workers * iterations, snapshot.ListingSucceeded);
+        Assert.Equal(workers * iterations, snapshot.ListingFailed);
     }
 
     [Fact]
@@ -89,8 +110,12 @@ public sealed class CrawlerProgressStateTests
     {
         var state = new CrawlerProgressState();
         state.SetTotalDiscovered(10);
-        state.SetQueueLinksRequested(5);
-        state.IncrementChecked();
+        state.SetProductQueueTotal(5);
+        state.IncrementProductProcessed();
+        state.SetListingQueueTotal(2);
+        state.IncrementListingProcessed();
+        state.IncrementProductLinksDiscoveredFromListings(10);
+        state.IncrementProductLinksEnqueuedFromListings(3);
         state.SetCurrentStage("stage");
         state.SetCurrentItem("item");
 
@@ -101,6 +126,16 @@ public sealed class CrawlerProgressStateTests
         Assert.Equal(0, snapshot.TotalDiscovered);
         Assert.Equal(0, snapshot.QueueLinksRequested);
         Assert.Equal(0, snapshot.CheckedProducts);
+        Assert.Equal(0, snapshot.ProductQueueTotal);
+        Assert.Equal(0, snapshot.ProductProcessed);
+        Assert.Equal(0, snapshot.ProductSucceeded);
+        Assert.Equal(0, snapshot.ProductFailed);
+        Assert.Equal(0, snapshot.ListingQueueTotal);
+        Assert.Equal(0, snapshot.ListingProcessed);
+        Assert.Equal(0, snapshot.ListingSucceeded);
+        Assert.Equal(0, snapshot.ListingFailed);
+        Assert.Equal(0, snapshot.ProductLinksDiscoveredFromListings);
+        Assert.Equal(0, snapshot.ProductLinksEnqueuedFromListings);
         Assert.Equal(string.Empty, snapshot.CurrentStage);
         Assert.Equal(string.Empty, snapshot.CurrentItem);
     }
@@ -110,14 +145,15 @@ public sealed class CrawlerProgressStateTests
     {
         var state = new CrawlerProgressState();
         state.SetSelectedForCheck(2);
-        state.SetQueueLinksRequested(2);
+        state.SetProductQueueTotal(2);
 
-        state.IncrementQueueLinksRequested(7);
+        state.IncrementProductQueueTotal(7);
 
         var snapshot = state.GetSnapshot();
 
         Assert.Equal(2, snapshot.SelectedForCheck);
         Assert.Equal(9, snapshot.QueueLinksRequested);
+        Assert.Equal(9, snapshot.ProductQueueTotal);
     }
 
     [Theory]
@@ -150,12 +186,15 @@ public sealed class CrawlerProgressStateTests
         state.SetTotalDiscovered(3);
         state.SetSelectedForCheck(3);
         state.SetCurrentStage("Завершено");
-        state.IncrementChecked();
-        state.IncrementChecked();
-        state.IncrementChecked();
-        state.IncrementSuccessful();
-        state.IncrementSuccessful();
-        state.IncrementFailed();
+        state.SetProductQueueTotal(3);
+        state.IncrementProductProcessed();
+        state.IncrementProductProcessed();
+        state.IncrementProductProcessed();
+        state.IncrementProductSucceeded();
+        state.IncrementProductSucceeded();
+        state.IncrementProductFailed();
+        state.SetListingQueueTotal(10);
+        state.IncrementListingProcessed();
 
         var snapshot = state.GetSnapshot();
 
@@ -164,6 +203,6 @@ public sealed class CrawlerProgressStateTests
         Assert.Equal(2, snapshot.SuccessfulProducts);
         Assert.Equal(1, snapshot.FailedProducts);
         Assert.Equal("100.0%", CrawlerProgressFormatter.FormatPercent(
-            CrawlerProgressFormatter.CalculatePercent(snapshot.CheckedProducts, snapshot.SelectedForCheck)));
+            CrawlerProgressFormatter.CalculatePercent(snapshot.ProductProcessed, snapshot.ProductQueueTotal)));
     }
 }

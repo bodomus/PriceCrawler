@@ -28,23 +28,51 @@ internal sealed class NoopCrawlerProgressReporter : ICrawlerProgressReporter
     {
     }
 
-    public void SetQueueLinksRequested(int value)
+    public void SetProductQueueTotal(int value)
     {
     }
 
-    public void IncrementQueueLinksRequested(int value)
+    public void IncrementProductQueueTotal(int value)
     {
     }
 
-    public void IncrementChecked()
+    public void IncrementProductProcessed()
     {
     }
 
-    public void IncrementSuccessful()
+    public void IncrementProductSucceeded()
     {
     }
 
-    public void IncrementFailed()
+    public void IncrementProductFailed()
+    {
+    }
+
+    public void SetListingQueueTotal(int value)
+    {
+    }
+
+    public void IncrementListingQueueTotal(int value)
+    {
+    }
+
+    public void IncrementListingProcessed()
+    {
+    }
+
+    public void IncrementListingSucceeded()
+    {
+    }
+
+    public void IncrementListingFailed()
+    {
+    }
+
+    public void IncrementProductLinksDiscoveredFromListings(int value)
+    {
+    }
+
+    public void IncrementProductLinksEnqueuedFromListings(int value)
     {
     }
 

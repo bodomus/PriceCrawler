@@ -65,7 +65,8 @@ public sealed class RunCrawlerUseCase(
             progressReporter.SetNewProducts(enqueued);
             progressReporter.SetUpdatedProducts(Math.Max(0, queueItems.Count - enqueued));
             progressReporter.SetSelectedForCheck(enqueued);
-            progressReporter.SetQueueLinksRequested(enqueued);
+            progressReporter.SetProductQueueTotal(enqueued);
+            progressReporter.SetListingQueueTotal(0);
 
             logger.LogInformation(
                 "Queue seeded run_id={RunId} urls_total={UrlsTotal} enqueued={Enqueued} max_attempts={MaxAttempts}",
@@ -115,7 +116,7 @@ public sealed class RunCrawlerUseCase(
         CancellationToken ct)
     {
         progressReporter.SetCurrentStage("Ошибка обнаружения");
-        progressReporter.IncrementFailed();
+        progressReporter.IncrementProductFailed();
         var runId = await crawlerRunRepository.StartAsync("discovery", ct);
         var ingestionRunId = await ingestionRunRepository.StartAsync(runId, ct);
         var errorInfo = new ErrorInfo(errorCode, message);

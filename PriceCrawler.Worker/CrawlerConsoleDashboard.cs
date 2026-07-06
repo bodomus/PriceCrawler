@@ -4,7 +4,7 @@ namespace PriceCrawler.Worker;
 
 internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSpan refreshInterval)
 {
-    private const int PanelHeight = 12;
+    private const int PanelHeight = 17;
     private readonly object _syncRoot = new();
     private CancellationTokenSource? _cts;
     private Task? _renderLoop;
@@ -114,44 +114,65 @@ internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSp
         var width = GetConsoleWidth();
         var total = snapshot.TotalDiscovered;
         var selected = snapshot.SelectedForCheck;
-        var queueTotal = snapshot.QueueLinksRequested > 0 ? snapshot.QueueLinksRequested : selected;
-        var queueProcessed = snapshot.CheckedProducts;
         var percent = snapshot.DiscoveryTotalSeeds > 0 && selected == 0
             ? CrawlerProgressFormatter.CalculatePercent(snapshot.DiscoveryProcessedSeeds, snapshot.DiscoveryTotalSeeds)
-            : CrawlerProgressFormatter.CalculatePercent(queueProcessed, queueTotal);
+            : CrawlerProgressFormatter.CalculatePercent(snapshot.ProductProcessed, snapshot.ProductQueueTotal);
 
         WriteAnsi("\u001b7");
-        WriteLine(1, FormatLine("Обнаружено", CrawlerProgressFormatter.FormatNumber(total), width, "\u001b[36m"));
+        WriteLine(1, FormatLine("Discovered products", CrawlerProgressFormatter.FormatNumber(total), width, "\u001b[36m"));
         WriteLine(2,
-            FormatLine("Новых", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.NewProducts, total), width,
+            FormatLine("New products", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.NewProducts, total), width,
                 "\u001b[37m"));
         WriteLine(3,
-            FormatLine("Обновлено", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.UpdatedProducts, total),
+            FormatLine("Updated products", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.UpdatedProducts, total),
                 width, "\u001b[37m"));
         WriteLine(4,
-            FormatLine("Выбрано на проверку", CrawlerProgressFormatter.FormatCurrentOverTotal(selected, total), width,
+            FormatLine("Selected catalog", CrawlerProgressFormatter.FormatCurrentOverTotal(selected, total), width,
                 "\u001b[36m"));
         WriteLine(5,
-            FormatLine("Ссылок в очереди", CrawlerProgressFormatter.FormatNumber(queueTotal), width,
-                "\u001b[36m"));
+            FormatLine("Listing queue", CrawlerProgressFormatter.FormatNumber(snapshot.ListingQueueTotal), width,
+                "\u001b[33m"));
         WriteLine(6,
-            FormatLine("Обработано ссылок", CrawlerProgressFormatter.FormatCurrentOverTotal(queueProcessed, queueTotal),
+            FormatLine("Listing processed",
+                CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.ListingProcessed, snapshot.ListingQueueTotal),
                 width, "\u001b[33m"));
         WriteLine(7,
-            FormatLine("Успешно",
-                CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.SuccessfulProducts, queueTotal), width,
+            FormatLine("Listing succeeded", CrawlerProgressFormatter.FormatNumber(snapshot.ListingSucceeded), width,
                 "\u001b[32m"));
         WriteLine(8,
-            FormatLine("Ошибок", CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.FailedProducts, queueTotal),
-                width, "\u001b[31m"));
+            FormatLine("Listing failed", CrawlerProgressFormatter.FormatNumber(snapshot.ListingFailed), width,
+                "\u001b[31m"));
         WriteLine(9,
-            FormatLine("Текущий этап", string.IsNullOrWhiteSpace(snapshot.CurrentStage) ? "-" : snapshot.CurrentStage,
-                width, "\u001b[33m"));
+            FormatLine("Product URLs found",
+                CrawlerProgressFormatter.FormatNumber(snapshot.ProductLinksDiscoveredFromListings), width,
+                "\u001b[36m"));
         WriteLine(10,
-            FormatLine("Текущая ссылка", string.IsNullOrWhiteSpace(snapshot.CurrentItem) ? "-" : snapshot.CurrentItem,
+            FormatLine("Product URLs enqueued",
+                CrawlerProgressFormatter.FormatNumber(snapshot.ProductLinksEnqueuedFromListings), width,
+                "\u001b[36m"));
+        WriteLine(11,
+            FormatLine("Product queue", CrawlerProgressFormatter.FormatNumber(snapshot.ProductQueueTotal), width,
+                "\u001b[36m"));
+        WriteLine(12,
+            FormatLine("Products processed",
+                CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.ProductProcessed, snapshot.ProductQueueTotal),
+                width, "\u001b[33m"));
+        WriteLine(13,
+            FormatLine("Products succeeded",
+                CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.ProductSucceeded, snapshot.ProductQueueTotal),
+                width, "\u001b[32m"));
+        WriteLine(14,
+            FormatLine("Products failed",
+                CrawlerProgressFormatter.FormatCurrentOverTotal(snapshot.ProductFailed, snapshot.ProductQueueTotal),
+                width, "\u001b[31m"));
+        WriteLine(15,
+            FormatLine("Current stage", string.IsNullOrWhiteSpace(snapshot.CurrentStage) ? "-" : snapshot.CurrentStage,
+                width, "\u001b[33m"));
+        WriteLine(16,
+            FormatLine("Current item", string.IsNullOrWhiteSpace(snapshot.CurrentItem) ? "-" : snapshot.CurrentItem,
                 width, "\u001b[37m"));
-        WriteLine(11, FormatLine("Выполнение", CrawlerProgressFormatter.FormatPercent(percent), width, "\u001b[36m"));
-        WriteLine(12, new string('-', Math.Max(1, width - 1)));
+        WriteLine(17,
+            FormatLine("Product progress", CrawlerProgressFormatter.FormatPercent(percent), width, "\u001b[36m"));
         WriteAnsi("\u001b8");
         _originalOut?.Flush();
     }
@@ -172,7 +193,7 @@ internal sealed class CrawlerConsoleDashboard(CrawlerProgressState state, TimeSp
             return value;
         }
 
-        return maxWidth <= 1 ? value[..1] : $"{value[..(maxWidth - 1)]}…";
+        return maxWidth <= 1 ? value[..1] : $"{value[..(maxWidth - 1)]}...";
     }
 
     private void WriteLine(int lineNumber, string text)

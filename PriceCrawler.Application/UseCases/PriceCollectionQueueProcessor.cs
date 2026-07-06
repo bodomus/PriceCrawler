@@ -120,8 +120,8 @@ public sealed class PriceCollectionQueueProcessor(
                     issue.IsTransient);
                 if (finalFailure)
                 {
-                    progressReporter.IncrementChecked();
-                    progressReporter.IncrementFailed();
+                    progressReporter.IncrementProductProcessed();
+                    progressReporter.IncrementProductFailed();
                 }
 
                 return;
@@ -169,8 +169,8 @@ public sealed class PriceCollectionQueueProcessor(
             }
 
             await queueRepository.MarkSucceededAsync(item.Id, ct);
-            progressReporter.IncrementChecked();
-            progressReporter.IncrementSuccessful();
+            progressReporter.IncrementProductProcessed();
+            progressReporter.IncrementProductSucceeded();
 
             logger.LogDebug(
                 "Queue item succeeded run_id={RunId} queue_id={QueueId} external_id={ExternalId} latency_ms={LatencyMs} http_status={HttpStatus}",
@@ -205,8 +205,8 @@ public sealed class PriceCollectionQueueProcessor(
                     ct);
                 if (finalFailure)
                 {
-                    progressReporter.IncrementChecked();
-                    progressReporter.IncrementFailed();
+                    progressReporter.IncrementProductProcessed();
+                    progressReporter.IncrementProductFailed();
                 }
             }
             catch (Exception persistEx)
@@ -304,8 +304,8 @@ public sealed class PriceCollectionQueueProcessor(
 
             if (finalFailure)
             {
-                progressReporter.IncrementChecked();
-                progressReporter.IncrementFailed();
+                progressReporter.IncrementListingProcessed();
+                progressReporter.IncrementListingFailed();
             }
 
             return;
@@ -337,11 +337,13 @@ public sealed class PriceCollectionQueueProcessor(
         var enqueued = discoveredItems.Count == 0
             ? 0
             : await queueRepository.EnqueueAsync(runId, discoveredItems, Math.Max(1, queueOpt.MaxAttempts), ct);
-        progressReporter.IncrementQueueLinksRequested(enqueued);
+        progressReporter.IncrementProductLinksDiscoveredFromListings(result.FoundCount);
+        progressReporter.IncrementProductLinksEnqueuedFromListings(enqueued);
+        progressReporter.IncrementProductQueueTotal(enqueued);
 
         await queueRepository.MarkSucceededAsync(item.Id, ct);
-        progressReporter.IncrementChecked();
-        progressReporter.IncrementSuccessful();
+        progressReporter.IncrementListingProcessed();
+        progressReporter.IncrementListingSucceeded();
 
         logger.LogInformation(
             "Listing page parsed run_id={RunId} queue_id={QueueId} url={Url} page_kind={PageKind} extractor={Extractor} http_status={HttpStatus} found_product_links={FoundProductLinks} enqueued_product_links={EnqueuedProductLinks} error_code={ErrorCode} transient={Transient}",

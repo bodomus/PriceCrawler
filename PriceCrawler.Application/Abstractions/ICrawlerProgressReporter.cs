@@ -14,15 +14,29 @@ public interface ICrawlerProgressReporter
 
     void SetSelectedForCheck(int value);
 
-    void SetQueueLinksRequested(int value);
+    void SetProductQueueTotal(int value);
 
-    void IncrementQueueLinksRequested(int value);
+    void IncrementProductQueueTotal(int value);
 
-    void IncrementChecked();
+    void IncrementProductProcessed();
 
-    void IncrementSuccessful();
+    void IncrementProductSucceeded();
 
-    void IncrementFailed();
+    void IncrementProductFailed();
+
+    void SetListingQueueTotal(int value);
+
+    void IncrementListingQueueTotal(int value);
+
+    void IncrementListingProcessed();
+
+    void IncrementListingSucceeded();
+
+    void IncrementListingFailed();
+
+    void IncrementProductLinksDiscoveredFromListings(int value);
+
+    void IncrementProductLinksEnqueuedFromListings(int value);
 
     void SetCurrentStage(string stage);
 

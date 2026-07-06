@@ -9,10 +9,16 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
     private int _newProducts;
     private int _updatedProducts;
     private int _selectedForCheck;
-    private int _queueLinksRequested;
-    private int _checkedProducts;
-    private int _successfulProducts;
-    private int _failedProducts;
+    private int _productQueueTotal;
+    private int _productProcessed;
+    private int _productSucceeded;
+    private int _productFailed;
+    private int _listingQueueTotal;
+    private int _listingProcessed;
+    private int _listingSucceeded;
+    private int _listingFailed;
+    private int _productLinksDiscoveredFromListings;
+    private int _productLinksEnqueuedFromListings;
     private int _discoveryProcessedSeeds;
     private int _discoveryTotalSeeds;
     private int _discoveryDiscoveredProductUrls;
@@ -28,10 +34,16 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
         Volatile.Write(ref _newProducts, 0);
         Volatile.Write(ref _updatedProducts, 0);
         Volatile.Write(ref _selectedForCheck, 0);
-        Volatile.Write(ref _queueLinksRequested, 0);
-        Volatile.Write(ref _checkedProducts, 0);
-        Volatile.Write(ref _successfulProducts, 0);
-        Volatile.Write(ref _failedProducts, 0);
+        Volatile.Write(ref _productQueueTotal, 0);
+        Volatile.Write(ref _productProcessed, 0);
+        Volatile.Write(ref _productSucceeded, 0);
+        Volatile.Write(ref _productFailed, 0);
+        Volatile.Write(ref _listingQueueTotal, 0);
+        Volatile.Write(ref _listingProcessed, 0);
+        Volatile.Write(ref _listingSucceeded, 0);
+        Volatile.Write(ref _listingFailed, 0);
+        Volatile.Write(ref _productLinksDiscoveredFromListings, 0);
+        Volatile.Write(ref _productLinksEnqueuedFromListings, 0);
         Volatile.Write(ref _discoveryProcessedSeeds, 0);
         Volatile.Write(ref _discoveryTotalSeeds, 0);
         Volatile.Write(ref _discoveryDiscoveredProductUrls, 0);
@@ -54,9 +66,9 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
 
     public void SetSelectedForCheck(int value) => Volatile.Write(ref _selectedForCheck, Normalize(value));
 
-    public void SetQueueLinksRequested(int value) => Volatile.Write(ref _queueLinksRequested, Normalize(value));
+    public void SetProductQueueTotal(int value) => Volatile.Write(ref _productQueueTotal, Normalize(value));
 
-    public void IncrementQueueLinksRequested(int value)
+    public void IncrementProductQueueTotal(int value)
     {
         var normalized = Normalize(value);
         if (normalized == 0)
@@ -64,14 +76,55 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
             return;
         }
 
-        Interlocked.Add(ref _queueLinksRequested, normalized);
+        Interlocked.Add(ref _productQueueTotal, normalized);
     }
 
-    public void IncrementChecked() => Interlocked.Increment(ref _checkedProducts);
+    public void IncrementProductProcessed() => Interlocked.Increment(ref _productProcessed);
 
-    public void IncrementSuccessful() => Interlocked.Increment(ref _successfulProducts);
+    public void IncrementProductSucceeded() => Interlocked.Increment(ref _productSucceeded);
 
-    public void IncrementFailed() => Interlocked.Increment(ref _failedProducts);
+    public void IncrementProductFailed() => Interlocked.Increment(ref _productFailed);
+
+    public void SetListingQueueTotal(int value) => Volatile.Write(ref _listingQueueTotal, Normalize(value));
+
+    public void IncrementListingQueueTotal(int value)
+    {
+        var normalized = Normalize(value);
+        if (normalized == 0)
+        {
+            return;
+        }
+
+        Interlocked.Add(ref _listingQueueTotal, normalized);
+    }
+
+    public void IncrementListingProcessed() => Interlocked.Increment(ref _listingProcessed);
+
+    public void IncrementListingSucceeded() => Interlocked.Increment(ref _listingSucceeded);
+
+    public void IncrementListingFailed() => Interlocked.Increment(ref _listingFailed);
+
+    public void IncrementProductLinksDiscoveredFromListings(int value)
+    {
+        var normalized = Normalize(value);
+        if (normalized == 0)
+        {
+            return;
+        }
+
+        Interlocked.Add(ref _productLinksDiscoveredFromListings, normalized);
+    }
+
+    public void IncrementProductLinksEnqueuedFromListings(int value)
+    {
+        var normalized = Normalize(value);
+        if (normalized == 0)
+        {
+            return;
+        }
+
+        Interlocked.Add(ref _productLinksEnqueuedFromListings, normalized);
+    }
 
     public void SetCurrentStage(string stage)
     {
@@ -123,18 +176,28 @@ public sealed class CrawlerProgressState : ICrawlerProgressReporter
                 Volatile.Read(ref _newProducts),
                 Volatile.Read(ref _updatedProducts),
                 Volatile.Read(ref _selectedForCheck),
-                Volatile.Read(ref _checkedProducts),
-                Volatile.Read(ref _successfulProducts),
-                Volatile.Read(ref _failedProducts),
+                Volatile.Read(ref _productProcessed),
+                Volatile.Read(ref _productSucceeded),
+                Volatile.Read(ref _productFailed),
                 _currentStage,
                 _currentItem,
-                Volatile.Read(ref _queueLinksRequested),
+                Volatile.Read(ref _productQueueTotal),
                 Volatile.Read(ref _discoveryProcessedSeeds),
                 Volatile.Read(ref _discoveryTotalSeeds),
                 Volatile.Read(ref _discoveryDiscoveredProductUrls),
                 _currentDiscoverySeedName,
                 _currentDiscoverySeedUrl,
-                Volatile.Read(ref _currentDiscoveryPageNumber));
+                Volatile.Read(ref _currentDiscoveryPageNumber),
+                Volatile.Read(ref _productQueueTotal),
+                Volatile.Read(ref _productProcessed),
+                Volatile.Read(ref _productSucceeded),
+                Volatile.Read(ref _productFailed),
+                Volatile.Read(ref _listingQueueTotal),
+                Volatile.Read(ref _listingProcessed),
+                Volatile.Read(ref _listingSucceeded),
+                Volatile.Read(ref _listingFailed),
+                Volatile.Read(ref _productLinksDiscoveredFromListings),
+                Volatile.Read(ref _productLinksEnqueuedFromListings));
         }
     }
 

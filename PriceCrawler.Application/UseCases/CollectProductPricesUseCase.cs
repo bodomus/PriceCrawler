@@ -107,7 +107,9 @@ public sealed class CollectProductPricesUseCase(
                 enqueueWatch.Stop();
                 stages.Add(CrawlerRunStages.QueueEnqueue, enqueueWatch.ElapsedMilliseconds, enqueued);
                 metrics.SetSelection(selected.Count, enqueued);
-                progressReporter.SetQueueLinksRequested(enqueued);
+                var acceptedInitialItems = queueItems.Take(enqueued).ToList();
+                progressReporter.SetProductQueueTotal(acceptedInitialItems.Count(IsProductQueueItem));
+                progressReporter.SetListingQueueTotal(acceptedInitialItems.Count(IsListingQueueItem));
             }
             catch
             {
@@ -295,6 +297,11 @@ public sealed class CollectProductPricesUseCase(
         var hash = sha.ComputeHash(bytes);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
+
+    private static bool IsProductQueueItem(QueueEnqueueItem item) => item.PageKind == QueueItemKind.ProductPage;
+
+    private static bool IsListingQueueItem(QueueEnqueueItem item) =>
+        item.PageKind is QueueItemKind.ListingPage or QueueItemKind.CategoryPage;
 
     private async Task ReleaseCatalogReservationsAsync(
         IReadOnlyCollection<ProductCatalogItem> catalogItems,
