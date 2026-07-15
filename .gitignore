@@ -47,3 +47,7 @@ _ReSharper*/
 .DS_Store
 Thumbs.db
 *.dfx
+
+# Local repository-intelligence state
+.code-review-graph/
+graphify-out/

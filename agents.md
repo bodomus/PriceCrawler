@@ -1,270 +1,286 @@
 # AGENTS.md
 
-## Purpose
-This file defines how Codex should work in the Varus Crawler repository.
+## Mandatory pre-ticket workflow
 
-Varus Crawler is a price collection and analysis project for e-commerce product data. Make focused, minimal, verifiable changes without breaking the current crawler workflow, database logic, or analyst-facing UI behavior.
+Before starting any non-trivial ticket, feature, bugfix, refactor, investigation,
+implementation-planning, database change, deployment change, or code review:
 
----
+1. Resolve the repository root:
 
-##IMportant
-If db varprice has been changed, copy to the varprice_test
+   ```powershell
+   git rev-parse --show-toplevel
+   ```
 
-## Working style
-- Read the relevant code path before editing.
-- For non-trivial tasks, make a short plan first.
-- Keep changes minimal, local, and reversible.
-- Do not refactor unrelated code.
-- Preserve existing behavior unless the task explicitly requires changes.
-- State assumptions clearly in the final response.
+2. Read the repository-root file `.codex/PRE_TICKET_WORKFLOW.md`.
+3. Use `$graphify-repository-analysis`.
+4. Use `$code-review-graph-analysis`.
+5. Execute all applicable preflight phases.
+6. Do not begin implementation until repository-intelligence preflight is complete.
+7. After implementation, update CRG, inspect impact radius, run validation, and
+   refresh Graphify when structural relationships changed.
 
----
+For spelling, formatting, comment-only, or metadata-only changes, the full graph
+preflight may be skipped when graph context cannot affect correctness.
 
 ## Project scope
-Typical flow:
-1. load source URLs or sitemap data
-2. prepare crawler run
-3. fetch product pages
-4. extract product/card data
-5. save normalized data
-6. write price snapshots and run metadata
-7. expose results in UI for analysis
 
-Do not change the high-level workflow unless explicitly required.
+This repository contains VARUS Price Crawler / PriceCrawler.
 
----
+Primary stack:
 
-## Important areas
-- crawler / worker entry points
-- extraction / parsing logic
-- repository / infrastructure layer
-- database models and migrations
-- UI pages for run history / snapshots / errors
-- `tests/` — automated tests
-- `README.md` / `docs/` — documentation
-- config files (`.json`, `.yaml`, `.yml`) — settings
+- .NET SDK 9.0.311 pinned by `global.json`;
+- projects currently targeting `net8.0`;
+- C# 12 with nullable reference types and implicit usings;
+- ASP.NET Core Web host;
+- console Worker host;
+- Domain, Application, Infrastructure, Web, Worker, and test projects;
+- EF Core with Npgsql;
+- PostgreSQL 16;
+- Docker Compose;
+- GitHub Actions;
+- Nerdbank.GitVersioning and SourceLink;
+- server-rendered MVC/Kendo dashboard plus JavaScript assets.
 
-If the actual structure differs, follow the repo instead of inventing a parallel one.
+Analysis must account for:
 
----
+- dependency-injection registration;
+- ASP.NET Core request, anti-forgery, model-binding, and cancellation behavior;
+- Worker command parsing and Generic Host startup;
+- hosted-service and process exit semantics;
+- EF Core model configuration and query translation;
+- PostgreSQL transactions, locking, CTEs, and `FOR UPDATE SKIP LOCKED`;
+- queue reservation, retries, timeouts, cancellation, and concurrency;
+- idempotency, normalization, and duplicate prevention;
+- crawler discovery, listing-page, and product-page strategies;
+- catalog refresh and price-collection lifecycle;
+- development, test, stage, and production database safety;
+- configuration precedence and secrets;
+- Web, Worker, SQL routines, and schema compatibility;
+- release, artifacts, stage deployment, and rollback behavior.
 
-## Technical assumptions
-- PostgreSQL is the primary database.
-- EF Core / Npgsql may be part of the stack.
-- Docker / docker-compose may be used for local database runtime.
-- Large URL volumes are expected.
-- Network calls may fail, timeout, or be rate-limited.
-- Existing schema names, status flows, and analyst UI behavior are important.
+## Repository layout
 
----
+- `PriceCrawler.Domain/` — domain entities, value concepts, and contracts.
+- `PriceCrawler.Application/` — use cases, orchestration, DTOs, and application interfaces.
+- `PriceCrawler.Infrastructure/` — EF/Npgsql persistence, SQL integration, crawler adapters,
+  queue pipeline, extractors, discovery, queries, and schema bootstrap.
+- `PriceCrawler.Web/` — ASP.NET Core MVC/API host, dashboard, static assets, and health endpoint.
+- `PriceCrawler.Worker/` — crawler CLI and worker host.
+- `PriceCrawler.Web.Tests/` — automated and integration tests.
+- `db/` — database routines, initialization, migrations/bootstrap assets, and local-only seeds.
+- `docs/` — maintained technical documentation.
+- `Tickets/` — ticket specifications and acceptance criteria.
+- `Review/` — review reports.
+- `artifacts/` — generated release packages; not production source.
+- `.codex/` — Codex workflows and repository automation.
+- `.agents/skills/` — repository-local Codex skills.
+- `.code-review-graph/` — generated CRG state.
+- `graphify-out/` — generated Graphify state.
 
-## Commands Codex should prefer
-### Build
-- `dotnet build`
+## Generated and non-source directories
 
-### Run
-Use the repository’s existing startup command first.
+Do not treat these as production source:
 
-Typical examples:
-- `dotnet run --project <project-path>`
-- `docker compose up --build`
+- `.git/`
+- `.idea/`
+- `.vs/`
+- `**/bin/`
+- `**/obj/`
+- `**/publish/`
+- `**/TestResults/`
+- coverage output;
+- `artifacts/`
+- `logs/`
+- `.code-review-graph/`
+- `graphify-out/`
+- vendored frontend bundles under `PriceCrawler.Web/wwwroot/vendor/`.
 
-### Tests
-Prefer targeted tests first:
-- `dotnet test`
-- `dotnet test <solution-or-project> --filter <name>`
+Do not index generated, vendor, cache, database, log, release, or build output in
+Graphify or CRG unless the ticket explicitly concerns it.
 
-### Validation before finishing
-Run the smallest sufficient validation set:
-1. build
-2. targeted tests for touched area
-3. focused run or smoke check if appropriate
+Do not exclude the complete `PriceCrawler.Web/wwwroot/` tree: project-owned JavaScript
+and CSS may be behaviorally relevant. Exclude only vendor/generated assets.
 
-Do not run large production-scale crawling unless needed.
+## Repository intelligence routing
 
----
+- Use Graphify for solution architecture, subsystem orientation, orchestration flows,
+  discovery-strategy relationships, queue/catalog concepts, and cross-project candidate discovery.
+- Use CRG for exact classes, interfaces, implementations, callers, callees, inheritance,
+  DI registrations, dependants, tests, review context, and change-impact analysis.
+- Treat graph output as candidate evidence.
+- Use `rg`, source inspection, SQL inspection, build output, and tests as authoritative.
+- Confirm generated or inferred call paths, reflection-based registration, EF mappings,
+  extension-method registration, and configuration binding directly in source.
+- When Graphify, CRG, documentation, and source disagree, verify executable behavior and
+  treat current source plus tests as authoritative.
 
-## Editing rules
-- Prefer editing existing files over creating new ones.
-- Do not create duplicate crawler flows or parallel repository paths unless requested.
-- Do not rename public routes, config keys, status values, or schema objects unless explicitly required.
-- Preserve backward compatibility where practical.
-- Keep changes easy to review.
+## Architecture and dependency rules
 
----
+Preserve the intended dependency direction:
 
-## Coding rules
-- Follow existing naming and module boundaries.
-- Prefer simple, explicit code over clever abstractions.
-- Avoid adding new dependencies unless clearly necessary.
-- Add comments only where logic is non-obvious.
-- Be careful with async flows, cancellation tokens, retries, timeouts, and database transaction boundaries.
+```text
+Domain
+  ↑
+Application
+  ↑
+Infrastructure
+  ↑
+Web / Worker
+```
 
----
+Exact project references must be verified before making dependency claims.
 
-## Crawler rules
-- Treat crawler throughput, retry policy, and timeout behavior as business logic.
-- Do not increase request aggressiveness casually.
-- Preserve protections against bans, throttling, and unstable remote responses.
-- When changing fetch behavior, be explicit about:
-  - timeout
-  - retry count
-  - concurrency
-  - delay/throttling
-  - cancellation
-- Prefer controlled, measurable changes over broad rewrites.
+General rules:
 
----
+- Domain must not depend on Infrastructure, Web, Worker, EF Core, or ASP.NET Core.
+- Application contracts must not expose EF-specific query types unless already established
+  intentionally.
+- Web controllers must not introduce ad-hoc EF/SQL access when an application contract and
+  infrastructure query service should own it.
+- Worker orchestration must reuse application/infrastructure services rather than duplicate
+  crawler or persistence logic.
+- Source-specific VARUS behavior should remain behind explicit strategies/adapters where practical.
+- Avoid static service location and hidden global state.
+- Preserve cancellation-token propagation across HTTP, database, queue, and worker boundaries.
 
-## Parsing rules
-- Keep extraction logic deterministic and debuggable.
-- Do not silently swallow parsing failures.
-- Preserve raw source details when needed for diagnostics.
-- When selector logic changes, verify that existing success paths still work.
-- If parser behavior changes, ensure logs and error recording remain useful.
+## Database and persistence safety
 
----
+Database changes are high-risk.
 
-## Database rules
-- Treat schema changes as high-impact.
-- For database changes:
-  - update migrations correctly
-  - preserve data where possible
-  - document breaking changes
-  - verify repository code and UI expectations still match schema
-- Do not hardcode connection strings, passwords, or local machine values.
-- Be explicit about nullability, indexes, foreign keys, and status references.
+Before changing schema, routines, EF mappings, queue logic, or persistence:
 
----
+1. inspect relevant entities, `DbContext`, configurations, SQL routines, bootstrap scripts,
+   and integration tests;
+2. identify all environments affected;
+3. verify transaction boundaries and locking semantics;
+4. preserve idempotency and retry safety;
+5. verify nullable/default/backfill behavior;
+6. update SQL routines and C# mappings together;
+7. update documentation when schema or workflow changes.
 
-## Repository / infrastructure rules
-- Do not swallow database exceptions.
-- Errors in infrastructure code should be logged and surfaced in the existing application style.
-- Preserve separation between domain logic, repository logic, and UI logic.
-- If adding error handling, ensure it is consistent across similar repositories.
+Never run destructive local seed scripts against stage, shared, or production databases.
 
----
+The local debug seed under `db/seeds/` must remain explicitly local/dev-only.
 
-## Snapshot / data rules
-- Preserve the intended meaning of:
-  - product
-  - price snapshot
-  - crawler run / crawler
-  - ingestion run
-  - error records
-  - collection queue
-- Do not change deduplication or latest-record logic unless explicitly required.
-- If changing snapshot logic, verify behavior for same-day duplicates and latest-per-product rules.
+Do not weaken stage/production guards.
 
----
+Do not log connection strings, credentials, cookies, authentication headers, or sensitive
+configuration.
 
-## UI rules
-- Keep UI changes minimal and task-focused.
-- Do not redesign the whole interface unless explicitly asked.
-- Preserve analyst workflow.
-- Manual actions should remain explicit; do not introduce automatic heavy requests on every click.
-- If adding widgets or panels, wire them to real backend behavior and loading/error states.
+## Queue and crawler safety
 
----
+For queue, catalog, and crawler changes, inspect:
 
-## Logging and diagnostics
-- Keep logs practical and useful.
-- Prefer logs that help diagnose:
-  - failed requests
-  - parsing failures
-  - DB write failures
-  - migration issues
-  - queue / batch progress
-  - crawler run status
-- Do not add unnecessary noise.
-- If SQL logging exists, preserve its style.
+- URL normalization and deduplication;
+- page-kind classification;
+- listing/filter versus product-page routing;
+- reservation ownership and expiration;
+- `SKIP LOCKED` semantics;
+- retry and terminal-failure classification;
+- timeout and cancellation behavior;
+- rate limits and concurrency;
+- run/ingestion lifecycle status;
+- snapshot and error persistence;
+- scheduling fields in `product_catalog`;
+- idempotent reprocessing;
+- progress-reporting counters.
 
----
+Do not increase request rate, concurrency, or retry aggressiveness without explicit ticket
+requirements and review of blocking risk.
 
-## Performance rules
-- Do not claim performance improvements without evidence.
-- For changes related to throughput, batching, concurrency, or queue processing:
-  - explain the expected effect
-  - preserve correctness first
-  - validate with at least a focused smoke test where possible
-- Prefer bounded concurrency over uncontrolled parallelism.
+Do not convert HTTP 200 into success without validating extractor output.
 
----
+## Web and dashboard safety
 
-## Config rules
-- Preserve existing config schema unless the task explicitly changes it.
-- If adding config keys:
-  - choose clear names
-  - document defaults
-  - keep backward compatibility where possible
-- Update example configs when config behavior changes.
+For dashboard changes:
 
----
+- preserve anti-forgery protection for state-changing actions;
+- avoid implicit live HTTP calls during normal deterministic page loading;
+- keep live VARUS refresh explicit and read-only unless a ticket changes that contract;
+- preserve server-side paging/filtering/sorting where established;
+- keep Web free of direct persistence logic when infrastructure query services exist;
+- validate JSON contracts against JavaScript consumers;
+- inspect project-owned assets under `wwwroot`, but ignore vendored bundles;
+- add tests for controller/application contracts when behavior changes.
 
-## Tests policy
-- Add or update tests for behavior changes when feasible.
-- Prefer focused tests around:
-  - parser behavior
-  - repository behavior
-  - deduplication logic
-  - run status transitions
-  - queue/batch logic
-  - controller/page behavior where practical
-- If full integration testing is too heavy, add the best lightweight coverage possible.
-- If tests cannot be run, say so explicitly.
+## Worker CLI safety
 
----
+The Worker CLI is a public operational contract.
 
-## Documentation policy
-Update docs when changing:
-- setup
-- run commands
-- crawler behavior
-- throttling / concurrency behavior
-- config schema
-- DB schema
-- analyst UI behavior
-- troubleshooting steps
+When changing it:
 
-At minimum check:
-- `README.md`
-- example configs
-- `docs/`
-- changelog / release notes if present
+- validate arguments before host creation and database bootstrap;
+- preserve documented exit codes;
+- preserve legacy aliases unless removal is explicit;
+- do not pass Worker CLI arguments into Generic Host as accidental configuration overrides;
+- preserve redirected-output and non-interactive behavior;
+- keep progress rendering out of file logs;
+- verify cancellation and process termination.
 
----
+## Build and validation
 
-## Safety and constraints
-- Never hardcode secrets, tokens, passwords, or local absolute paths.
-- Never invent successful command results if commands were not run.
-- Never perform destructive data cleanup unless explicitly requested.
-- Be careful with migrations, deletes, truncates, and bulk updates.
-- If a task is risky, state the risk clearly.
+Canonical commands documented by the repository:
 
----
+```powershell
+dotnet --info
+dotnet restore PriceCrawler.sln
+dotnet build PriceCrawler.sln
+dotnet test PriceCrawler.sln
+```
+
+For write-side DB routines or crawler persistence, run the focused integration suite first:
+
+```powershell
+dotnet test PriceCrawler.Web.Tests\PriceCrawler.Web.Tests.csproj --filter "FullyQualifiedName~WorkerIntegrationTests"
+```
+
+Release builds treat warnings as errors:
+
+```powershell
+dotnet build PriceCrawler.sln -c Release
+```
+
+Run the narrowest relevant tests first, then the solution suite when justified.
+
+Docker/PostgreSQL validation may require:
+
+```powershell
+docker compose up -d postgres
+```
+
+Do not assume Docker or a database is available. Report unavailable validation explicitly.
+
+## Documentation and release obligations
+
+- Update `CHANGELOG.md` for user-visible changes.
+- Update `README.md`, `Status.md`, and relevant `docs/*` when schema, CLI, workflow,
+  deployment, or operational behavior changes.
+- Keep `db/routines/*.sql`, C# persistence code, and `WorkerIntegrationTests` aligned.
+- Preserve deterministic/versioned release behavior.
+- Do not modify generated release artifacts manually.
+
+## Change safety
+
+- Do not modify production code during investigation-only tasks.
+- Do not overwrite, reset, clean, stash, revert, or destroy pre-existing user changes.
+- Keep scope aligned with the ticket.
+- Avoid unrelated refactors.
+- Preserve public contracts unless the ticket explicitly changes them.
+- Distinguish direct impact, adjacent impact, test-only impact, migration impact,
+  deployment impact, and graph-proximity noise.
 
 ## Definition of done
-A task is done only when:
-- the requested change is implemented
-- touched files are internally consistent
-- minimal necessary validation was performed
-- relevant docs/config examples were updated if needed
-- risks, limitations, or manual follow-up were stated clearly
 
----
+A non-trivial ticket is not complete until:
 
-## Final response format
-When finishing a task, respond with:
-1. Summary
-2. Files changed
-3. Validation performed
-4. Risks / limitations
-5. Manual steps, if any
-
-Be specific. Do not claim tests passed unless they were actually run.
-
----
-
-## Subdirectory overrides
-More specific `AGENTS.md` files in subfolders may define stricter local rules.
-When working in a subdirectory, prefer the nearest applicable instructions.
+- the applicable pre-ticket workflow was executed;
+- important graph findings were validated against source;
+- database and operational risks were assessed;
+- the smallest coherent implementation was completed;
+- tests were added or updated for changed behavior;
+- CRG was updated after changes;
+- post-change impact was inspected;
+- required build/tests were run or explicitly reported unavailable;
+- docs and changelog obligations were evaluated;
+- remaining risks and unverified assumptions were documented;
+- an implementation report was produced.

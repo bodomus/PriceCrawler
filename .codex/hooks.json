@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:\\Users\\bodom\\.local\\bin\\graphify.EXE hook-check"
+          }
+        ]
+      }
+    ]
+  }
+}
