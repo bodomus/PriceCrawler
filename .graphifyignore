@@ -1,0 +1,32 @@
+.git/
+.idea/
+.vs/
+
+**/bin/
+**/obj/
+
+artifacts/
+stage/
+deploy/
+logs/
+
+*.log
+*.zip
+
+TestResults/
+coverage/
+graphify-out/
+
+# Semantic files: skip during first code-only test
+*.md
+*.txt
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+AGENTS.*
+
+# Third-party frontend libraries
+PriceCrawler.Web/wwwroot/
