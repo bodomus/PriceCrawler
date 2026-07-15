@@ -106,12 +106,13 @@ public sealed class VarusListingPageExtractor(
                 .Select(x => x.AbsoluteUri)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+
             sw.Stop();
 
             if (urls.Count == 0)
             {
                 logger.LogWarning(
-                    "Listing page parsed with no products url={Url} http_status={HttpStatus} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
+                    "Listing page contained no verified JSON-LD ItemList products url={Url} http_status={HttpStatus} latency_ms={LatencyMs} current_rps={CurrentRps:F2}",
                     url,
                     httpStatus,
                     sw.ElapsedMilliseconds,
@@ -134,6 +135,10 @@ public sealed class VarusListingPageExtractor(
                 sw.ElapsedMilliseconds,
                 rps,
                 urls.Count);
+            logger.LogDebug(
+                "Verified listing product link samples url={Url} samples={Samples}",
+                url,
+                string.Join(" | ", urls.Take(10)));
             return ListingExtractionResult.Success(url, urls, httpStatus, sw.ElapsedMilliseconds, rps);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

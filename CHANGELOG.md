@@ -31,5 +31,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Worker argument parsing now validates unsupported options and conflicting modes before host creation and DB bootstrap.
 
 ### Fixed
+- VARUS listing/category product discovery now uses server-rendered JSON-LD Product ItemList
+  records instead of falling back to every page anchor, preventing navigation and service URLs
+  from inflating discovery and queue progress metrics.
 - Removed stale documentation assumptions about `city`, `product_errors`, `discount_percent`, and `last_seen_at`.
 - Worker positional commands are no longer forwarded to Generic Host configuration parsing; Worker configuration is loaded from the executable content root, and `--once` is rejected outside `vegetables`.

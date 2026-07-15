@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using AngleSharp.Dom;
 using AngleSharp.Html.Parser;
 
@@ -18,68 +20,113 @@ public sealed class CategoryProductLinkExtractor : ICategoryProductLinkExtractor
         var document = parser.ParseDocument(html);
         var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var anchor in SelectProductAnchors(document))
+        foreach (var script in document.QuerySelectorAll("script[type='application/ld+json' i]"))
         {
-            var href = anchor.GetAttribute("href");
-            if (string.IsNullOrWhiteSpace(href) ||
-                !Uri.TryCreate(VarusBaseUri, href.Trim(), out var uri) ||
-                !VarusUrlRules.IsVarusHttpsUrl(uri) ||
-                !LooksLikeProductUrl(uri, categoryUrl))
-            {
-                continue;
-            }
-
-            urls.Add(NormalizeProductCandidateUrl(uri).AbsoluteUri);
+            ExtractProductUrlsFromJsonLd(script, categoryUrl, urls);
         }
 
         return urls.Select(x => new Uri(x)).ToList();
     }
 
-    private static IEnumerable<IElement> SelectProductAnchors(IDocument document)
+    private static void ExtractProductUrlsFromJsonLd(
+        IElement script,
+        Uri categoryUrl,
+        ISet<string> urls)
     {
-        var cardAnchors = document.QuerySelectorAll(
-            "[class*='product-card' i] a[href], [class*='product_tile' i] a[href], [data-testid*='product' i] a[href]");
-        if (cardAnchors.Length > 0)
+        var json = script.TextContent;
+        if (string.IsNullOrWhiteSpace(json))
         {
-            return cardAnchors;
+            return;
         }
 
-        return document.QuerySelectorAll("a[href]");
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            ExtractProductUrlsFromRoot(document.RootElement, categoryUrl, urls);
+        }
+        catch (JsonException)
+        {
+            // Ignore unrelated malformed JSON-LD blocks. Without a valid product ItemList,
+            // the caller safely reports that the listing contains no verified products.
+        }
     }
 
-    private static bool LooksLikeProductUrl(Uri uri, Uri categoryUrl)
+    private static void ExtractProductUrlsFromRoot(
+        JsonElement root,
+        Uri categoryUrl,
+        ISet<string> urls)
     {
-        var path = uri.AbsolutePath.Trim('/');
-        if (string.IsNullOrWhiteSpace(path))
+        if (root.ValueKind == JsonValueKind.Array)
         {
-            return false;
+            foreach (var item in root.EnumerateArray())
+            {
+                ExtractProductUrlsFromRoot(item, categoryUrl, urls);
+            }
+
+            return;
         }
 
-        if (string.Equals(uri.AbsolutePath, categoryUrl.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+        if (root.ValueKind != JsonValueKind.Object)
         {
-            return false;
+            return;
         }
 
-        if (path.Contains('/'))
+        if (root.TryGetProperty("@graph", out var graph))
         {
-            return false;
+            ExtractProductUrlsFromRoot(graph, categoryUrl, urls);
         }
 
-        if (path.StartsWith("brands/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("blog", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("checkout", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("customer", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("img/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("media/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("ru", StringComparison.OrdinalIgnoreCase))
+        if (!HasSchemaType(root, "ItemList") ||
+            !root.TryGetProperty("itemListElement", out var itemList) ||
+            itemList.ValueKind != JsonValueKind.Array)
         {
-            return false;
+            return;
         }
 
-        return true;
+        foreach (var listItem in itemList.EnumerateArray())
+        {
+            if (listItem.ValueKind != JsonValueKind.Object ||
+                !HasSchemaType(listItem, "ListItem") ||
+                !listItem.TryGetProperty("item", out var product) ||
+                product.ValueKind != JsonValueKind.Object ||
+                !HasSchemaType(product, "Product") ||
+                !product.TryGetProperty("url", out var urlElement) ||
+                urlElement.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var value = urlElement.GetString();
+            if (string.IsNullOrWhiteSpace(value) ||
+                !Uri.TryCreate(VarusBaseUri, value.Trim(), out var uri) ||
+                !VarusUrlRules.IsVarusHttpsUrl(uri) ||
+                string.Equals(uri.AbsolutePath, categoryUrl.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            urls.Add(NormalizeProductUrl(uri).AbsoluteUri);
+        }
     }
 
-    private static Uri NormalizeProductCandidateUrl(Uri uri)
+    private static bool HasSchemaType(JsonElement element, string expectedType)
+    {
+        if (!element.TryGetProperty("@type", out var type))
+        {
+            return false;
+        }
+
+        return type.ValueKind switch
+        {
+            JsonValueKind.String => string.Equals(type.GetString(), expectedType, StringComparison.OrdinalIgnoreCase),
+            JsonValueKind.Array => type.EnumerateArray().Any(value =>
+                value.ValueKind == JsonValueKind.String &&
+                string.Equals(value.GetString(), expectedType, StringComparison.OrdinalIgnoreCase)),
+            _ => false
+        };
+    }
+
+    private static Uri NormalizeProductUrl(Uri uri)
     {
         var builder = new UriBuilder(uri)
         {

@@ -24,13 +24,10 @@ public sealed class VarusListingPageExtractorTests
     public async Task ExtractAsync_WhenListingContainsMultipleProductCards_ReturnsNormalizedProductUrls()
     {
         await using var harness = CreateHarness(
-            """
-            <html><body>
-              <div class="product-card"><a href="/product-a?utm=1#card">A</a></div>
-              <div class="product-card"><a href="https://varus.ua/product-b">B</a></div>
-              <div class="product-card"><a href="https://example.com/not-varus">External</a></div>
-            </body></html>
-            """);
+            ProductListingHtml(
+                "/product-a?utm=1#card",
+                "https://varus.ua/product-b",
+                "https://example.com/not-varus"));
 
         var result = await harness.Extractor.ExtractAsync(
             "https://varus.ua/kovbasi~brand_espana",
@@ -48,12 +45,7 @@ public sealed class VarusListingPageExtractorTests
     [Fact]
     public async Task ExtractAsync_WhenListingContainsOneProductCard_ReturnsSingleProductUrl()
     {
-        await using var harness = CreateHarness(
-            """
-            <html><body>
-              <div class="product-card"><a href="/single-product">Only one</a></div>
-            </body></html>
-            """);
+        await using var harness = CreateHarness(ProductListingHtml("/single-product"));
 
         var result = await harness.Extractor.ExtractAsync(
             "https://varus.ua/kovbasi~brand_gremio-de-la-carne",
@@ -66,13 +58,9 @@ public sealed class VarusListingPageExtractorTests
     [Fact]
     public async Task ExtractAsync_DeduplicatesProductUrls()
     {
-        await using var harness = CreateHarness(
-            """
-            <html><body>
-              <div class="product-card"><a href="/same-product?tracking=1">Same</a></div>
-              <div class="product-card"><a href="https://varus.ua/same-product#duplicate">Same duplicate</a></div>
-            </body></html>
-            """);
+        await using var harness = CreateHarness(ProductListingHtml(
+            "/same-product?tracking=1",
+            "https://varus.ua/same-product#duplicate"));
 
         var result = await harness.Extractor.ExtractAsync(
             "https://varus.ua/kovbasi~brand_espana",
@@ -85,7 +73,15 @@ public sealed class VarusListingPageExtractorTests
     [Fact]
     public async Task ExtractAsync_WhenNoProducts_ReturnsListingNoProductsFound()
     {
-        await using var harness = CreateHarness("<html><body>No product cards here</body></html>");
+        await using var harness = CreateHarness(
+            """
+            <html><body>
+              <a href="/buyers">Buyers</a><a href="/promotion">Promotion</a>
+              <a href="/loyalty">Loyalty</a><a href="/help">Help</a>
+              <a href="/giftcards">Gift cards</a><a href="/stores">Stores</a>
+              <a href="/own-tm">Own TM</a><a href="/work">Work</a><a href="/ordering">Ordering</a>
+            </body></html>
+            """);
 
         var result = await harness.Extractor.ExtractAsync(
             "https://varus.ua/kovbasi~brand_espana",
@@ -93,6 +89,44 @@ public sealed class VarusListingPageExtractorTests
 
         Assert.Equal(CrawlerErrorCodes.ListingNoProductsFound, result.ErrorCode);
         Assert.False(result.IsTransient);
+        Assert.Empty(result.ProductUrls);
+    }
+
+    [Fact]
+    public async Task ExtractAsync_RejectsListingInvalidSchemesAndNonProductJsonLd()
+    {
+        await using var harness = CreateHarness(ProductListingHtml(
+            "https://varus.ua/kovbasi~brand_espana#self",
+            "http://varus.ua/http-product",
+            "javascript:alert(1)",
+            "https://example.com/external"));
+
+        var result = await harness.Extractor.ExtractAsync(
+            "https://varus.ua/kovbasi~brand_espana",
+            CancellationToken.None);
+
+        Assert.Equal(CrawlerErrorCodes.ListingNoProductsFound, result.ErrorCode);
+        Assert.Empty(result.ProductUrls);
+    }
+
+    private static string ProductListingHtml(params string[] urls)
+    {
+        var items = string.Join(",", urls.Select((url, index) =>
+            $$"""
+              {
+                "@type": "ListItem",
+                "position": {{index + 1}},
+                "item": { "@type": "Product", "sku": "sku-{{index + 1}}", "url": {{System.Text.Json.JsonSerializer.Serialize(url)}} }
+              }
+              """));
+
+        return $$"""
+          <html><body>
+            <script type="application/ld+json">
+              { "@context": "https://schema.org", "@type": "ItemList", "itemListElement": [{{items}}] }
+            </script>
+          </body></html>
+          """;
     }
 
     private static ExtractorHarness CreateHarness(string html)

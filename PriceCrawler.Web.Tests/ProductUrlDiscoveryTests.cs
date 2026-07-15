@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -419,10 +421,18 @@ public sealed class ProductUrlDiscoveryTests
     {
         var result = new CategoryProductLinkExtractor().ExtractProductUrls(
             """
-            <div class="product-card"><a href="/product-a?utm=1#details">A</a></div>
-            <div class="product-card"><a href="https://varus.ua/product-a">A duplicate</a></div>
-            <div class="product-card"><a href="https://example.com/not-varus">External</a></div>
-            <div class="product-card"><a href="/category/subcategory">Nested category</a></div>
+            <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "itemListElement": [
+                { "@type": "ListItem", "item": { "@type": "Product", "url": "/product-a?utm=1#details" } },
+                { "@type": "ListItem", "item": { "@type": "Product", "url": "https://varus.ua/product-a" } },
+                { "@type": "ListItem", "item": { "@type": "Product", "url": "https://example.com/not-varus" } },
+                { "@type": "ListItem", "item": { "@type": "WebPage", "url": "/promotion" } }
+              ]
+            }
+            </script>
             """,
             new Uri("https://varus.ua/category"));
 
@@ -632,8 +642,42 @@ public sealed class ProductUrlDiscoveryTests
     private static HttpResponseMessage Html(string html)
         => new(HttpStatusCode.OK)
         {
-            Content = new StringContent(html, Encoding.UTF8, "text/html")
+            Content = new StringContent(WithProductJsonLd(html), Encoding.UTF8, "text/html")
         };
+
+    private static string WithProductJsonLd(string html)
+    {
+        var urls = Regex.Matches(
+                html,
+                "<div class=\"product-card\"><a href=\"(?<url>[^\"]+)\"",
+                RegexOptions.CultureInvariant)
+            .Select(match => match.Groups["url"].Value)
+            .ToArray();
+        if (urls.Length == 0)
+        {
+            return html;
+        }
+
+        var items = urls.Select((url, index) => new Dictionary<string, object>
+        {
+            ["@type"] = "ListItem",
+            ["position"] = index + 1,
+            ["item"] = new Dictionary<string, object>
+            {
+                ["@type"] = "Product",
+                ["sku"] = $"fixture-{index + 1}",
+                ["url"] = url
+            }
+        });
+        var json = JsonSerializer.Serialize(new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org",
+            ["@type"] = "ItemList",
+            ["itemListElement"] = items
+        });
+
+        return $"{html}<script type=\"application/ld+json\">{json}</script>";
+    }
 
     private static string SeedJson(string name, string url) =>
         $$"""
