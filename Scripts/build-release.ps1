@@ -93,6 +93,103 @@ function Normalize-Version {
     return $normalized
 }
 
+function Get-ExpectedDatabaseSchemaVersion {
+    param([Parameter(Mandatory)][string]$ContractPath)
+
+    $contract = Get-Content -LiteralPath $ContractPath -Raw
+    $match = [regex]::Match(
+        $contract,
+        'public\s+const\s+int\s+ExpectedVersion\s*=\s*(?<version>\d+)\s*;',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+
+    if (-not $match.Success) {
+        throw "Could not read DatabaseSchema.ExpectedVersion from $ContractPath"
+    }
+
+    return [int]$match.Groups["version"].Value
+}
+
+function Assert-DatabaseReleaseAssets {
+    param(
+        [Parameter(Mandatory)][string]$MigrationsPath,
+        [Parameter(Mandatory)][string]$ScriptsPath,
+        [Parameter(Mandatory)][int]$ExpectedVersion
+    )
+
+    $baselinePath = Join-Path $MigrationsPath "0001_baseline.sql"
+    $bootstrapPath = Join-Path $ScriptsPath "bootstrap-schema-version.sql"
+    foreach ($requiredPath in @($baselinePath, $bootstrapPath)) {
+        if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+            throw "Required database release file not found: $requiredPath"
+        }
+    }
+
+    $migrationFiles = @(Get-ChildItem -LiteralPath $MigrationsPath -File -Filter "*.sql" | Sort-Object Name)
+    if ($migrationFiles.Count -eq 0) {
+        throw "No database migration files were found in $MigrationsPath"
+    }
+
+    for ($index = 0; $index -lt $migrationFiles.Count; $index++) {
+        $expectedNumber = $index + 1
+        $match = [regex]::Match($migrationFiles[$index].Name, '^(?<number>\d{4})_[a-z0-9_]+\.sql$')
+        if (-not $match.Success -or [int]$match.Groups["number"].Value -ne $expectedNumber) {
+            throw "Invalid or non-contiguous database migration numbering: $($migrationFiles[$index].Name)"
+        }
+    }
+
+    $targetVersion = [int][regex]::Match($migrationFiles[-1].Name, '^\d{4}').Value
+    if ($targetVersion -ne $ExpectedVersion) {
+        throw "Database migration target version $targetVersion does not match application expected version $ExpectedVersion."
+    }
+
+    $baseline = Get-Content -LiteralPath $baselinePath -Raw
+    if ($baseline -notmatch "(?is)insert\s+into\s+public\.schema_version.*?values\s*\(\s*$ExpectedVersion\s*,\s*'0001_baseline'") {
+        throw "Baseline migration metadata does not register expected schema version $ExpectedVersion."
+    }
+}
+
+function Assert-ReleaseArchiveDatabaseAssets {
+    param(
+        [Parameter(Mandatory)][string]$ArchivePath,
+        [Parameter(Mandatory)][int]$ExpectedVersion
+    )
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($ArchivePath)
+    try {
+        $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
+        foreach ($requiredEntry in @(
+            "db/migrations/0001_baseline.sql",
+            "db/scripts/bootstrap-schema-version.sql",
+            "release.json"
+        )) {
+            if ($requiredEntry -notin $entries) {
+                throw "Release archive does not contain required database entry: $requiredEntry"
+            }
+        }
+
+        $releaseEntry = $archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq "release.json" }
+        $reader = [System.IO.StreamReader]::new($releaseEntry.Open())
+        try {
+            $releaseMetadata = $reader.ReadToEnd() | ConvertFrom-Json
+        }
+        finally {
+            $reader.Dispose()
+        }
+
+        if (
+            $releaseMetadata.database.minimumSchemaVersion -ne $ExpectedVersion -or
+            $releaseMetadata.database.targetSchemaVersion -ne $ExpectedVersion
+        ) {
+            throw "Release archive database metadata does not match application expected version $ExpectedVersion."
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 # scripts/build-release.ps1 -> repository root
 $scriptDirectory = Split-Path -Parent $PSCommandPath
 $repositoryRoot = (Resolve-Path (Join-Path $scriptDirectory "..")).Path
@@ -100,6 +197,10 @@ $repositoryRoot = (Resolve-Path (Join-Path $scriptDirectory "..")).Path
 $solutionPath = Join-Path $repositoryRoot "PriceCrawler.sln"
 $webProjectPath = Join-Path $repositoryRoot "PriceCrawler.Web\PriceCrawler.Web.csproj"
 $workerProjectPath = Join-Path $repositoryRoot "PriceCrawler.Worker\PriceCrawler.Worker.csproj"
+$databaseSchemaContractPath = Join-Path $repositoryRoot "PriceCrawler.Infrastructure\Persistence\DatabaseSchema.cs"
+$databaseMigrationsPath = Join-Path $repositoryRoot "db\migrations"
+$databaseScriptsPath = Join-Path $repositoryRoot "db\scripts"
+$databaseReadmePath = Join-Path $repositoryRoot "db\README.md"
 
 $artifactsPath = Join-Path $repositoryRoot "artifacts"
 $publishRoot = Join-Path $artifactsPath "publish"
@@ -111,11 +212,17 @@ $packageRoot = Join-Path $releaseRoot "_package"
 
 Write-Step "Validating repository structure"
 
-foreach ($requiredPath in @($solutionPath, $webProjectPath, $workerProjectPath)) {
+foreach ($requiredPath in @($solutionPath, $webProjectPath, $workerProjectPath, $databaseSchemaContractPath)) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required file not found: $requiredPath"
     }
 }
+
+$expectedDatabaseSchemaVersion = Get-ExpectedDatabaseSchemaVersion -ContractPath $databaseSchemaContractPath
+Assert-DatabaseReleaseAssets `
+    -MigrationsPath $databaseMigrationsPath `
+    -ScriptsPath $databaseScriptsPath `
+    -ExpectedVersion $expectedDatabaseSchemaVersion
 
 Push-Location $repositoryRoot
 
@@ -245,6 +352,7 @@ Or provide the version explicitly:
 
     $packageWebPath = Join-Path $packageRoot "web"
     $packageCrawlerPath = Join-Path $packageRoot "crawler"
+    $packageDatabasePath = Join-Path $packageRoot "db"
 
     Copy-Item `
         -LiteralPath $webPublishPath `
@@ -258,13 +366,32 @@ Or provide the version explicitly:
         -Recurse `
         -Force
 
+    New-Item -ItemType Directory -Path $packageDatabasePath -Force | Out-Null
+    Copy-Item `
+        -LiteralPath $databaseMigrationsPath `
+        -Destination (Join-Path $packageDatabasePath "migrations") `
+        -Recurse `
+        -Force
+    Copy-Item `
+        -LiteralPath $databaseScriptsPath `
+        -Destination (Join-Path $packageDatabasePath "scripts") `
+        -Recurse `
+        -Force
+    if (Test-Path -LiteralPath $databaseReadmePath -PathType Leaf) {
+        Copy-Item -LiteralPath $databaseReadmePath -Destination $packageDatabasePath -Force
+    }
+
     $releaseInfo = [ordered]@{
         product       = "PriceCrawler"
         version       = $Version
         configuration = $Configuration
         commit        = (git rev-parse HEAD).Trim()
         createdUtc    = [DateTime]::UtcNow.ToString("o")
-        components    = @("web", "crawler")
+        components    = @("web", "crawler", "db")
+        database      = [ordered]@{
+            minimumSchemaVersion = $expectedDatabaseSchemaVersion
+            targetSchemaVersion  = $expectedDatabaseSchemaVersion
+        }
     }
 
     $releaseInfo |
@@ -292,6 +419,10 @@ Or provide the version explicitly:
     if ($archive.Length -eq 0) {
         throw "Release archive is empty: $archivePath"
     }
+
+    Assert-ReleaseArchiveDatabaseAssets `
+        -ArchivePath $archivePath `
+        -ExpectedVersion $expectedDatabaseSchemaVersion
 
     Write-Step "Release created successfully"
 

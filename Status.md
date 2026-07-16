@@ -206,3 +206,14 @@ Important:
 - These are UI/API result statuses for the explicit manual live check.
 - They are not stored in `price_snapshot` or `crawler_run`.
 - A manual live refresh does not create a new snapshot automatically.
+
+## 9. Database schema compatibility status
+
+Source: `PriceCrawler.Infrastructure.Persistence.DatabaseSchemaStartupService`.
+
+- Compatible: `schema_version` exists and `max(version)` equals `DatabaseSchema.ExpectedVersion` (`1`).
+- Missing metadata: startup fails and instructs the operator to run baseline/bootstrap.
+- Older schema: startup fails and instructs the operator to apply forward migrations.
+- Newer schema: startup fails and requires a compatible application release.
+- Stage/Staging and Production always validate and never run automatic schema initialization.
+- Database schema downgrade is not supported.

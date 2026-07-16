@@ -82,8 +82,8 @@ logger.LogInformation(
 
 using (var scope = host.Services.CreateScope())
 {
-    var bootstrap = scope.ServiceProvider.GetRequiredService<SchemaBootstrapper>();
-    await bootstrap.EnsureSchemaAsync();
+    var databaseStartup = scope.ServiceProvider.GetRequiredService<DatabaseSchemaStartupService>();
+    await databaseStartup.ValidateAndInitializeAsync(builder.Environment.EnvironmentName);
 }
 
 using var runScope = host.Services.CreateScope();

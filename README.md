@@ -463,6 +463,18 @@ where run_id = :run_id
 order by id;
 ```
 
+## Database schema versioning
+
+- Canonical clean-database entry point: `db/migrations/0001_baseline.sql`.
+- Existing version `1` database registration: `db/scripts/bootstrap-schema-version.sql`.
+- Current expected schema version is centralized in `DatabaseSchema.ExpectedVersion` and is validated by both Web and Worker.
+- Development may run legacy automatic initialization only when `DatabaseSchema:AllowAutomaticInitialization=true`.
+- Stage/Staging and Production are always validation-only at startup; configuration cannot enable automatic schema mutation there.
+- Missing, empty, older, or newer `schema_version` metadata stops startup with an operator-facing error.
+- Release ZIPs include `db/migrations`, `db/scripts`, and `database.minimumSchemaVersion` / `targetSchemaVersion` in `release.json`.
+- Detailed operator commands and safety rules: `db/README.md` and `docs/database-environments.md`.
+- Schema downgrade is not supported.
+
 ## DB routine scripts
 
 - Версионируемые SQL-скрипты DB routines находятся в `db/routines`.
@@ -494,8 +506,8 @@ order by id;
   проверку meaningful change, conditional insert `price_snapshot`
   и возврат `(productId, snapshotId, snapshotCreated)`.
 - Общие SQL helper-объекты для будущих routines допускают префикс `routine_support_*`.
-- `schema.sql` и `db/routines/**/*.sql` копируются в output/publish для `PriceCrawler.Web` и `PriceCrawler.Worker`,
-  поэтому bootstrap работает как из репозитория, так и из опубликованного приложения.
+- `schema.sql` и `db/routines/**/*.sql` остаются legacy Development initialization assets.
+  Canonical deployment creation/registration assets находятся в `db/migrations` и `db/scripts` release-пакета.
 
 ## Integration tests for DB routines
 

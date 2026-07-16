@@ -16,6 +16,8 @@ logs/
 TestResults/
 coverage/
 graphify-out/
+artifacts/
+stage/
 
 # Semantic files: skip during first code-only test
 *.md

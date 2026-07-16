@@ -30,6 +30,10 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
         services.AddScoped<SchemaBootstrapper>();
+        services.AddScoped<DatabaseSchemaVersionReader>();
+        services.AddScoped<DatabaseSchemaStartupService>();
+        services.AddOptions<DatabaseSchemaOptions>()
+            .Bind(configuration.GetSection(DatabaseSchemaOptions.SectionName));
         services.AddScoped<PgRoutineExecutor>();
 
         services.AddScoped<ICrawlerRunRepository, PgCrawlerRunRepository>();

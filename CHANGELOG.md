@@ -6,6 +6,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 ### Added
+- Explicit database schema version `1`, immutable `0001_baseline.sql`, and validation-first existing-database bootstrap.
+- Shared Web/Worker schema compatibility reader and startup validation with protected Stage/Production behavior.
+- Database deployment assets and minimum/target schema metadata in release packages.
 - `crawl_error` table and domain models for normalized crawler error persistence.
 - Documentation for the normalized `product` / `price_snapshot` schema introduced by `MPC-21`.
 - `ProductAnalytics` payload and real dashboard chart backed by Postgres history.
@@ -18,6 +21,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Explicit Worker CLI commands: `vegetables`, `catalog-refresh`, `collect-prices`, and `--help`.
 
 ### Changed
+- Web and Worker no longer run mutation-capable schema ensure in Stage/Staging or Production; protected environments validate `schema_version` only.
+- PostgreSQL integration coverage now creates isolated databases from the canonical baseline and verifies bootstrap mismatch/repeat behavior.
 - Database schema refactored around internal `product.id` links instead of legacy `product_key`.
 - `price_snapshot` now stores `price` / `old_price` and acts as the fact table for product observations.
 - Queue/pipeline, repositories, parser output, dashboard queries, and tests were aligned with the new storage model.
