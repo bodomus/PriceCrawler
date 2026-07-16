@@ -4,6 +4,7 @@
 **/publish/
 artifacts
 logs
+stage
 
 
 # User-specific files
