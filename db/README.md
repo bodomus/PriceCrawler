@@ -65,14 +65,39 @@ Web and Worker both validate the maximum registered version against `DatabaseSch
 
 ## Environment safety
 
-- Development: legacy automatic initialization may be explicitly enabled; version validation still follows it.
-- Test: disposable databases may be created from the baseline and destroyed by tests.
-- Stage/Staging: startup is always validation-only. Apply migrations in the deployment process after backup.
-- Production: startup is always validation-only. Apply approved forward migrations only after a verified backup.
+- Development: `DatabaseSchema:StartupMode=Ensure`. An empty database is initialized from `0001_baseline.sql`; an existing approved Development schema uses the legacy ensure path. Version validation always follows.
+- Test: `DatabaseSchema:StartupMode=Ensure`. Disposable databases are initialized from the baseline and may be recreated; repeated initialization is deterministic.
+- Stage/Staging: `DatabaseSchema:StartupMode=ValidateOnly`. Apply migrations in the deployment process after backup.
+- Production: `DatabaseSchema:StartupMode=ValidateOnly`. Apply approved forward migrations only after a verified backup.
+
+`Ensure` is permitted only when the effective environment name is `Development` or `Test`. If Stage, Staging, Production, or an unknown environment is configured as `Ensure`, startup throws `DatabaseSchemaStartupConfigurationException` before the initializer or version reader accesses the database. Environment variables and Web command-line configuration cannot bypass this policy.
+
+Validation is mandatory; there is no `ValidateOnStartup` disable switch. `ValidateOnly` executes only the two read-only metadata queries in `DatabaseSchemaVersionReader`. It never calls the initializer, baseline, bootstrap, migration scripts, or `SchemaBootstrapper`.
+
+Stage and Production schema changes belong to deployment, not application startup.
+
+## Configuration precedence
+
+The effective mode is resolved before the hard safety policy runs:
+
+1. `appsettings.json` provides the safe `ValidateOnly` fallback.
+2. `appsettings.<Environment>.json` selects the environment intent.
+3. Environment variables such as `DatabaseSchema__StartupMode` override JSON.
+4. Web command-line configuration has higher precedence than JSON/environment configuration.
+5. Worker operational CLI arguments are deliberately excluded from Generic Host configuration (`Args = []`); environment variables remain supported.
+6. Tests may add an explicit in-memory provider last.
+
+The safety policy evaluates the final value, so higher-precedence configuration can cause startup to fail but cannot make a protected environment mutable.
+
+## Startup failure behavior
+
+- Web performs schema startup before `app.Run()` and therefore opens no listening port after failure.
+- Worker performs schema startup before command-start logging, use-case resolution, queue consumption, or crawler work.
+- Unsafe configuration, missing metadata, empty metadata, older versions, and newer versions all terminate startup with a non-zero process exit.
+- Structured logs include `Environment`, `SchemaStartupMode`, `ExpectedSchemaVersion`, `ActualSchemaVersion`, `Result`, and a stable `Reason`; connection strings and credentials are never included.
 
 Runtime users need read access to `schema_version`; they do not need DDL rights. Migration/bootstrap users may require DDL rights.
 
 ## No downgrade support
 
 Schema versions only move forward (`1 -> 2 -> 3`). There are no down migrations and no automatic schema rollback. Roll back the application only when it remains compatible with the installed database schema; database recovery uses the approved backup process.
-

@@ -6,6 +6,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 ### Added
+- Explicit `DatabaseSchemaStartupMode` (`Ensure` / `ValidateOnly`), separated initializer/validator/coordinator services, and a non-bypassable environment safety policy.
+- PostgreSQL and process-level coverage proving Stage/Production validation is read-only, works without DDL permission, blocks Web listening, and blocks Worker processing on failure.
 - Explicit database schema version `1`, immutable `0001_baseline.sql`, and validation-first existing-database bootstrap.
 - Shared Web/Worker schema compatibility reader and startup validation with protected Stage/Production behavior.
 - Database deployment assets and minimum/target schema metadata in release packages.
@@ -21,7 +23,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Explicit Worker CLI commands: `vegetables`, `catalog-refresh`, `collect-prices`, and `--help`.
 
 ### Changed
-- Web and Worker no longer run mutation-capable schema ensure in Stage/Staging or Production; protected environments validate `schema_version` only.
+- Web and Worker now use one shared schema startup coordinator. Development/Test explicitly `Ensure`; Stage/Staging/Production explicitly `ValidateOnly` and reject unsafe overrides before database access.
+- Empty Development/Test databases initialize from `0001_baseline.sql`; repeated Test initialization restores connection session state and remains deterministic.
+- Generic `Schema ensured` logging was replaced with structured environment, mode, expected/actual version, result, and failure-reason fields.
 - PostgreSQL integration coverage now creates isolated databases from the canonical baseline and verifies bootstrap mismatch/repeat behavior.
 - Database schema refactored around internal `product.id` links instead of legacy `product_key`.
 - `price_snapshot` now stores `price` / `old_price` and acts as the fact table for product observations.

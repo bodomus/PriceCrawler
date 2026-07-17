@@ -28,6 +28,40 @@
 
 ---
 
+## 2.1. Режим запуска схемы приложения
+
+Web и Worker используют один общий параметр:
+
+```json
+{
+  "DatabaseSchema": {
+    "StartupMode": "ValidateOnly"
+  }
+}
+```
+
+Поддерживаются только два режима:
+
+- `Ensure` — разрешён исключительно для Development и Test. Пустая база создаётся из `0001_baseline.sql`; существующая разрешённая Dev/Test-база проходит legacy ensure; после этого версия обязательно проверяется.
+- `ValidateOnly` — выполняет только read-only чтение `schema_version` и точное сравнение с `DatabaseSchema.ExpectedVersion`.
+
+Матрица по умолчанию:
+
+| Окружение | Режим |
+|---|---|
+| Development | `Ensure` |
+| Test | `Ensure` |
+| Stage / Staging | `ValidateOnly` |
+| Production | `ValidateOnly` |
+
+Hard guard применяется к итоговому значению после `appsettings.json`, environment-specific JSON, переменных окружения, Web command line и test overrides. Если Stage, Staging, Production или неизвестное окружение получает `Ensure`, процесс завершается до обращения к базе. Молчаливое переключение режима и отключение validation не допускаются.
+
+Web проверяет схему до открытия HTTP-порта. Worker проверяет схему до запуска команды, получения очереди или crawler job.
+
+> Stage and Production schema changes belong to deployment, not application startup.
+
+---
+
 # 3. Development
 
 ## 3.1. Назначение

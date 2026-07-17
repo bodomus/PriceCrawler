@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -18,7 +19,7 @@ public sealed class DatabaseSchemaVersioningTests
     [Trait("Category", "Integration")]
     public async Task Baseline_EmptyDatabase_CreatesCompleteVersionOneSchema()
     {
-        await using var database = await TemporaryDatabase.CreateAsync();
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
 
         await database.ExecuteFileAsync(BaselinePath);
 
@@ -42,7 +43,7 @@ public sealed class DatabaseSchemaVersioningTests
     [Trait("Category", "Integration")]
     public async Task Baseline_NonEmptyDatabase_FailsWithoutPartialSchemaCreation()
     {
-        await using var database = await TemporaryDatabase.CreateAsync();
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
         await database.ExecuteAsync("create table unrelated(id integer primary key);");
 
         var error = await Assert.ThrowsAsync<PostgresException>(() => database.ExecuteFileAsync(BaselinePath));
@@ -55,9 +56,9 @@ public sealed class DatabaseSchemaVersioningTests
     [Trait("Category", "Integration")]
     public async Task Bootstrap_ValidExistingDatabase_IsRepeatableAndPreservesApplicationRows()
     {
-        await using var database = await CreateExistingDatabaseAsync();
+        await using var database = await CreateExistingDatabaseWithoutMetadataAsync();
         await database.ExecuteAsync(
-            "insert into product(external_id,name,url) values('mpc79','preserved','https://example.test/mpc79');");
+            "insert into product(external_id,name,url) values('mpc80','preserved','https://example.test/mpc80');");
         var before = await database.ScalarAsync<int>("select count(*) from product");
 
         await database.ExecuteFileAsync(BootstrapPath);
@@ -70,9 +71,9 @@ public sealed class DatabaseSchemaVersioningTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Bootstrap_MissingRequiredTable_IsRejected()
+    public async Task Bootstrap_MissingRequiredTable_IsRejectedWithoutMetadataCreation()
     {
-        await using var database = await CreateExistingDatabaseAsync();
+        await using var database = await CreateExistingDatabaseWithoutMetadataAsync();
         await database.ExecuteAsync("drop table crawl_error;");
 
         var error = await Assert.ThrowsAsync<PostgresException>(() => database.ExecuteFileAsync(BootstrapPath));
@@ -83,9 +84,9 @@ public sealed class DatabaseSchemaVersioningTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Bootstrap_MissingRequiredColumn_IsRejected()
+    public async Task Bootstrap_MissingRequiredColumn_IsRejectedWithoutMetadataCreation()
     {
-        await using var database = await CreateExistingDatabaseAsync();
+        await using var database = await CreateExistingDatabaseWithoutMetadataAsync();
         await database.ExecuteAsync("alter table product rename column slug to unexpected_slug;");
 
         var error = await Assert.ThrowsAsync<PostgresException>(() => database.ExecuteFileAsync(BootstrapPath));
@@ -96,9 +97,9 @@ public sealed class DatabaseSchemaVersioningTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Bootstrap_IncompatibleCriticalColumnType_IsRejected()
+    public async Task Bootstrap_IncompatibleCriticalColumnType_IsRejectedWithoutMetadataCreation()
     {
-        await using var database = await CreateExistingDatabaseAsync();
+        await using var database = await CreateExistingDatabaseWithoutMetadataAsync();
         await database.ExecuteAsync("alter table product alter column external_id type text;");
 
         var error = await Assert.ThrowsAsync<PostgresException>(() => database.ExecuteFileAsync(BootstrapPath));
@@ -109,9 +110,9 @@ public sealed class DatabaseSchemaVersioningTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task Bootstrap_ConflictingVersionMetadata_IsRejected()
+    public async Task Bootstrap_ConflictingVersionMetadata_IsRejectedWithoutRepair()
     {
-        await using var database = await TemporaryDatabase.CreateAsync();
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
         await database.ExecuteFileAsync(BaselinePath);
         await database.ExecuteAsync("update schema_version set migration_name='conflicting';");
 
@@ -125,60 +126,171 @@ public sealed class DatabaseSchemaVersioningTests
     [InlineData("Development")]
     [InlineData("Test")]
     [Trait("Category", "Integration")]
-    public async Task Startup_CompatibleSchema_Succeeds(string environmentName)
+    public async Task Ensure_EmptyDatabase_InitializesBaselineAndValidatesVersion(string environmentName)
     {
-        await using var database = await TemporaryDatabase.CreateAsync();
-        await database.ExecuteFileAsync(BaselinePath);
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
         await using var context = CreateDbContext(database.ConnectionString);
-        var service = CreateStartupService(context, allowAutomaticInitialization: false);
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.Ensure);
 
-        await service.ValidateAndInitializeAsync(environmentName);
+        await coordinator.ExecuteAsync(environmentName);
+
+        Assert.Equal(1, await database.ScalarAsync<int>("select max(version) from schema_version"));
+        Assert.True(await database.ScalarAsync<bool>("select to_regclass('public.product') is not null"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task Ensure_TestDatabase_RepeatedExecutionIsDeterministicAndPreservesRows()
+    {
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
+        await using var context = CreateDbContext(database.ConnectionString);
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.Ensure);
+        await coordinator.ExecuteAsync("Test");
+        await database.ExecuteAsync(
+            "insert into product(external_id,name,url) values('repeat','preserved','https://example.test/repeat');");
+
+        await coordinator.ExecuteAsync("Test");
+
+        Assert.Equal(1, await database.ScalarAsync<int>("select max(version) from schema_version"));
+        Assert.Equal(1, await database.ScalarAsync<int>("select count(*) from product where external_id='repeat'"));
+    }
+
+    [Theory]
+    [InlineData("Stage")]
+    [InlineData("Staging")]
+    [InlineData("Production")]
+    [Trait("Category", "Integration")]
+    public async Task ValidateOnly_CompatibleSchema_SucceedsWithoutMutation(string environmentName)
+    {
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
+        await database.ExecuteFileAsync(BaselinePath);
+        await database.ExecuteAsync(
+            "insert into product(external_id,name,url) values('readonly','preserved','https://example.test/readonly');");
+        var before = await CaptureDatabaseStateAsync(database);
+        await using var context = CreateDbContext(database.ConnectionString);
+        var logger = new RecordingLogger<DatabaseSchemaStartupCoordinator>();
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.ValidateOnly, logger);
+
+        await coordinator.ExecuteAsync(environmentName);
+
+        Assert.Equal(before, await CaptureDatabaseStateAsync(database));
+        var success = Assert.Single(logger.Entries, entry => Equals(entry.GetValueOrDefault("Result"), "Succeeded"));
+        Assert.Equal(environmentName, success["Environment"]);
+        Assert.Equal(DatabaseSchemaStartupMode.ValidateOnly, success["SchemaStartupMode"]);
+        Assert.Equal(DatabaseSchema.ExpectedVersion, success["ExpectedSchemaVersion"]);
+        Assert.Equal(DatabaseSchema.ExpectedVersion, success["ActualSchemaVersion"]);
     }
 
     [Theory]
     [InlineData("Stage", 0)]
-    [InlineData("Staging", 2)]
+    [InlineData("Stage", 2)]
     [InlineData("Production", 0)]
     [InlineData("Production", 2)]
     [Trait("Category", "Integration")]
-    public async Task Startup_ProtectedEnvironment_VersionMismatchFails(string environmentName, int actualVersion)
+    public async Task ValidateOnly_VersionMismatchFailsWithoutRepair(string environmentName, int actualVersion)
     {
-        await using var database = await TemporaryDatabase.CreateAsync();
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
         await database.ExecuteFileAsync(BaselinePath);
         await database.ExecuteAsync($"update schema_version set version={actualVersion};");
+        var before = await CaptureDatabaseStateAsync(database);
         await using var context = CreateDbContext(database.ConnectionString);
-        var service = CreateStartupService(context, allowAutomaticInitialization: true);
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.ValidateOnly);
 
         var error = await Assert.ThrowsAsync<DatabaseSchemaVersionMismatchException>(
-            () => service.ValidateAndInitializeAsync(environmentName));
+            () => coordinator.ExecuteAsync(environmentName));
 
-        Assert.Contains($"Actual: {actualVersion}", error.Message, StringComparison.Ordinal);
+        Assert.Contains($"Actual schema version: {actualVersion}", error.Message, StringComparison.Ordinal);
         Assert.Contains("Automatic schema changes are disabled", error.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("Password", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Host=", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(before, await CaptureDatabaseStateAsync(database));
     }
 
     [Theory]
     [InlineData("Stage")]
     [InlineData("Production")]
     [Trait("Category", "Integration")]
-    public async Task Startup_ProtectedEnvironment_MissingMetadataDoesNotCreateSchema(string environmentName)
+    public async Task ValidateOnly_MissingMetadataFailsWithoutCreatingAnySchema(string environmentName)
     {
-        await using var database = await TemporaryDatabase.CreateAsync();
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
         await using var context = CreateDbContext(database.ConnectionString);
-        var service = CreateStartupService(context, allowAutomaticInitialization: true);
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.ValidateOnly);
 
         var error = await Assert.ThrowsAsync<DatabaseSchemaVersionMismatchException>(
-            () => service.ValidateAndInitializeAsync(environmentName));
+            () => coordinator.ExecuteAsync(environmentName));
 
-        Assert.Contains("was not found", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("schema_version table was not found", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(await database.ScalarAsync<bool>("select to_regclass('public.crawler_run') is not null"));
         Assert.False(await database.ScalarAsync<bool>("select to_regclass('public.schema_version') is not null"));
     }
 
-    private static async Task<TemporaryDatabase> CreateExistingDatabaseAsync()
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ValidateOnly_CurrentMetadataNeverRepairsMissingApplicationTables()
     {
-        var database = await TemporaryDatabase.CreateAsync();
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
+        await database.ExecuteAsync("""
+                                    create table schema_version
+                                    (
+                                        version integer not null primary key,
+                                        migration_name varchar(200) not null,
+                                        applied_at_utc timestamptz not null default now(),
+                                        application_version varchar(50),
+                                        checksum varchar(128)
+                                    );
+                                    insert into schema_version(version, migration_name, application_version)
+                                    values (1, '0001_baseline', 'v0.4.1-alpha');
+                                    """);
+        await using var context = CreateDbContext(database.ConnectionString);
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.ValidateOnly);
+
+        await coordinator.ExecuteAsync("Stage");
+
+        Assert.False(await database.ScalarAsync<bool>("select to_regclass('public.product') is not null"));
+        Assert.False(await database.ScalarAsync<bool>("select to_regclass('public.crawler_run') is not null"));
+        Assert.Equal(1, await database.ScalarAsync<int>("select count(*) from schema_version"));
+    }
+
+    [Theory]
+    [InlineData("Stage")]
+    [InlineData("Production")]
+    [Trait("Category", "Integration")]
+    public async Task UnsafeEnsure_IsRejectedBeforeDatabaseAccess(string environmentName)
+    {
+        await using var context = CreateDbContext(
+            "Host=127.0.0.1;Port=1;Database=must_not_connect;Username=none;Timeout=1");
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.Ensure);
+
+        var error = await Assert.ThrowsAsync<DatabaseSchemaStartupConfigurationException>(
+            () => coordinator.ExecuteAsync(environmentName));
+
+        Assert.Equal(DatabaseSchemaStartupMode.Ensure, error.ConfiguredMode);
+        Assert.Equal(DatabaseSchemaStartupMode.ValidateOnly, error.RequiredMode);
+        Assert.Contains("Startup aborted before database schema mutation", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Host=", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ProductionValidateOnly_SucceedsWithRoleThatHasNoDdlPermission()
+    {
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
+        await database.ExecuteFileAsync(BaselinePath);
+        var runtimeConnectionString = await database.CreateReadOnlyRuntimeRoleAsync();
+        Assert.False(await TemporaryPostgresDatabase.ScalarAsync<bool>(
+            runtimeConnectionString,
+            "select has_schema_privilege(current_user, 'public', 'CREATE')"));
+        await using var context = CreateDbContext(runtimeConnectionString);
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.ValidateOnly);
+
+        await coordinator.ExecuteAsync("Production");
+
+        Assert.Equal(1, await database.ScalarAsync<int>("select max(version) from schema_version"));
+    }
+
+    private static async Task<TemporaryPostgresDatabase> CreateExistingDatabaseWithoutMetadataAsync()
+    {
+        var database = await TemporaryPostgresDatabase.CreateAsync();
         try
         {
             await database.ExecuteFileAsync(BaselinePath);
@@ -192,18 +304,39 @@ public sealed class DatabaseSchemaVersioningTests
         }
     }
 
-    private static DatabaseSchemaStartupService CreateStartupService(
+    private static async Task<string> CaptureDatabaseStateAsync(TemporaryPostgresDatabase database)
+        => await database.ScalarAsync<string>("""
+                                               select concat_ws('|',
+                                                   (select count(*) from pg_catalog.pg_class object
+                                                    join pg_catalog.pg_namespace namespace on namespace.oid=object.relnamespace
+                                                    where namespace.nspname='public'),
+                                                   (select count(*) from pg_catalog.pg_proc routine
+                                                    join pg_catalog.pg_namespace namespace on namespace.oid=routine.pronamespace
+                                                    where namespace.nspname='public'),
+                                                   (select count(*) from schema_version),
+                                                   (select count(*) from product),
+                                                   (select count(*) from crawler_run),
+                                                   (select count(*) from price_collect_queue),
+                                                   (select count(*) from db_routine_script));
+                                               """);
+
+    private static DatabaseSchemaStartupCoordinator CreateCoordinator(
         PriceCrawlerDbContext context,
-        bool allowAutomaticInitialization)
-        => new(
-            new SchemaBootstrapper(context, NullLogger<SchemaBootstrapper>.Instance),
-            new DatabaseSchemaVersionReader(context),
-            Options.Create(new DatabaseSchemaOptions
-            {
-                AllowAutomaticInitialization = allowAutomaticInitialization,
-                ValidateOnStartup = true
-            }),
-            NullLogger<DatabaseSchemaStartupService>.Instance);
+        DatabaseSchemaStartupMode startupMode,
+        ILogger<DatabaseSchemaStartupCoordinator>? logger = null)
+    {
+        var bootstrapper = new SchemaBootstrapper(context, NullLogger<SchemaBootstrapper>.Instance);
+        var initializer = new DatabaseSchemaInitializer(
+            context,
+            bootstrapper,
+            NullLogger<DatabaseSchemaInitializer>.Instance);
+        var validator = new DatabaseSchemaValidator(new DatabaseSchemaVersionReader(context));
+        return new DatabaseSchemaStartupCoordinator(
+            initializer,
+            validator,
+            Options.Create(new DatabaseSchemaOptions { StartupMode = startupMode }),
+            logger ?? NullLogger<DatabaseSchemaStartupCoordinator>.Instance);
+    }
 
     private static PriceCrawlerDbContext CreateDbContext(string connectionString)
         => new(new DbContextOptionsBuilder<PriceCrawlerDbContext>()
@@ -212,97 +345,47 @@ public sealed class DatabaseSchemaVersioningTests
 
     private static string ResolveRepositoryFile(params string[] segments)
     {
+        var root = ResolveRepositoryRoot();
+        var path = Path.Combine([root, .. segments]);
+        return File.Exists(path)
+            ? path
+            : throw new FileNotFoundException($"Could not locate repository file {Path.Combine(segments)}.");
+    }
+
+    private static string ResolveRepositoryRoot()
+    {
         foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
         {
             var directory = new DirectoryInfo(start);
             while (directory is not null)
             {
-                var solutionPath = Path.Combine(directory.FullName, "PriceCrawler.sln");
-                if (File.Exists(solutionPath))
-                {
-                    var path = Path.Combine([directory.FullName, .. segments]);
-                    if (File.Exists(path)) return path;
-                }
-
+                if (File.Exists(Path.Combine(directory.FullName, "PriceCrawler.sln"))) return directory.FullName;
                 directory = directory.Parent;
             }
         }
 
-        throw new FileNotFoundException($"Could not locate repository file {Path.Combine(segments)}.");
+        throw new DirectoryNotFoundException("Could not locate the repository root.");
     }
 
-    private sealed class TemporaryDatabase : IAsyncDisposable
+    private sealed class RecordingLogger<T> : ILogger<T>
     {
-        private readonly string _databaseName;
-        private bool _disposed;
+        public List<Dictionary<string, object?>> Entries { get; } = [];
 
-        private TemporaryDatabase(string databaseName, string connectionString)
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
         {
-            _databaseName = databaseName;
-            ConnectionString = connectionString;
-        }
-
-        public string ConnectionString { get; }
-
-        public static async Task<TemporaryDatabase> CreateAsync()
-        {
-            var template = new NpgsqlConnectionStringBuilder(PostgresIntegrationFixture.ConnectionString);
-            var databaseName = $"pricecrawler_mpc79_test_{Guid.NewGuid():N}";
-            var admin = new NpgsqlConnectionStringBuilder(template.ConnectionString) { Database = "postgres" };
-            await using var connection = new NpgsqlConnection(admin.ConnectionString);
-            await connection.OpenAsync();
-            await using var command = new NpgsqlCommand($"create database {QuoteIdentifier(databaseName)};", connection);
-            await command.ExecuteNonQueryAsync();
-
-            template.Database = databaseName;
-            return new TemporaryDatabase(databaseName, template.ConnectionString);
-        }
-
-        public async Task ExecuteFileAsync(string path)
-            => await ExecuteAsync(await File.ReadAllTextAsync(path));
-
-        public async Task ExecuteAsync(string sql)
-        {
-            await using var connection = new NpgsqlConnection(ConnectionString);
-            await connection.OpenAsync();
-            await using var command = new NpgsqlCommand(sql, connection) { CommandTimeout = 120 };
-            await command.ExecuteNonQueryAsync();
-        }
-
-        public async Task<T> ScalarAsync<T>(string sql)
-        {
-            await using var connection = new NpgsqlConnection(ConnectionString);
-            await connection.OpenAsync();
-            await using var command = new NpgsqlCommand(sql, connection) { CommandTimeout = 30 };
-            var value = await command.ExecuteScalarAsync();
-            return (T)Convert.ChangeType(value!, typeof(T));
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_disposed) return;
-            _disposed = true;
-
-            var template = new NpgsqlConnectionStringBuilder(ConnectionString) { Database = "postgres" };
-            await using var connection = new NpgsqlConnection(template.ConnectionString);
-            await connection.OpenAsync();
-            await using (var terminateCommand = new NpgsqlCommand("""
-                                                                  select pg_terminate_backend(pid)
-                                                                  from pg_stat_activity
-                                                                  where datname = @database_name
-                                                                    and pid <> pg_backend_pid();
-                                                                  """, connection))
+            if (state is IEnumerable<KeyValuePair<string, object?>> values)
             {
-                terminateCommand.Parameters.AddWithValue("database_name", _databaseName);
-                await terminateCommand.ExecuteNonQueryAsync();
+                Entries.Add(values.ToDictionary(pair => pair.Key, pair => pair.Value));
             }
-
-            await using var dropCommand = new NpgsqlCommand(
-                $"drop database if exists {QuoteIdentifier(_databaseName)};",
-                connection);
-            await dropCommand.ExecuteNonQueryAsync();
         }
-
-        private static string QuoteIdentifier(string value) => $"\"{value.Replace("\"", "\"\"")}\"";
     }
 }

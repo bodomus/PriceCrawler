@@ -75,16 +75,17 @@ builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfigurati
 
 using var host = builder.Build();
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("PriceCrawler.Worker");
+
+using (var scope = host.Services.CreateScope())
+{
+    var databaseStartup = scope.ServiceProvider.GetRequiredService<DatabaseSchemaStartupCoordinator>();
+    await databaseStartup.ExecuteAsync(builder.Environment.EnvironmentName);
+}
+
 logger.LogInformation(
     "Worker command started. ExecutionId={ExecutionId}; Mode={Mode}",
     executionId,
     command.Mode);
-
-using (var scope = host.Services.CreateScope())
-{
-    var databaseStartup = scope.ServiceProvider.GetRequiredService<DatabaseSchemaStartupService>();
-    await databaseStartup.ValidateAndInitializeAsync(builder.Environment.EnvironmentName);
-}
 
 using var runScope = host.Services.CreateScope();
 var progressState = runScope.ServiceProvider.GetRequiredService<CrawlerProgressState>();

@@ -1,12 +1,9 @@
 namespace PriceCrawler.Infrastructure.Persistence;
 
-/// <summary>Controls database initialization and startup validation.</summary>
+/// <summary>Controls the single database schema operation performed during application startup.</summary>
 public sealed class DatabaseSchemaOptions
 {
     public const string SectionName = "DatabaseSchema";
 
-    public bool AllowAutomaticInitialization { get; set; }
-
-    public bool ValidateOnStartup { get; set; } = true;
+    public DatabaseSchemaStartupMode StartupMode { get; set; } = DatabaseSchemaStartupMode.ValidateOnly;
 }
-

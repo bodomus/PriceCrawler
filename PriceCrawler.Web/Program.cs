@@ -72,8 +72,8 @@ app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
 using (var scope = app.Services.CreateScope())
 {
-    var databaseStartup = scope.ServiceProvider.GetRequiredService<DatabaseSchemaStartupService>();
-    await databaseStartup.ValidateAndInitializeAsync(app.Environment.EnvironmentName);
+    var databaseStartup = scope.ServiceProvider.GetRequiredService<DatabaseSchemaStartupCoordinator>();
+    await databaseStartup.ExecuteAsync(app.Environment.EnvironmentName);
 }
 
 app.Logger.LogInformation("Application starting in {EnvironmentName}", app.Environment.EnvironmentName);

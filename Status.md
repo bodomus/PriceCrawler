@@ -209,11 +209,14 @@ Important:
 
 ## 9. Database schema compatibility status
 
-Source: `PriceCrawler.Infrastructure.Persistence.DatabaseSchemaStartupService`.
+Source: `PriceCrawler.Infrastructure.Persistence.DatabaseSchemaStartupCoordinator`.
 
 - Compatible: `schema_version` exists and `max(version)` equals `DatabaseSchema.ExpectedVersion` (`1`).
 - Missing metadata: startup fails and instructs the operator to run baseline/bootstrap.
 - Older schema: startup fails and instructs the operator to apply forward migrations.
 - Newer schema: startup fails and requires a compatible application release.
-- Stage/Staging and Production always validate and never run automatic schema initialization.
+- Development/Test use the explicit `Ensure` mode and validate after initialization.
+- Stage/Staging and Production use `ValidateOnly`; a configured `Ensure` is rejected before database access.
+- Web does not listen and Worker does not start crawler work until schema startup succeeds.
+- Validation-only startup succeeds for a runtime role without DDL permission.
 - Database schema downgrade is not supported.

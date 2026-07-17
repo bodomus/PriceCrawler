@@ -132,8 +132,25 @@ artifacts\publish\crawler
 ```text
 web/
 crawler/
+db/migrations/
+db/scripts/
+db/README.md
 release.json
 ```
+
+Перед запуском Web или Worker deployment обязан применить требуемые forward migrations и проверить target schema version. Stage-конфигурация должна содержать:
+
+```json
+{
+  "DatabaseSchema": {
+    "StartupMode": "ValidateOnly"
+  }
+}
+```
+
+Приложение повторно проверяет `schema_version` при старте, но не выполняет baseline, bootstrap, migrations или repair. Unsafe override `DatabaseSchema__StartupMode=Ensure` завершает Stage/Production startup до обращения к базе.
+
+> Stage and Production schema changes belong to deployment, not application startup.
 
 Проверить ZIP:
 

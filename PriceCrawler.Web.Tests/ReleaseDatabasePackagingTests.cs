@@ -38,6 +38,43 @@ public sealed class ReleaseDatabasePackagingTests
         Assert.Contains("Assert-ReleaseArchiveDatabaseAssets", script, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void WebAndWorkerStartup_UseSharedCoordinatorWithoutPrivateBootstrapPath()
+    {
+        var root = ResolveRepositoryRoot();
+        foreach (var host in new[] { "PriceCrawler.Web", "PriceCrawler.Worker" })
+        {
+            var program = File.ReadAllText(Path.Combine(root, host, "Program.cs"));
+            Assert.Contains("DatabaseSchemaStartupCoordinator", program, StringComparison.Ordinal);
+            Assert.Contains("databaseStartup.ExecuteAsync", program, StringComparison.Ordinal);
+            Assert.DoesNotContain("SchemaBootstrapper", program, StringComparison.Ordinal);
+            Assert.DoesNotContain("EnsureSchemaAsync", program, StringComparison.Ordinal);
+
+            var project = File.ReadAllText(Path.Combine(root, host, $"{host}.csproj"));
+            Assert.Contains("db\\migrations\\0001_baseline.sql", project, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ValidateOnlyPath_IsSeparatedFromAllMutationServices()
+    {
+        var persistence = Path.Combine(ResolveRepositoryRoot(), "PriceCrawler.Infrastructure", "Persistence");
+        var validator = File.ReadAllText(Path.Combine(persistence, "DatabaseSchemaValidator.cs"));
+        var reader = File.ReadAllText(Path.Combine(persistence, "DatabaseSchemaVersionReader.cs"));
+
+        Assert.Contains("versionReader.ReadAsync", validator, StringComparison.Ordinal);
+        Assert.DoesNotContain("DatabaseSchemaInitializer", validator, StringComparison.Ordinal);
+        Assert.DoesNotContain("SchemaBootstrapper", validator, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExecuteNonQuery", validator, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExecuteNonQuery", reader, StringComparison.Ordinal);
+        Assert.DoesNotContain("insert ", reader, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("create ", reader, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("alter ", reader, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("drop ", reader, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string ResolveRepositoryRoot()
     {
         foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })

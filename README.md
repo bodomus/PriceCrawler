@@ -468,9 +468,13 @@ order by id;
 - Canonical clean-database entry point: `db/migrations/0001_baseline.sql`.
 - Existing version `1` database registration: `db/scripts/bootstrap-schema-version.sql`.
 - Current expected schema version is centralized in `DatabaseSchema.ExpectedVersion` and is validated by both Web and Worker.
-- Development may run legacy automatic initialization only when `DatabaseSchema:AllowAutomaticInitialization=true`.
-- Stage/Staging and Production are always validation-only at startup; configuration cannot enable automatic schema mutation there.
+- `DatabaseSchema:StartupMode=Ensure` initializes an empty Development/Test database from the baseline, or runs the approved existing-database ensure path, and then validates version `1`.
+- `DatabaseSchema:StartupMode=ValidateOnly` executes only read-only metadata queries.
+- Development and Test configure `Ensure`; Stage, Staging, and Production configure `ValidateOnly`.
+- A hard policy permits `Ensure` only in Development/Test. Environment-variable or Web command-line overrides cannot enable it elsewhere; startup aborts before database access.
+- Web validates before opening its listening port. Worker validates before resolving or executing crawler work.
 - Missing, empty, older, or newer `schema_version` metadata stops startup with an operator-facing error.
+- Stage and Production schema changes belong to deployment, not application startup.
 - Release ZIPs include `db/migrations`, `db/scripts`, and `database.minimumSchemaVersion` / `targetSchemaVersion` in `release.json`.
 - Detailed operator commands and safety rules: `db/README.md` and `docs/database-environments.md`.
 - Schema downgrade is not supported.
