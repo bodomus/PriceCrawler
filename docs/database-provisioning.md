@@ -264,3 +264,5 @@ Prod Worker -> varprice_prod / pricecrawler_prod_worker
 Inject the final connection string separately into each process through `ConnectionStrings__Postgres`; do not store it in appsettings or command history.
 
 Stage and Production remain `DatabaseSchema:StartupMode=ValidateOnly`. The application validates before listening or processing, while deployment owns all schema changes.
+
+For a normal Production release, do not invoke this bootstrap workflow. Use `Scripts/deploy-production.ps1` with the exact matching successful Stage report. It invokes the packaged role contract with `-ProductionOnly` after forward migrations and before activation, preserving separate deploy/runtime identities. See `docs/production-deployment.md` for backup, process, health, evidence, and recovery rules.

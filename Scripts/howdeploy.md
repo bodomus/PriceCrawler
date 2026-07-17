@@ -266,6 +266,8 @@ artifacts\releases\PriceCrawler-v0.4.1.zip.sha256
 
 Stage deployment after package creation is performed only by `Scripts/deploy-stage.ps1`. Use the normal, explicit Development-refresh, or non-mutating `-WhatIf` commands from `docs/stage-deployment.md`. The deploy verifies the sidecar/package, creates and verifies a Stage backup, applies forward-only migrations and Stage-only runtime grants, activates `current`, verifies Web port and `/health`, and only then starts Worker. Production and schema downgrade are unsupported.
 
+Production deployment is performed only by `Scripts/deploy-production.ps1` and requires the successful JSON report from that Stage deployment for the exact ZIP. Run `-WhatIf` first using `docs/production-deployment.md`; a real deploy additionally requires `-ConfirmProductionDeployment`. The script validates the Production independence marker, creates a verified backup before mutation, applies only forward migrations and Production-only runtime grants, and starts Worker only after Web listener and health verification. It never copies another database into Production.
+
 ---
 
 ## Правила релиза

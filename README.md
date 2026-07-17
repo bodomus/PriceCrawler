@@ -623,6 +623,12 @@ dotnet msbuild PriceCrawler.Application/PriceCrawler.Application.csproj -t:GetBu
 dotnet test PriceCrawler.sln
 ```
 
+## Production deployment
+
+Production accepts only the exact release ZIP proven successful by a matching Stage report. Use `Scripts/deploy-production.ps1` with external Web/Worker configuration and explicit `-ConfirmProductionDeployment`; run `-WhatIf` first. The script verifies the independent Production marker and separate non-DDL runtime roles, creates and validates a Production backup, applies forward-only migrations with the deploy identity, and gates Worker startup on Web listener ownership and health. See `docs/production-deployment.md`.
+
+Production is never refreshed from Development or Stage, schema downgrade and automatic database restore are unsupported, and Web/Worker always start in `ValidateOnly`.
+
 
 ## Как делать backup
 docker exec var_postgres pg_dump -U var -d varprice -F c -f /backups/varprice.backup

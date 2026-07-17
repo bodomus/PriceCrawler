@@ -120,4 +120,6 @@ Runtime users need read access to `schema_version`; they do not need DDL rights.
 
 ## No downgrade support
 
+Normal Production schema delivery is owned by `Scripts/deploy-production.ps1`. It requires the exact Stage-approved package, verifies the independent Production marker and separate runtime identities, creates and validates a Production backup, and runs only missing forward migrations with the deploy identity. It never copies Development/Stage into Production, reruns bootstrap, downgrades, or restores the database automatically. See `docs/production-deployment.md`.
+
 Schema versions only move forward (`1 -> 2 -> 3`). There are no down migrations and no automatic schema rollback. Roll back the application only when it remains compatible with the installed database schema; database recovery uses the approved backup process.
