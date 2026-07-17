@@ -477,6 +477,22 @@ order by id;
 - Stage and Production schema changes belong to deployment, not application startup.
 - Release ZIPs include `db/migrations`, `db/scripts`, and `database.minimumSchemaVersion` / `targetSchemaVersion` in `release.json`.
 
+Release packages are built with `scripts/build-release.ps1` into `artifacts/releases/`. The builder resolves the default application version from Nerdbank.GitVersioning, records the exact Git commit and UTC timestamp, validates numbered migrations against `DatabaseSchema.ExpectedVersion`, sanitizes packaged connection strings, rejects forbidden paths/secrets, validates the staging tree and final ZIP, and emits a SHA-256 sidecar. Existing version artifacts are never overwritten unless `-ReplaceExistingArtifact` is explicitly supplied for an approved local rebuild.
+
+Current archive root:
+
+```text
+web/
+crawler/
+db/migrations/0001_baseline.sql
+db/scripts/bootstrap-schema-version.sql
+db/scripts/provision-database-runtime-roles.ps1
+db/README.md
+release.json
+```
+
+For schema version `1`, `release.json` declares `minimumSchemaVersion=1` and `targetSchemaVersion=1`. Database artifacts are consumed by deployment; Stage/Production application startup remains `ValidateOnly` and never executes them.
+
 Initial Test/Stage/Production provisioning uses `scripts/initialize-database-environments.ps1` and is documented in `docs/database-provisioning.md`. Test is created from the baseline without Development business data; Stage receives a verified logical Development snapshot; Production receives that snapshot exactly once and is then protected by a durable independence marker.
 
 Stage and Production use four separate non-superuser runtime identities provisioned by `scripts/provision-database-runtime-roles.ps1`: distinct Web and Worker roles for each environment. Credentials and complete runtime connection strings come from environment variables or the deployment secret store. Runtime roles run only with `ValidateOnly`, have no database/schema creation or object ownership, and are actively verified to reject `CREATE TABLE` and `ALTER TABLE`.

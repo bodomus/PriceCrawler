@@ -492,7 +492,7 @@ Stage deployment выполняется только через `deploy-stage.ps
 Последовательность:
 
 1. Проверить release ZIP.
-2. Прочитать `release.json`.
+2. Проверить sidecar SHA-256, прочитать и валидировать `release.json`.
 3. Определить application version.
 4. Проверить target schema version.
 5. Создать backup Stage.

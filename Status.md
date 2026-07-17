@@ -224,3 +224,16 @@ Runtime database access: `scripts/provision-database-runtime-roles.ps1` independ
 - Web does not listen and Worker does not start crawler work until schema startup succeeds.
 - Validation-only startup succeeds for a runtime role without DDL permission.
 - Database schema downgrade is not supported.
+
+## 10. Release package compatibility status
+
+Source: `Scripts/build-release.ps1`, `PriceCrawler.Web.Tests/ReleaseDatabasePackagingTests`.
+
+- Default application version comes from Nerdbank.GitVersioning; `release.json` records the exact 40-character Git commit and normalized UTC build timestamp.
+- The migration inventory is validated for filename format, unique/contiguous ordering, baseline/bootstrap metadata and equality with `DatabaseSchema.ExpectedVersion`.
+- Current release schema compatibility is `minimum=1`, `target=1`; no schema version was changed by MPC-82.
+- ZIP root is limited to `web/`, `crawler/`, `db/`, and `release.json`; host copies of legacy DB initialization assets and Development/Test appsettings are removed from release staging.
+- Base packaged connection strings are sanitized to placeholders. Stage/Staging/Production templates must remain `ValidateOnly`.
+- Dumps, backups, logs, `.env`, `.pgpass`, graph databases, test results, plaintext secret-like configuration values and developer absolute paths are rejected.
+- Existing archives/checksums are not silently overwritten. Successful builds emit `PriceCrawler-<version>.zip` and `.zip.sha256` under `artifacts/releases/` by default.
+- Packaging does not open a database or execute SQL; migrations remain deployment artifacts.

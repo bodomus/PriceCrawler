@@ -6,6 +6,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 ### Added
+- Validated release-package contract with canonical NBGV/Git metadata, ordered migration inventory, safe Web/Crawler configuration staging, deterministic ZIP entry ordering, SHA-256 sidecar, forbidden-content checks, and behavioral packaging tests.
 - Separate non-superuser Stage/Production Web and Worker runtime-role provisioning with external secret inputs, least-privilege data/routine grants, active DDL-denial probes, and `ValidateOnly` host-start integration coverage.
 - Repeatable Test/Stage/Production provisioning via `scripts/initialize-database-environments.ps1`, including Docker/native PostgreSQL tooling, `-WhatIf`, guarded replacement, verified logical dumps, SHA-256 checksums, sanitized logs, and bootstrap reporting.
 - One-time Production bootstrap protection through a durable database-level independence marker, initial verified backup, and permanent refusal of Development-to-Production overwrite.
@@ -27,6 +28,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Explicit Worker CLI commands: `vegetables`, `catalog-refresh`, `collect-prices`, and `--help`.
 
 ### Changed
+- Release artifacts now default to `artifacts/releases`, refuse silent replacement, expose explicit output/replacement controls, and validate both the staging tree and final archive against schema/component metadata.
 - Partial Stage/Production bootstrap failures now retain the verified Development dump and print an explicit operator recovery procedure; failed initial Production databases are never deleted automatically and may be retried only after marker/history checks.
 - Web and Worker now use one shared schema startup coordinator. Development/Test explicitly `Ensure`; Stage/Staging/Production explicitly `ValidateOnly` and reject unsafe overrides before database access.
 - Empty Development/Test databases initialize from `0001_baseline.sql`; repeated Test initialization restores connection session state and remains deterministic.

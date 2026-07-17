@@ -2,6 +2,12 @@
 
 PriceCrawler uses explicit forward-only database schema versions. Application version and database schema version are independent.
 
+## Release package contract
+
+`scripts/build-release.ps1` packages deployable database assets under the ZIP root `db/`: all validated numbered migrations, `scripts/bootstrap-schema-version.sql`, runtime-role provisioning support, and this operator reference. `release.json` records the ordered migration filenames and the minimum/target schema range read from `DatabaseSchema.ExpectedVersion`; the current range is `1 -> 1`.
+
+Packaging only copies and validates SQL. It never connects to PostgreSQL, executes baseline/bootstrap/migrations, creates a database, or changes `schema_version`. Dumps, backups, logs, secrets and environment-specific credentials are forbidden. Deployment applies approved forward migrations with the administrative identity, reapplies reviewed runtime grants, and then starts Web/Worker in `ValidateOnly`.
+
 Current baseline:
 
 - application release: `v0.4.1-alpha`;
