@@ -2,6 +2,8 @@
 
 Сервис для сбора и обработки данных о товарах VARUS.
 
+Stage releases deploy only through `Scripts/deploy-stage.ps1`: validated ZIP/checksum, verified backup, optional explicit Development refresh, forward migrations with the deploy identity, Stage-only runtime grants, Web `ValidateOnly`/listener/health verification, and only then the explicitly selected Worker command. See `docs/stage-deployment.md`.
+
 ## Состав решения
 
 - `PriceCrawler.Domain` - доменные сущности и контракты.

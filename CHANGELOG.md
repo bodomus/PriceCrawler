@@ -6,6 +6,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 ### Added
+- MPC-83: guarded Stage deployment with package/hash validation, verified backup, explicit Development refresh, forward migrations, Stage-only runtime grants, safe `current` switching, Web health gating, Worker stabilization, dry-run, logs, and JSON reports.
 - Validated release-package contract with canonical NBGV/Git metadata, ordered migration inventory, safe Web/Crawler configuration staging, deterministic ZIP entry ordering, SHA-256 sidecar, forbidden-content checks, and behavioral packaging tests.
 - Separate non-superuser Stage/Production Web and Worker runtime-role provisioning with external secret inputs, least-privilege data/routine grants, active DDL-denial probes, and `ValidateOnly` host-start integration coverage.
 - Repeatable Test/Stage/Production provisioning via `scripts/initialize-database-environments.ps1`, including Docker/native PostgreSQL tooling, `-WhatIf`, guarded replacement, verified logical dumps, SHA-256 checksums, sanitized logs, and bootstrap reporting.

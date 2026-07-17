@@ -22,6 +22,11 @@ param(
     [string]$StageWorkerPasswordEnvironmentVariable = "PRICECRAWLER_STAGE_WORKER_DB_PASSWORD",
     [string]$ProductionWebPasswordEnvironmentVariable = "PRICECRAWLER_PROD_WEB_DB_PASSWORD",
     [string]$ProductionWorkerPasswordEnvironmentVariable = "PRICECRAWLER_PROD_WORKER_DB_PASSWORD"
+
+    ,[switch]$StageOnly
+    ,[switch]$ProductionOnly
+    ,[ValidateRange(1, 2147483647)]
+    [int]$ExpectedSchemaVersion = 1
 )
 
 Set-StrictMode -Version Latest
@@ -415,7 +420,7 @@ function Assert-RuntimeRoleSafety {
     }
 
     $version = Invoke-Psql -Database $Database -User $Role -Password $Password -Sql "select max(version) from schema_version;" -Description "ValidateOnly schema read as '$Role'"
-    if ($version -ne "1") {
+    if ($version -ne $ExpectedSchemaVersion.ToString()) {
         throw "Runtime role '$Role' read unexpected schema version '$version'."
     }
 
@@ -433,6 +438,10 @@ foreach ($entry in @(
     @{ Name = "ProductionWorkerRole"; Value = $ProductionWorkerRole }
 )) {
     Assert-SafeIdentifier -Value $entry.Value -Name $entry.Name
+}
+
+if ($StageOnly -and $ProductionOnly) {
+    throw "-StageOnly and -ProductionOnly cannot be combined. Omit both to provision both environments."
 }
 
 if ([string]::IsNullOrWhiteSpace($ObjectOwnerRole)) {
@@ -458,25 +467,32 @@ $roleSpecs = @(
     @{ Environment = "Production"; Host = "Web"; Database = $ProductionDatabase; Role = $ProductionWebRole; SecretVariable = $ProductionWebPasswordEnvironmentVariable },
     @{ Environment = "Production"; Host = "Worker"; Database = $ProductionDatabase; Role = $ProductionWorkerRole; SecretVariable = $ProductionWorkerPasswordEnvironmentVariable }
 )
+if ($StageOnly) {
+    $roleSpecs = @($roleSpecs | Where-Object Environment -eq "Stage")
+}
+elseif ($ProductionOnly) {
+    $roleSpecs = @($roleSpecs | Where-Object Environment -eq "Production")
+}
+$selectedDatabases = @($roleSpecs | ForEach-Object Database | Sort-Object -Unique)
 
 Invoke-Psql -Database "postgres" -User $AdminUser -Sql "select 1;" -Description "PostgreSQL connectivity check" | Out-Null
-foreach ($database in @($StageDatabase, $ProductionDatabase)) {
+foreach ($database in $selectedDatabases) {
     $exists = Invoke-Psql -Database "postgres" -User $AdminUser -Sql "select exists(select 1 from pg_database where datname=$(Quote-Literal $database));" -Description "Checking database '$database'"
     if ($exists -ne "t") {
         throw "Database '$database' does not exist. Runtime-role provisioning never creates or restores databases."
     }
     $version = Invoke-Psql -Database $database -User $AdminUser -Sql "select max(version) from schema_version;" -Description "Validating schema version for '$database'"
-    if ($version -ne "1") {
-        throw "Database '$database' has schema version '$version'; expected '1'. No migration or bootstrap was attempted."
+    if ($version -ne $ExpectedSchemaVersion.ToString()) {
+        throw "Database '$database' has schema version '$version'; expected '$ExpectedSchemaVersion'. No migration or bootstrap was attempted."
     }
 }
 
 if ($WhatIfPreference) {
     Write-Host "Runtime role provisioning dry run"
     Write-Host "Tool mode: $script:ResolvedToolMode"
-    Write-Host "Stage: $StageDatabase -> Web=$StageWebRole; Worker=$StageWorkerRole"
-    Write-Host "Production: $ProductionDatabase -> Web=$ProductionWebRole; Worker=$ProductionWorkerRole"
-    Write-Host "Credentials: required from the four named environment variables; values were not read or displayed."
+    if (-not $ProductionOnly) { Write-Host "Stage: $StageDatabase -> Web=$StageWebRole; Worker=$StageWorkerRole" }
+    if (-not $StageOnly) { Write-Host "Production: $ProductionDatabase -> Web=$ProductionWebRole; Worker=$ProductionWorkerRole" }
+    Write-Host "Credentials: required only for selected environment roles; values were not read or displayed."
     Write-Host "Planned validation: role attributes, ownership, ValidateOnly schema read, CREATE TABLE denial, ALTER TABLE denial."
     Write-Host "No role, grant, schema, database, or credential was changed because -WhatIf is active."
     return
@@ -487,15 +503,20 @@ foreach ($spec in $roleSpecs) {
     $script:RuntimePasswords += $spec.Password
 }
 
-if (-not $PSCmdlet.ShouldProcess("$StageDatabase and $ProductionDatabase", "Create/update four runtime login roles and apply non-DDL grants")) {
+$selectedTarget = $selectedDatabases -join " and "
+if (-not $PSCmdlet.ShouldProcess($selectedTarget, "Create/update selected runtime login roles and apply non-DDL grants")) {
     return
 }
 
 foreach ($spec in $roleSpecs) {
     New-OrUpdateRuntimeRole -Role $spec.Role -Password $spec.Password
 }
-Grant-EnvironmentRuntimeAccess -Database $StageDatabase -WebRole $StageWebRole -WorkerRole $StageWorkerRole
-Grant-EnvironmentRuntimeAccess -Database $ProductionDatabase -WebRole $ProductionWebRole -WorkerRole $ProductionWorkerRole
+if (-not $ProductionOnly) {
+    Grant-EnvironmentRuntimeAccess -Database $StageDatabase -WebRole $StageWebRole -WorkerRole $StageWorkerRole
+}
+if (-not $StageOnly) {
+    Grant-EnvironmentRuntimeAccess -Database $ProductionDatabase -WebRole $ProductionWebRole -WorkerRole $ProductionWorkerRole
+}
 
 foreach ($spec in $roleSpecs) {
     Assert-RuntimeRoleSafety -Database $spec.Database -Role $spec.Role -Password $spec.Password

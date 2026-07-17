@@ -264,6 +264,8 @@ artifacts\releases\PriceCrawler-v0.4.1.zip
 artifacts\releases\PriceCrawler-v0.4.1.zip.sha256
 ```
 
+Stage deployment after package creation is performed only by `Scripts/deploy-stage.ps1`. Use the normal, explicit Development-refresh, or non-mutating `-WhatIf` commands from `docs/stage-deployment.md`. The deploy verifies the sidecar/package, creates and verifies a Stage backup, applies forward-only migrations and Stage-only runtime grants, activates `current`, verifies Web port and `/health`, and only then starts Worker. Production and schema downgrade are unsupported.
+
 ---
 
 ## Правила релиза

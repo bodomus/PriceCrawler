@@ -237,3 +237,8 @@ Source: `Scripts/build-release.ps1`, `PriceCrawler.Web.Tests/ReleaseDatabasePack
 - Dumps, backups, logs, `.env`, `.pgpass`, graph databases, test results, plaintext secret-like configuration values and developer absolute paths are rejected.
 - Existing archives/checksums are not silently overwritten. Successful builds emit `PriceCrawler-<version>.zip` and `.zip.sha256` under `artifacts/releases/` by default.
 - Packaging does not open a database or execute SQL; migrations remain deployment artifacts.
+
+## MPC-83 Stage deployment
+
+- `Scripts/deploy-stage.ps1` now provides package/checksum/schema validation, verified Stage backup, explicit Development refresh, forward migrations, Stage-only least-privilege reprovisioning, immutable releases, safe `current`, owned PID lifecycle, Web listener/health gating, Worker stabilization, non-mutating dry-run, phase log, and JSON report.
+- Production targeting and schema downgrade are impossible by contract. Full operator guidance is in `docs/stage-deployment.md`.

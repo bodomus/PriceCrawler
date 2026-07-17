@@ -43,6 +43,10 @@ public sealed class DatabaseRuntimeRoleProvisioningScriptTests
         Assert.DoesNotContain("grant execute on routines to", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CREATE TABLE probe", script, StringComparison.Ordinal);
         Assert.Contains("ALTER TABLE probe", script, StringComparison.Ordinal);
+        Assert.Contains("StageOnly", script, StringComparison.Ordinal);
+        Assert.Contains("ProductionOnly", script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedSchemaVersion", script, StringComparison.Ordinal);
+        Assert.Contains("$selectedDatabases", script, StringComparison.Ordinal);
         Assert.DoesNotContain("InitializeProduction", script, StringComparison.Ordinal);
         Assert.DoesNotContain("0001_baseline.sql", script, StringComparison.OrdinalIgnoreCase);
     }

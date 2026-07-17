@@ -627,6 +627,8 @@ Production
 
 ## 14.2. Stage/Production runtime roles
 
+Normal Stage deployment is implemented by `Scripts/deploy-stage.ps1` and documented in `docs/stage-deployment.md`. It requires verified backup before refresh/migration, allows Development-to-Stage refresh only through an explicit switch, applies only forward migrations with the deploy identity, and then runs runtime provisioning with `-StageOnly`. Production-like targets, automatic restore, and schema downgrade are forbidden.
+
 После создания баз отдельный `scripts/provision-database-runtime-roles.ps1` создаёт четыре login-роли: `pricecrawler_stage_web`, `pricecrawler_stage_worker`, `pricecrawler_prod_web`, `pricecrawler_prod_worker`. Пароли читаются только из environment variables, заполняемых secret store; script parameters, repository files и logs их не содержат.
 
 Runtime-роли не являются superuser, не имеют `CREATEDB`, `CREATEROLE`, schema/database `CREATE`, ownership или migration permissions. Они получают только application table/sequence/routine grants, необходимые текущим Web/Worker paths. Deploy/object-owner identity остаётся отдельной и единственной выполняет forward migrations и DDL.

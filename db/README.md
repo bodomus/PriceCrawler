@@ -1,5 +1,7 @@
 # PriceCrawler database deployment
 
+Stage migration orchestration belongs to `Scripts/deploy-stage.ps1` (see `docs/stage-deployment.md`). It requires existing `schema_version`, never runs baseline/bootstrap, verifies a backup, forbids downgrade, and invokes packaged role provisioning with `-StageOnly` after schema work so runtime roles never receive migration/DDL authority and Production is untouched.
+
 PriceCrawler uses explicit forward-only database schema versions. Application version and database schema version are independent.
 
 ## Release package contract

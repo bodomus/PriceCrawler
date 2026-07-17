@@ -1,5 +1,7 @@
 # Initial database environment provisioning
 
+Initial provisioning is not a normal Stage release. Subsequent Stage deployments use `Scripts/deploy-stage.ps1` as documented in `docs/stage-deployment.md`: verified backup, optional explicit Development refresh, forward-only migrations, and reviewed runtime grants only for Stage. `provision-database-runtime-roles.ps1 -StageOnly -ExpectedSchemaVersion <target>` neither requires nor reads Production credentials during Stage deploy.
+
 `scripts/initialize-database-environments.ps1` is the supported one-time provisioning workflow for Test, Stage, and Production.
 
 ## Environment names
