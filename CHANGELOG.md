@@ -6,6 +6,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 ### Added
+- Repeatable Test/Stage/Production provisioning via `scripts/initialize-database-environments.ps1`, including Docker/native PostgreSQL tooling, `-WhatIf`, guarded replacement, verified logical dumps, SHA-256 checksums, sanitized logs, and bootstrap reporting.
+- One-time Production bootstrap protection through a durable database-level independence marker, initial verified backup, and permanent refusal of Development-to-Production overwrite.
+- Safe four-environment connection-string templates and PostgreSQL integration coverage for Test baseline policy, Stage snapshot restore, Production bootstrap, and second-attempt rejection.
 - Explicit `DatabaseSchemaStartupMode` (`Ensure` / `ValidateOnly`), separated initializer/validator/coordinator services, and a non-bypassable environment safety policy.
 - PostgreSQL and process-level coverage proving Stage/Production validation is read-only, works without DDL permission, blocks Web listening, and blocks Worker processing on failure.
 - Explicit database schema version `1`, immutable `0001_baseline.sql`, and validation-first existing-database bootstrap.

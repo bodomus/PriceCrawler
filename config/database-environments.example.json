@@ -1,0 +1,35 @@
+{
+  "Development": {
+    "ConnectionStrings": {
+      "Postgres": "Host=<development-host>;Port=<port>;Database=varprice;Username=<development-user>;Password=<secret>"
+    },
+    "DatabaseSchema": {
+      "StartupMode": "Ensure"
+    }
+  },
+  "Test": {
+    "ConnectionStrings": {
+      "Postgres": "Host=<test-host>;Port=<port>;Database=varprice_test;Username=<test-user>;Password=<secret>"
+    },
+    "DatabaseSchema": {
+      "StartupMode": "Ensure"
+    }
+  },
+  "Stage": {
+    "ConnectionStrings": {
+      "Postgres": "Host=<stage-host>;Port=<port>;Database=varprice_stage;Username=<stage-runtime-user>;Password=<secret>"
+    },
+    "DatabaseSchema": {
+      "StartupMode": "ValidateOnly"
+    }
+  },
+  "Production": {
+    "ConnectionStrings": {
+      "Postgres": "Host=<production-host>;Port=<port>;Database=varprice_prod;Username=<production-runtime-user>;Password=<secret>"
+    },
+    "DatabaseSchema": {
+      "StartupMode": "ValidateOnly"
+    }
+  }
+}
+

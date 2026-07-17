@@ -76,6 +76,14 @@ Validation is mandatory; there is no `ValidateOnStartup` disable switch. `Valida
 
 Stage and Production schema changes belong to deployment, not application startup.
 
+## Initial environment provisioning
+
+Use `scripts/initialize-database-environments.ps1`; see `docs/database-provisioning.md` for exact Docker and native commands. Test is recreated from `0001_baseline.sql` without Development data. Stage is initialized from a checksum-verified custom-format Development dump and is backed up before replacement. Production can be initialized from Development exactly once, receives a durable database-level independence marker, and gets an initial verified backup.
+
+> After initial bootstrap, Production must never be replaced from Development.
+
+The provisioning script has no Production replacement or generic force option. Future Production changes use approved forward migrations only.
+
 ## Configuration precedence
 
 The effective mode is resolved before the hard safety policy runs:

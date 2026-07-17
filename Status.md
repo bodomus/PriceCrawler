@@ -217,6 +217,8 @@ Source: `PriceCrawler.Infrastructure.Persistence.DatabaseSchemaStartupCoordinato
 - Newer schema: startup fails and requires a compatible application release.
 - Development/Test use the explicit `Ensure` mode and validate after initialization.
 - Stage/Staging and Production use `ValidateOnly`; a configured `Ensure` is rejected before database access.
+
+Environment provisioning: `scripts/initialize-database-environments.ps1` creates disposable Test from baseline, creates/replaces Stage from a verified Development logical dump with a pre-replacement backup, and performs a one-time Production bootstrap with a durable independence marker and initial backup. Production has no refresh/force path and moves forward through migrations only. Operator guide: `docs/database-provisioning.md`.
 - Web does not listen and Worker does not start crawler work until schema startup succeeds.
 - Validation-only startup succeeds for a runtime role without DDL permission.
 - Database schema downgrade is not supported.

@@ -476,6 +476,12 @@ order by id;
 - Missing, empty, older, or newer `schema_version` metadata stops startup with an operator-facing error.
 - Stage and Production schema changes belong to deployment, not application startup.
 - Release ZIPs include `db/migrations`, `db/scripts`, and `database.minimumSchemaVersion` / `targetSchemaVersion` in `release.json`.
+
+Initial Test/Stage/Production provisioning uses `scripts/initialize-database-environments.ps1` and is documented in `docs/database-provisioning.md`. Test is created from the baseline without Development business data; Stage receives a verified logical Development snapshot; Production receives that snapshot exactly once and is then protected by a durable independence marker.
+
+> After initial bootstrap, Production must never be replaced from Development.
+
+Connection-string placeholders for all four environments are in `config/database-environments.example.json`. Real credentials remain in external configuration or a secret store.
 - Detailed operator commands and safety rules: `db/README.md` and `docs/database-environments.md`.
 - Schema downgrade is not supported.
 

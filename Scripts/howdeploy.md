@@ -152,6 +152,10 @@ release.json
 
 > Stage and Production schema changes belong to deployment, not application startup.
 
+Первичное создание баз не является частью обычного release deploy. Перед первым Stage/Production deployment используйте `scripts/initialize-database-environments.ps1` по инструкции `docs/database-provisioning.md`. Production bootstrap допускается ровно один раз; после него Development dump больше никогда не применяется к Production.
+
+> After initial bootstrap, Production must never be replaced from Development.
+
 Проверить ZIP:
 
 ```powershell

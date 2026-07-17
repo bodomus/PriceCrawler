@@ -597,3 +597,21 @@ Production
 
 > Development определяет, какой структура должна стать.  
 > Migrations определяют, как Stage и Production безопасно к ней переходят.
+
+---
+
+# 14. Initial provisioning workflow
+
+Первичное создание Test, Stage и Production выполняется только через `scripts/initialize-database-environments.ps1`. Полные команды, dry-run, backup/restore и secret-handling описаны в `docs/database-provisioning.md`.
+
+- `varprice_test` пересоздаётся из `0001_baseline.sql` и по умолчанию не получает бизнес-данные Development;
+- `varprice_stage` получает проверенный logical dump Development; существующий Stage заменяется только с `-ReplaceExistingStage` после проверенного backup;
+- `varprice_prod` получает Development logical dump ровно один раз и только с `-ConfirmInitialProductionBootstrap`;
+- после Production bootstrap сохраняется durable database-level independence marker и создаётся initial Production backup с SHA-256;
+- повторный Development-to-Production bootstrap не поддерживается и блокируется по marker, `schema_version`, application objects и user tables;
+- provisioning identity и runtime identity различаются; Stage/Production runtime login не должен быть superuser и не получает schema mutation rights;
+- пароли не передаются параметрами скрипта и не попадают в logs/reports.
+
+> After initial bootstrap, Production must never be replaced from Development.
+
+После bootstrap Production изменяется только forward migrations deployment-процесса и штатной бизнес-логикой приложения.
