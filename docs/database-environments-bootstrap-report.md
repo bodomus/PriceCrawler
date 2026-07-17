@@ -46,10 +46,14 @@ Production was initialized exactly once from the verified Development logical du
 
 Future Production schema changes use forward migrations only.
 
+## Partial failure recovery policy
+
+The provisioning script does not automatically delete Stage or Production in error handling. A failed Stage replacement is rerun explicitly from the retained verified Development dump. A failed initial Production database may be deleted manually only after proving that it was created by the failed run, was never introduced into service, and has no independence marker. If the marker exists, Production is independent and must not be deleted or bootstrapped again. Exact environment-specific marker, deletion, and guarded rerun commands are emitted as `RECOVERY REQUIRED` by the failing run and documented in `docs/database-provisioning.md`.
+
 ## Remaining manual steps
 
-- Create environment-specific non-superuser login identities through the deployment secret store.
-- Apply approved runtime grants through the deployment process; do not rerun Production bootstrap.
+- Populate the four runtime password environment variables from the deployment secret store and run `scripts/provision-database-runtime-roles.ps1`; do not rerun Production bootstrap.
+- Inject distinct Web/Worker connection strings for `pricecrawler_stage_web`, `pricecrawler_stage_worker`, `pricecrawler_prod_web`, and `pricecrawler_prod_worker`.
 - Supply connection strings through external configuration; do not store credentials in the repository.
 - Apply future Stage/Production schema changes through deployment forward migrations before Web or Worker starts.
 

@@ -102,3 +102,8 @@ The Production independence marker should therefore use durable database-level m
 - Dump/backup artifacts and logs stay under ignored `artifacts/db/`.
 - Passwords are supplied through `.pgpass`, environment/deployment secret stores, or the container environment; never through script parameters or logs.
 
+## Follow-up: separate runtime identities
+
+The original bootstrap left runtime login creation as a manual deployment step. Source inspection confirms that Web is not read-only: `RunsController.IngestVegetables` invokes `RunCrawlerUseCase`, which uses the same security-invoker write routines and application tables as the Worker crawler path. Therefore both Web and Worker require application DML, but Web routine execution can be restricted to its crawler/read allowlist. Neither host needs ownership, database/schema creation, baseline, migration, bootstrap, or other DDL permissions.
+
+The safe follow-up is a separate idempotent role-provisioning script. It must not call the environment bootstrap script, must require four external password environment variables, must preserve deploy/object ownership, revoke PUBLIC schema/routine mutation paths, and actively verify `ValidateOnly` reads plus DDL denial on isolated databases before any real role provisioning.

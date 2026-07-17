@@ -615,3 +615,20 @@ Production
 > After initial bootstrap, Production must never be replaced from Development.
 
 После bootstrap Production изменяется только forward migrations deployment-процесса и штатной бизнес-логикой приложения.
+
+## 14.1. Recovery после частичного bootstrap
+
+При ошибке после начала Stage replacement или Production restore скрипт не удаляет базу автоматически. Он выводит `RECOVERY REQUIRED`, путь к проверенному Development dump и точную recovery-команду; полный порядок действий приведён в `docs/database-provisioning.md`.
+
+- неполный Stage повторно заменяется только оператором, с `-ReplaceExistingStage` и тем же `-VerifiedDevelopmentDumpPath`; сохранённый pre-replacement backup не удаляется;
+- failed initial Production database можно удалить вручную только после доказательства, что она никогда не вводилась в эксплуатацию, проверки отсутствия independence marker и подтверждения в логе, что базу создал именно неуспешный запуск скрипта;
+- если marker уже существует, Production считается самостоятельной: удаление и повторный bootstrap запрещены, восстанавливается только незавершённый post-marker шаг по отдельно проверенной процедуре;
+- если скрипт не создавал Production в текущем запуске, автоматическая recovery-команда удаления не формируется и требуется проверка DBA.
+
+## 14.2. Stage/Production runtime roles
+
+После создания баз отдельный `scripts/provision-database-runtime-roles.ps1` создаёт четыре login-роли: `pricecrawler_stage_web`, `pricecrawler_stage_worker`, `pricecrawler_prod_web`, `pricecrawler_prod_worker`. Пароли читаются только из environment variables, заполняемых secret store; script parameters, repository files и logs их не содержат.
+
+Runtime-роли не являются superuser, не имеют `CREATEDB`, `CREATEROLE`, schema/database `CREATE`, ownership или migration permissions. Они получают только application table/sequence/routine grants, необходимые текущим Web/Worker paths. Deploy/object-owner identity остаётся отдельной и единственной выполняет forward migrations и DDL.
+
+Скрипт не выполняет baseline/bootstrap/migrations и не изменяет `schema_version`. Для каждой роли обязательны read-only проверка version `1`, успешный `ValidateOnly` startup и отрицательные проверки `CREATE TABLE`/`ALTER TABLE`. После approved forward migration provisioning grants запускаются повторно для новых объектов.

@@ -156,6 +156,17 @@ release.json
 
 > After initial bootstrap, Production must never be replaced from Development.
 
+Перед запуском Stage/Production Web и Worker создайте отдельные runtime-роли командой `scripts/provision-database-runtime-roles.ps1` по процедуре из `docs/database-provisioning.md`. Credentials должны быть внедрены secret store в `ConnectionStrings__Postgres` отдельно для каждого процесса:
+
+```text
+Stage Web        -> pricecrawler_stage_web
+Stage Worker     -> pricecrawler_stage_worker
+Production Web   -> pricecrawler_prod_web
+Production Worker-> pricecrawler_prod_worker
+```
+
+Runtime connection string не должен использовать deploy/admin identity. После каждой forward migration повторно примените runtime grants; Web/Worker по-прежнему запускаются только с `DatabaseSchema__StartupMode=ValidateOnly`.
+
 Проверить ZIP:
 
 ```powershell

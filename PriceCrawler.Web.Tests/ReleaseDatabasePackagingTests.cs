@@ -36,6 +36,7 @@ public sealed class ReleaseDatabasePackagingTests
         Assert.Contains("targetSchemaVersion", script, StringComparison.Ordinal);
         Assert.Contains("DatabaseSchema.ExpectedVersion", script, StringComparison.Ordinal);
         Assert.Contains("Assert-ReleaseArchiveDatabaseAssets", script, StringComparison.Ordinal);
+        Assert.Contains("provision-database-runtime-roles.ps1", script, StringComparison.Ordinal);
     }
 
     [Fact]

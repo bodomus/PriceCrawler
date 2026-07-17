@@ -84,6 +84,10 @@ Use `scripts/initialize-database-environments.ps1`; see `docs/database-provision
 
 The provisioning script has no Production replacement or generic force option. Future Production changes use approved forward migrations only.
 
+Partial Stage/Production bootstrap failures are never deleted automatically. The script prints marker checks and an exact guarded rerun command using `-VerifiedDevelopmentDumpPath`; follow the audited recovery procedure in `docs/database-provisioning.md` before any manual Production deletion.
+
+Provision Stage/Production runtime identities separately with `scripts/provision-database-runtime-roles.ps1`. It creates distinct Web/Worker logins from externally supplied secret environment variables, grants application data/routine access without ownership or DDL rights, and verifies `ValidateOnly`, `CREATE TABLE` denial, and `ALTER TABLE` denial. It does not run bootstrap or migrations and must be rerun after an approved forward migration to cover new objects.
+
 ## Configuration precedence
 
 The effective mode is resolved before the hard safety policy runs:

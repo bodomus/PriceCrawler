@@ -479,6 +479,8 @@ order by id;
 
 Initial Test/Stage/Production provisioning uses `scripts/initialize-database-environments.ps1` and is documented in `docs/database-provisioning.md`. Test is created from the baseline without Development business data; Stage receives a verified logical Development snapshot; Production receives that snapshot exactly once and is then protected by a durable independence marker.
 
+Stage and Production use four separate non-superuser runtime identities provisioned by `scripts/provision-database-runtime-roles.ps1`: distinct Web and Worker roles for each environment. Credentials and complete runtime connection strings come from environment variables or the deployment secret store. Runtime roles run only with `ValidateOnly`, have no database/schema creation or object ownership, and are actively verified to reject `CREATE TABLE` and `ALTER TABLE`.
+
 > After initial bootstrap, Production must never be replaced from Development.
 
 Connection-string placeholders for all four environments are in `config/database-environments.example.json`. Real credentials remain in external configuration or a secret store.

@@ -60,10 +60,20 @@ Implement and execute the one-time environment provisioning workflow without cha
 
 9. Run post-change CRG/Graphify analysis, final build/tests, secret scan, and create `Review/review-MPC-81.md`.
 
+## Follow-up plan: runtime roles
+
+1. Add `scripts/provision-database-runtime-roles.ps1` as an operation independent from database bootstrap.
+2. Create four parameterized login roles with safe fixed defaults and passwords read only from named environment variables.
+3. Revoke database/schema creation and PUBLIC routine execution; preserve the separate deploy/object-owner identity.
+4. Grant current application table/sequence access, a Web routine allowlist, and the complete Worker operational routine catalog; configure safe default privileges.
+5. Verify attributes, ownership, schema version, `CREATE TABLE` denial, and `ALTER TABLE` denial.
+6. Update Web/Worker templates with distinct usernames and document secret-store connection-string injection.
+7. Add temporary PostgreSQL integration coverage that starts Stage/Production Web and Worker in `ValidateOnly` under the new roles.
+8. Do not execute Production bootstrap or change schema version.
+
 ## Expected blast radius
 
 - Direct: provisioning PowerShell script, its tests, environment connection templates, DB/deployment docs.
 - Operational: local Docker PostgreSQL databases `varprice_test`, `varprice_stage`, and new `varprice_prod`; ignored dump/backup/log artifacts.
 - Adjacent: Web/Worker startup smoke only; no runtime source changes expected.
 - No impact: Domain/Application contracts, EF mappings, routines, baseline version, crawler concurrency/queue behavior.
-

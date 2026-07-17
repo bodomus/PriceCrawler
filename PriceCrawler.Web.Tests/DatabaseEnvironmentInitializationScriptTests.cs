@@ -33,8 +33,19 @@ public sealed class DatabaseEnvironmentInitializationScriptTests
         Assert.Contains("$ReplaceExistingTest", script, StringComparison.Ordinal);
         Assert.Contains("$ReplaceExistingStage", script, StringComparison.Ordinal);
         Assert.Contains("$ConfirmInitialProductionBootstrap", script, StringComparison.Ordinal);
+        Assert.Contains("$VerifiedDevelopmentDumpPath", script, StringComparison.Ordinal);
+        Assert.Contains("$script:ProductionCreatedByCurrentRun", script, StringComparison.Ordinal);
+        Assert.Contains("$script:ProductionMarkerPersistedByCurrentRun", script, StringComparison.Ordinal);
+        Assert.Contains("$script:StageReplacementStartedByCurrentRun", script, StringComparison.Ordinal);
+        Assert.Contains("RECOVERY REQUIRED: initial Production", script, StringComparison.Ordinal);
+        Assert.Contains("No Production database was deleted automatically", script, StringComparison.Ordinal);
+        Assert.Contains("Get-RecoveryRerunCommand", script, StringComparison.Ordinal);
+        Assert.Contains("prove that '$ProductionDatabase' has never been successfully introduced into service", script, StringComparison.Ordinal);
+        Assert.Contains("provision-database-runtime-roles.ps1", script, StringComparison.Ordinal);
         Assert.Contains("initial_bootstrap_completed=true", script, StringComparison.Ordinal);
         Assert.Contains("Future Production changes must use forward migrations", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Remove-Database -Database $ProductionDatabase", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Grant-RuntimeAccess -Database $ProductionDatabase", script, StringComparison.Ordinal);
         Assert.DoesNotContain("[switch]$Force", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("[string]$Password", script, StringComparison.OrdinalIgnoreCase);
     }
@@ -100,6 +111,16 @@ public sealed class DatabaseEnvironmentInitializationScriptTests
 
             Assert.NotNull(connectionString);
             Assert.Contains($"Database={expectedDatabase};", connectionString, StringComparison.Ordinal);
+            var expectedRole = (environment, host) switch
+            {
+                ("Stage" or "Staging", "PriceCrawler.Web") => "pricecrawler_stage_web",
+                ("Stage" or "Staging", "PriceCrawler.Worker") => "pricecrawler_stage_worker",
+                ("Production", "PriceCrawler.Web") => "pricecrawler_prod_web",
+                ("Production", "PriceCrawler.Worker") => "pricecrawler_prod_worker",
+                _ => null
+            };
+            if (expectedRole is not null)
+                Assert.Contains($"Username={expectedRole};", connectionString, StringComparison.Ordinal);
             Assert.Equal(expectedMode, mode);
             if (environment is "Stage" or "Staging")
                 Assert.DoesNotContain("varprice_prod", connectionString, StringComparison.OrdinalIgnoreCase);
@@ -188,6 +209,31 @@ public sealed class DatabaseEnvironmentInitializationScriptTests
                 StringComparison.Ordinal);
             Assert.NotEmpty(Directory.GetFiles(artifacts, "*.dump", SearchOption.AllDirectories));
             Assert.NotEmpty(Directory.GetFiles(artifacts, "*.log", SearchOption.AllDirectories));
+
+            var verifiedDevelopmentDump = Directory.GetFiles(
+                    Path.Combine(artifacts, "bootstrap"),
+                    "*.dump",
+                    SearchOption.TopDirectoryOnly)
+                .Single();
+            var stageRecoveryRerun = await RunScriptAsync(
+                "-ToolMode", "Docker",
+                "-DockerContainer", container,
+                "-HostName", host,
+                "-Port", template.Port.ToString(),
+                "-AdminUser", adminUser,
+                "-InitializeStage",
+                "-ReplaceExistingStage",
+                "-VerifiedDevelopmentDumpPath", verifiedDevelopmentDump,
+                "-DevelopmentDatabase", source,
+                "-TestDatabase", test,
+                "-StageDatabase", stage,
+                "-ProductionDatabase", production,
+                "-ArtifactsRoot", artifacts,
+                "-ReportPath", report);
+
+            Assert.True(stageRecoveryRerun.ExitCode == 0, stageRecoveryRerun.CombinedOutput);
+            Assert.Contains("Reusing explicitly supplied verified Development dump", stageRecoveryRerun.CombinedOutput, StringComparison.Ordinal);
+            Assert.Equal(1, await ScalarAsync<int>(ConnectionStringFor(template, stage), "select count(*) from product"));
 
             var secondProductionAttempt = await RunScriptAsync(
                 "-ToolMode", "Docker",

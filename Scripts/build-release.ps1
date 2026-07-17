@@ -162,6 +162,7 @@ function Assert-ReleaseArchiveDatabaseAssets {
         foreach ($requiredEntry in @(
             "db/migrations/0001_baseline.sql",
             "db/scripts/bootstrap-schema-version.sql",
+            "db/scripts/provision-database-runtime-roles.ps1",
             "release.json"
         )) {
             if ($requiredEntry -notin $entries) {
@@ -201,6 +202,7 @@ $databaseSchemaContractPath = Join-Path $repositoryRoot "PriceCrawler.Infrastruc
 $databaseMigrationsPath = Join-Path $repositoryRoot "db\migrations"
 $databaseScriptsPath = Join-Path $repositoryRoot "db\scripts"
 $databaseReadmePath = Join-Path $repositoryRoot "db\README.md"
+$runtimeRoleProvisioningScriptPath = Join-Path $repositoryRoot "scripts\provision-database-runtime-roles.ps1"
 
 $artifactsPath = Join-Path $repositoryRoot "artifacts"
 $publishRoot = Join-Path $artifactsPath "publish"
@@ -212,7 +214,7 @@ $packageRoot = Join-Path $releaseRoot "_package"
 
 Write-Step "Validating repository structure"
 
-foreach ($requiredPath in @($solutionPath, $webProjectPath, $workerProjectPath, $databaseSchemaContractPath)) {
+foreach ($requiredPath in @($solutionPath, $webProjectPath, $workerProjectPath, $databaseSchemaContractPath, $runtimeRoleProvisioningScriptPath)) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required file not found: $requiredPath"
     }
@@ -376,6 +378,10 @@ Or provide the version explicitly:
         -LiteralPath $databaseScriptsPath `
         -Destination (Join-Path $packageDatabasePath "scripts") `
         -Recurse `
+        -Force
+    Copy-Item `
+        -LiteralPath $runtimeRoleProvisioningScriptPath `
+        -Destination (Join-Path $packageDatabasePath "scripts\provision-database-runtime-roles.ps1") `
         -Force
     if (Test-Path -LiteralPath $databaseReadmePath -PathType Leaf) {
         Copy-Item -LiteralPath $databaseReadmePath -Destination $packageDatabasePath -Force

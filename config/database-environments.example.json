@@ -15,21 +15,36 @@
       "StartupMode": "Ensure"
     }
   },
-  "Stage": {
+  "StageWeb": {
     "ConnectionStrings": {
-      "Postgres": "Host=<stage-host>;Port=<port>;Database=varprice_stage;Username=<stage-runtime-user>;Password=<secret>"
+      "Postgres": "Host=<stage-host>;Port=<port>;Database=varprice_stage;Username=pricecrawler_stage_web;Password=<secret-from-environment-or-secret-store>"
     },
     "DatabaseSchema": {
       "StartupMode": "ValidateOnly"
     }
   },
-  "Production": {
+  "StageWorker": {
     "ConnectionStrings": {
-      "Postgres": "Host=<production-host>;Port=<port>;Database=varprice_prod;Username=<production-runtime-user>;Password=<secret>"
+      "Postgres": "Host=<stage-host>;Port=<port>;Database=varprice_stage;Username=pricecrawler_stage_worker;Password=<secret-from-environment-or-secret-store>"
+    },
+    "DatabaseSchema": {
+      "StartupMode": "ValidateOnly"
+    }
+  },
+  "ProductionWeb": {
+    "ConnectionStrings": {
+      "Postgres": "Host=<production-host>;Port=<port>;Database=varprice_prod;Username=pricecrawler_prod_web;Password=<secret-from-environment-or-secret-store>"
+    },
+    "DatabaseSchema": {
+      "StartupMode": "ValidateOnly"
+    }
+  },
+  "ProductionWorker": {
+    "ConnectionStrings": {
+      "Postgres": "Host=<production-host>;Port=<port>;Database=varprice_prod;Username=pricecrawler_prod_worker;Password=<secret-from-environment-or-secret-store>"
     },
     "DatabaseSchema": {
       "StartupMode": "ValidateOnly"
     }
   }
 }
-

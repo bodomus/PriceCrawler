@@ -170,12 +170,15 @@ Production  -> varprice_prod / ValidateOnly
 | PowerShell AST parser | success |
 | JSON parsing, 11 environment/config files | success |
 | Provisioning focused tests | 8/8 |
-| Schema/config/process/release focused tests | 62/62 |
+| Runtime-role provisioning tests | 2/2; four roles, host startup, DDL denial, Web/Worker separation |
+| Schema/config/process/release/runtime focused tests | 64/64 |
 | `WorkerIntegrationTests` | 23/23 |
 | `dotnet restore PriceCrawler.sln` | success |
 | Release solution build | success, 0 warnings / 0 errors |
-| Full Release solution tests | 311/311: Web 290, Worker 21 |
+| Full Release solution tests | 313/313: Web 292, Worker 21 |
+| Release archive with runtime-role script | success; `db/scripts/provision-database-runtime-roles.ps1` present |
 | Temporary Docker Test/Stage/Production integration workflow | success; cleanup confirmed |
+| Recovery rerun from `-VerifiedDevelopmentDumpPath` | success; Stage restored and verified from retained dump |
 | Actual database list/version/object/count verification | success |
 | Actual second Production bootstrap refusal | success, exit 1, no data change |
 | Stage Web `ValidateOnly` smoke | HTTP 200, expected=actual=1 |
@@ -190,19 +193,48 @@ Worker не запускался с crawler-командой против Stage/
 
 ## Оставшиеся manual deployment steps
 
-В PostgreSQL сейчас имеется только login/superuser `var`. Он использован как provisioning identity и владеет созданными базами, но не должен стать штатным Web/Worker runtime identity.
+В PostgreSQL сейчас имеется только login/superuser `var`. Он использован как provisioning/object-owner identity и не должен стать штатным Web/Worker runtime identity. Четыре runtime password environment variables в текущей операторской сессии отсутствуют, поэтому реальные роли не создавались с вымышленными или потерянными credentials.
 
 До реального Stage/Production application deployment необходимо:
 
-1. создать через внешний secret/deployment process non-superuser runtime logins;
-2. выдать им только approved connect/data/sequence/routine grants без schema `CREATE`;
-3. передать реальные connection strings через secret store/environment configuration;
+1. заполнить четыре документированные password environment variables из внешнего secret store;
+2. выполнить `scripts/provision-database-runtime-roles.ps1` и сохранить audit output;
+3. передать разные Web/Worker connection strings через secret store/environment configuration;
 4. не запускать Production bootstrap повторно;
 5. применять будущие Production schema changes только forward migrations.
 
-Этот шаг сознательно не автоматизирован без заданных имён/секретов. Provisioning script может применить grants к заранее созданной explicit non-superuser role при первоначальном запуске, но никогда не создаёт login/password.
+Скрипт и grants полностью реализованы и проверены на временных PostgreSQL databases. Применение к реальным Stage/Production ожидает только внешние secret values; повторный Production bootstrap для этого не используется.
 
 ## Итог
 
+### Дополнение: recovery после частичного сбоя
+
+После ревью добавлен штатный операторский recovery-path без ослабления guards:
+
+- скрипт отслеживает, создавалась ли Production текущим запуском, начался ли restore и был ли записан independence marker;
+- marker записывается только после успешной проверки schema version, critical objects и row counts;
+- при ошибке выводятся `RECOVERY REQUIRED`, команда проверки marker, ручные команды удаления только failed initial Production и точный повторный запуск с `-VerifiedDevelopmentDumpPath`;
+- Production не удаляется автоматически; если базу не создавал текущий запуск или marker уже существует, команда удаления не предлагается;
+- для неполного Stage сохраняются pre-replacement backup и verified Development dump, после чего оператор может явно повторить guarded replacement;
+- в документацию добавлены полная процедура и сохранение `-WhatIf`-вывода через `Tee-Object`.
+
+### Дополнение: отдельные runtime-роли
+
+Добавлен независимый от bootstrap скрипт `scripts/provision-database-runtime-roles.ps1` для четырёх login identities: Stage/Production Web и Worker. Credentials читаются только из четырёх secret environment variables и передаются `psql` через stdin. Роли получают безопасные `NOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOINHERIT/NOREPLICATION/NOBYPASSRLS`, не владеют database/schema/application objects и не получают DDL.
+
+PUBLIC schema/routine mutation paths закрыты; deploy/object-owner identity остаётся отдельной. Web получает allowlist crawler/read routines, Worker — operational routine catalog. Обе роли получают необходимый текущему приложению table/sequence DML, поскольку Web `IngestVegetables` использует write pipeline. Скрипт сам проверяет version `1`, отказ `CREATE TABLE` и отказ `ALTER TABLE`, не выполняя baseline, migration, bootstrap или изменение `schema_version`.
+
 Все database-provisioning acceptance criteria, не требующие внешних runtime credentials, выполнены. Test, Stage и Production физически созданы и проверены; Test не содержит Development data; Stage/Production counts совпадают с source snapshot; Production independent, backed up и защищена от повторного Development overwrite. Schema version, baseline и runtime C# contracts не изменялись.
 
+### Дополнение после возобновления: строгий least privilege
+
+Повторная проверка исходного промпта выявила избыточные grants: Worker получал права на все текущие и будущие таблицы, sequences и routines, а Web — чтение всех таблиц. Реализация ужесточена:
+
+- Web и Worker получают явные allow-list’ы таблиц, sequences и routines, соответствующие их текущим путям выполнения;
+- `schema_version` доступна runtime-ролям только для чтения, `db_routine_script` недоступна;
+- runtime-роли не получают default privileges на будущие объекты; после forward migration provisioning-скрипт должен быть повторно запущен с обновлёнными проверенными allow-list’ами;
+- у runtime-ролей отзываются существующие memberships, чтобы исключить обход ограничений через `SET ROLE`;
+- PUBLIC-доступ к application tables, sequences и routines отзывается;
+- интеграционный тест дополнительно проверяет отсутствие Web-доступа к `product_catalog`, Worker-доступа к `db_routine_script` и Worker UPDATE к `schema_version`.
+
+После изменения выполнены PowerShell AST parse, 16 unit tests, CRG incremental update и изолированный PostgreSQL integration test. Последний подтвердил provisioning четырёх ролей, успешный запуск Stage/Production Web и Worker в `ValidateOnly`, а также отказ `CREATE TABLE` и `ALTER TABLE`. Реальные Stage/Production базы и Production bootstrap не запускались; schema version осталась `1`.

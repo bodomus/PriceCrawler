@@ -41,6 +41,8 @@ param(
 
     [string]$ProductionRuntimeRole,
 
+    [string]$VerifiedDevelopmentDumpPath,
+
     [string]$ArtifactsRoot,
 
     [string]$ReportPath
@@ -53,6 +55,13 @@ $script:Timestamp = [DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss")
 $script:LogPath = $null
 $script:ResolvedToolMode = $null
 $script:FailureLogged = $false
+$script:RecoveryLogged = $false
+$script:RecoveryDevelopmentDumpPath = $null
+$script:StageReplacementStartedByCurrentRun = $false
+$script:StageBootstrapCompletedByCurrentRun = $false
+$script:ProductionCreatedByCurrentRun = $false
+$script:ProductionRestoreStartedByCurrentRun = $false
+$script:ProductionMarkerPersistedByCurrentRun = $false
 $script:ArtifactRecords = [System.Collections.Generic.List[object]]::new()
 $script:EnvironmentResults = [System.Collections.Generic.List[object]]::new()
 $script:CriticalTables = @(
@@ -108,6 +117,86 @@ function Write-FailureOnce {
     if (-not $script:FailureLogged) {
         $script:FailureLogged = $true
         Write-OperatorLog "Database environment initialization failed. $Message" "ERROR"
+    }
+}
+
+function Get-RecoveryRerunCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Stage", "Production")]
+        [string]$EnvironmentName
+    )
+
+    $toolArguments = "-ToolMode $script:ResolvedToolMode"
+    if ($script:ResolvedToolMode -eq "Docker") {
+        $toolArguments += " -DockerContainer `"$DockerContainer`""
+    }
+
+    $operationArguments = if ($EnvironmentName -eq "Production") {
+        "-InitializeProduction -ConfirmInitialProductionBootstrap"
+    }
+    else {
+        "-InitializeStage -ReplaceExistingStage"
+    }
+
+    return ".\scripts\initialize-database-environments.ps1 $toolArguments -HostName `"$HostName`" -Port $Port -AdminUser `"$AdminUser`" -DevelopmentDatabase `"$DevelopmentDatabase`" -TestDatabase `"$TestDatabase`" -StageDatabase `"$StageDatabase`" -ProductionDatabase `"$ProductionDatabase`" $operationArguments -VerifiedDevelopmentDumpPath `"$script:RecoveryDevelopmentDumpPath`""
+}
+
+function Write-PartialFailureRecoveryOnce {
+    if ($script:RecoveryLogged) {
+        return
+    }
+
+    $hasStageRecovery = $script:StageReplacementStartedByCurrentRun -and -not $script:StageBootstrapCompletedByCurrentRun
+    $hasProductionRecovery = $script:ProductionRestoreStartedByCurrentRun
+    if (-not $hasStageRecovery -and -not $hasProductionRecovery) {
+        return
+    }
+
+    $script:RecoveryLogged = $true
+
+    if ($hasStageRecovery) {
+        Write-OperatorLog "RECOVERY REQUIRED: Stage replacement started but did not complete. The current '$StageDatabase' database may be partial. No Stage database was deleted automatically by error handling." "ERROR"
+        Write-OperatorLog "Verified Development dump for Stage recovery: $script:RecoveryDevelopmentDumpPath" "ERROR"
+        if (Test-Path -LiteralPath $stageBackupPath -PathType Leaf) {
+            Write-OperatorLog "Previous Stage backup retained for rollback: $stageBackupPath" "ERROR"
+        }
+        Write-OperatorLog "After operator review, rerun the guarded Stage restore from the same verified dump:" "ERROR"
+        Write-OperatorLog (Get-RecoveryRerunCommand -EnvironmentName "Stage") "ERROR"
+    }
+
+    if ($hasProductionRecovery -and -not $script:ProductionMarkerPersistedByCurrentRun) {
+        Write-OperatorLog "RECOVERY REQUIRED: initial Production restore/validation failed before the independence marker was persisted. No Production database was deleted automatically." "ERROR"
+        Write-OperatorLog "Before deletion, an authorized operator must prove that '$ProductionDatabase' has never been successfully introduced into service and confirm that the independence marker is absent." "ERROR"
+
+        $markerSql = "select coalesce(shobj_description(oid,'pg_database'),'') from pg_database where datname='$ProductionDatabase';"
+        if ($script:ResolvedToolMode -eq "Docker") {
+            Write-OperatorLog "Marker check: docker exec `"$DockerContainer`" psql --username `"$AdminUser`" --dbname postgres --command `"$markerSql`"" "ERROR"
+        }
+        else {
+            Write-OperatorLog "Marker check: psql --host `"$HostName`" --port $Port --username `"$AdminUser`" --dbname postgres --command `"$markerSql`"" "ERROR"
+        }
+
+        if ($script:ProductionCreatedByCurrentRun) {
+            Write-OperatorLog "The failed Production database was created by this script run. Only after the audit proof above, remove that failed bootstrap database manually:" "ERROR"
+            $terminateSql = "select pg_terminate_backend(pid) from pg_stat_activity where datname='$ProductionDatabase' and pid<>pg_backend_pid();"
+            if ($script:ResolvedToolMode -eq "Docker") {
+                Write-OperatorLog "docker exec `"$DockerContainer`" psql --username `"$AdminUser`" --dbname postgres --command `"$terminateSql`"" "ERROR"
+                Write-OperatorLog "docker exec `"$DockerContainer`" dropdb --username `"$AdminUser`" `"$ProductionDatabase`"" "ERROR"
+            }
+            else {
+                Write-OperatorLog "psql --host `"$HostName`" --port $Port --username `"$AdminUser`" --dbname postgres --command `"$terminateSql`"" "ERROR"
+                Write-OperatorLog "dropdb --host `"$HostName`" --port $Port --username `"$AdminUser`" `"$ProductionDatabase`"" "ERROR"
+            }
+            Write-OperatorLog "Then repeat the guarded bootstrap from the same verified dump:" "ERROR"
+            Write-OperatorLog (Get-RecoveryRerunCommand -EnvironmentName "Production") "ERROR"
+        }
+        else {
+            Write-OperatorLog "The script did not create the Production database in this run. Do not delete it using a generated command; escalate to a DBA for ownership/history verification." "ERROR"
+        }
+    }
+    elseif ($hasProductionRecovery -and $script:ProductionMarkerPersistedByCurrentRun) {
+        Write-OperatorLog "Production independence marker was already persisted before the later failure. Do not delete Production and do not rerun bootstrap. Treat Production as independent and complete the missing backup/verification step through a reviewed recovery procedure." "ERROR"
     }
 }
 
@@ -675,6 +764,12 @@ function Write-BootstrapReport {
     $lines.Add("## Restore command pattern")
     $lines.Add("")
     $lines.Add("Use ``pg_restore --exit-on-error --no-owner --no-privileges --dbname <empty-target> <verified-dump>`` with an authorized deployment identity. Never restore a Development dump over initialized Production.")
+    $lines.Add("")
+    $lines.Add("## Partial failure recovery")
+    $lines.Add("")
+    $lines.Add("The script never deletes Production automatically in error handling. If a Production database created by the current run fails before the independence marker is persisted, the operator log records the marker check, manual drop commands, retained verified dump, and exact guarded rerun command. Deletion is permitted only after proving that Production was never successfully introduced into service.")
+    $lines.Add("")
+    $lines.Add("If Stage replacement fails, the operator log records the partial target, verified Development dump, previous Stage backup when present, and exact guarded Stage rerun command. If Production fails after its marker is persisted, it is already independent: do not delete it and do not rerun bootstrap.")
 
     $parent = Split-Path -Parent $Path
     if ($parent -and -not (Test-Path -LiteralPath $parent)) {
@@ -711,6 +806,7 @@ function Show-DryRunPlan {
 
 trap {
     Write-FailureOnce -Message $_.Exception.Message
+    Write-PartialFailureRecoveryOnce
     break
 }
 
@@ -756,6 +852,13 @@ if ($initializeProductionEffective -and -not $ConfirmInitialProductionBootstrap)
     throw "Production initialization requires -ConfirmInitialProductionBootstrap. There is no force or replacement override."
 }
 
+if (-not [string]::IsNullOrWhiteSpace($VerifiedDevelopmentDumpPath) -and -not ($initializeStageEffective -or $initializeProductionEffective)) {
+    throw "-VerifiedDevelopmentDumpPath is valid only with Stage or Production initialization."
+}
+if (-not [string]::IsNullOrWhiteSpace($StageRuntimeRole) -or -not [string]::IsNullOrWhiteSpace($ProductionRuntimeRole)) {
+    throw "Combined Stage/Production runtime roles are no longer supported. Run scripts/provision-database-runtime-roles.ps1 after database provisioning to create separate Web and Worker identities."
+}
+
 if ([string]::IsNullOrWhiteSpace($ArtifactsRoot)) {
     $ArtifactsRoot = Join-Path $repositoryRoot "artifacts\db"
 }
@@ -776,7 +879,15 @@ $dumpDirectory = Join-Path $ArtifactsRoot "bootstrap"
 $stageBackupDirectory = Join-Path $ArtifactsRoot "backups\stage"
 $productionBackupDirectory = Join-Path $ArtifactsRoot "backups\production"
 $logDirectory = Join-Path $ArtifactsRoot "logs"
-$developmentDumpPath = Join-Path $dumpDirectory "varprice-dev-v1-$script:Timestamp.dump"
+if ([string]::IsNullOrWhiteSpace($VerifiedDevelopmentDumpPath)) {
+    $developmentDumpPath = Join-Path $dumpDirectory "varprice-dev-v1-$script:Timestamp.dump"
+}
+else {
+    if (-not [System.IO.Path]::IsPathRooted($VerifiedDevelopmentDumpPath)) {
+        $VerifiedDevelopmentDumpPath = Join-Path $repositoryRoot $VerifiedDevelopmentDumpPath
+    }
+    $developmentDumpPath = [System.IO.Path]::GetFullPath($VerifiedDevelopmentDumpPath)
+}
 $stageBackupPath = Join-Path $stageBackupDirectory "varprice-stage-before-bootstrap-$script:Timestamp.dump"
 $productionBackupPath = Join-Path $productionBackupDirectory "varprice-prod-initial-v1-$script:Timestamp.dump"
 $script:LogPath = Join-Path $logDirectory "initialize-database-environments-$script:Timestamp.log"
@@ -832,9 +943,14 @@ try {
     $developmentDump = $null
     if ($initializeStageEffective -or $initializeProductionEffective) {
         Assert-DevelopmentQuiescent -Database $DevelopmentDatabase
-        if ($PSCmdlet.ShouldProcess($DevelopmentDatabase, "Create verified logical bootstrap dump")) {
+        if (-not [string]::IsNullOrWhiteSpace($VerifiedDevelopmentDumpPath)) {
+            $developmentDump = Assert-DumpFile -Path $developmentDumpPath -Kind "Reused verified Development bootstrap"
+            Write-OperatorLog "Reusing explicitly supplied verified Development dump for recovery. Path=$($developmentDump.Path); Development schema/count validation still applies."
+        }
+        elseif ($PSCmdlet.ShouldProcess($DevelopmentDatabase, "Create verified logical bootstrap dump")) {
             $developmentDump = New-LogicalDump -Database $DevelopmentDatabase -Path $developmentDumpPath -Kind "Development bootstrap"
         }
+        $script:RecoveryDevelopmentDumpPath = $developmentDump.Path
     }
 
     if ($initializeTestEffective -and $PSCmdlet.ShouldProcess($TestDatabase, "Recreate disposable Test database from baseline")) {
@@ -860,15 +976,19 @@ try {
         if ($stageExists) {
             New-LogicalDump -Database $StageDatabase -Path $stageBackupPath -Kind "Stage pre-bootstrap backup" | Out-Null
             Write-OperatorLog "Destructive Stage replacement authorized after verified backup. Database=$StageDatabase" "WARN"
+            $script:StageReplacementStartedByCurrentRun = $true
             Remove-Database -Database $StageDatabase
+        }
+        else {
+            $script:StageReplacementStartedByCurrentRun = $true
         }
         New-Database -Database $StageDatabase
         Restore-LogicalDump -Database $StageDatabase -Path $developmentDump.Path
-        Grant-RuntimeAccess -Database $StageDatabase -Role $StageRuntimeRole
         $version = Assert-DatabaseSchema -Database $StageDatabase -ExpectedVersion $schemaContract.Version
         $counts = Get-RowCounts -Database $StageDatabase
         Assert-RowCountsEqual -Expected $developmentCounts -Actual $counts -EnvironmentName "Stage"
         Add-EnvironmentResult -Environment "Stage" -Database $StageDatabase -SchemaVersion $version -RowCounts $counts -DataPolicy "initial consistent Development logical snapshot"
+        $script:StageBootstrapCompletedByCurrentRun = $true
         Write-OperatorLog "Stage initialization succeeded. Database=$StageDatabase; SchemaVersion=$version; RowCountsMatch=true"
     }
 
@@ -877,13 +997,15 @@ try {
         Assert-ProductionCanInitialize -Database $ProductionDatabase
         if (-not (Test-DatabaseExists -Database $ProductionDatabase)) {
             New-Database -Database $ProductionDatabase
+            $script:ProductionCreatedByCurrentRun = $true
         }
+        $script:ProductionRestoreStartedByCurrentRun = $true
         Restore-LogicalDump -Database $ProductionDatabase -Path $developmentDump.Path
-        Set-ProductionMarker -Database $ProductionDatabase -SchemaVersion $schemaContract.Version -ApplicationVersion $schemaContract.ApplicationVersion
-        Grant-RuntimeAccess -Database $ProductionDatabase -Role $ProductionRuntimeRole
         $version = Assert-DatabaseSchema -Database $ProductionDatabase -ExpectedVersion $schemaContract.Version
         $counts = Get-RowCounts -Database $ProductionDatabase
         Assert-RowCountsEqual -Expected $developmentCounts -Actual $counts -EnvironmentName "Production"
+        Set-ProductionMarker -Database $ProductionDatabase -SchemaVersion $schemaContract.Version -ApplicationVersion $schemaContract.ApplicationVersion
+        $script:ProductionMarkerPersistedByCurrentRun = $true
         $marker = Get-ProductionMarker -Database $ProductionDatabase
         if ($marker -notmatch 'initial_bootstrap_completed=true') {
             throw "Production independence marker was not persisted."
@@ -898,5 +1020,6 @@ try {
 }
 catch {
     Write-FailureOnce -Message $_.Exception.Message
+    Write-PartialFailureRecoveryOnce
     throw
 }

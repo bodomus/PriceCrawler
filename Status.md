@@ -219,6 +219,8 @@ Source: `PriceCrawler.Infrastructure.Persistence.DatabaseSchemaStartupCoordinato
 - Stage/Staging and Production use `ValidateOnly`; a configured `Ensure` is rejected before database access.
 
 Environment provisioning: `scripts/initialize-database-environments.ps1` creates disposable Test from baseline, creates/replaces Stage from a verified Development logical dump with a pre-replacement backup, and performs a one-time Production bootstrap with a durable independence marker and initial backup. Production has no refresh/force path and moves forward through migrations only. Operator guide: `docs/database-provisioning.md`.
+
+Runtime database access: `scripts/provision-database-runtime-roles.ps1` independently provisions `pricecrawler_stage_web`, `pricecrawler_stage_worker`, `pricecrawler_prod_web`, and `pricecrawler_prod_worker` from external secret environment variables. These roles are non-superuser, non-owner, non-DDL identities; Web/Worker remain `ValidateOnly`, and automated PostgreSQL/process tests verify successful startup plus `CREATE TABLE`/`ALTER TABLE` denial.
 - Web does not listen and Worker does not start crawler work until schema startup succeeds.
 - Validation-only startup succeeds for a runtime role without DDL permission.
 - Database schema downgrade is not supported.
