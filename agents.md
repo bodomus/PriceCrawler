@@ -22,6 +22,39 @@ implementation-planning, database change, deployment change, or code review:
 For spelling, formatting, comment-only, or metadata-only changes, the full graph
 preflight may be skipped when graph context cannot affect correctness.
 
+## Database environments
+
+Before making any changes related to:
+
+- database schema;
+- migrations;
+- connection strings;
+- Development, Test, Stage, or Production databases;
+- deployment scripts;
+- backup or restore;
+- Web or Worker startup configuration;
+
+read and follow:
+
+- `docs/database-environments.md`
+
+This document is the source of truth for database environment responsibilities,
+schema versioning, backup policy, deployment rules, and the no-downgrade policy.
+
+Do not:
+
+- copy Development data over an existing Production database;
+- modify Stage or Production schema automatically at application startup;
+- implement schema downgrade migrations;
+- bypass required Stage or Production backups;
+- connect Stage Worker to the Production database;
+- change these rules implicitly as part of another ticket.
+
+If a ticket requires changing the database environment model, update
+`docs/database-environments.md` explicitly as part of the ticket.
+
+
+
 ## Project scope
 
 This repository contains VARUS Price Crawler / PriceCrawler.

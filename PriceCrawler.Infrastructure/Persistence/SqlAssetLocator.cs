@@ -5,17 +5,20 @@ public static class SqlAssetLocator
     public static string ResolveSchemaPath()
         => ResolveFile("schema.sql");
 
+    public static string ResolveBaselinePath()
+        => ResolveFile("db", "migrations", "0001_baseline.sql");
+
     public static string ResolveRoutineScriptsDirectory()
         => ResolveDirectory("db", "routines");
 
-    private static string ResolveFile(string fileName)
+    private static string ResolveFile(params string[] segments)
     {
         foreach (var candidate in GetCandidates())
         {
             var directory = new DirectoryInfo(candidate);
             while (directory is not null)
             {
-                var filePath = Path.Combine(directory.FullName, fileName);
+                var filePath = Path.Combine([directory.FullName, .. segments]);
                 if (File.Exists(filePath))
                 {
                     return filePath;
@@ -25,7 +28,7 @@ public static class SqlAssetLocator
             }
         }
 
-        throw new FileNotFoundException($"Could not locate {fileName}.");
+        throw new FileNotFoundException($"Could not locate {Path.Combine(segments)}.");
     }
 
     private static string ResolveDirectory(params string[] segments)

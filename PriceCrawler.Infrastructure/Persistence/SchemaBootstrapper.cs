@@ -33,7 +33,7 @@ public sealed class SchemaBootstrapper(PriceCrawlerDbContext dbContext, ILogger<
                 await DropLegacyTablesAsync(connection, transaction, ct);
                 await transaction.CommitAsync(ct);
 
-                log.LogInformation("Schema ensured");
+                log.LogInformation("Existing Development/Test database ensure operations completed");
                 return;
             }
             catch (Exception ex)

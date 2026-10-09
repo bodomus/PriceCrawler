@@ -30,6 +30,16 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPgConnectionFactory, PgConnectionFactory>();
         services.AddScoped<SchemaBootstrapper>();
+        services.AddScoped<DatabaseSchemaInitializer>();
+        services.AddScoped<DatabaseSchemaVersionReader>();
+        services.AddScoped<DatabaseSchemaValidator>();
+        services.AddScoped<DatabaseSchemaStartupCoordinator>();
+        services.AddOptions<DatabaseSchemaOptions>()
+            .Bind(configuration.GetSection(DatabaseSchemaOptions.SectionName))
+            .Validate(
+                value => Enum.IsDefined(value.StartupMode),
+                $"{DatabaseSchemaOptions.SectionName}:StartupMode is invalid.")
+            .ValidateOnStart();
         services.AddScoped<PgRoutineExecutor>();
 
         services.AddScoped<ICrawlerRunRepository, PgCrawlerRunRepository>();

@@ -4,6 +4,22 @@
 > PriceCrawler ticket, bugfix, feature, refactor, database change, deployment change,
 > investigation, implementation-planning task, or code review.
 
+### Database and deployment context check
+
+If the ticket touches database structure, migrations, configuration, deployment,
+backup, restore, Stage, or Production:
+
+1. Read `docs/database-environments.md`.
+2. Summarize the relevant constraints in the implementation plan.
+3. Verify that the proposed solution respects:
+   - forward-only schema migrations;
+   - no schema downgrade;
+   - Stage and Production backup requirements;
+   - Development as the source of new schema;
+   - migrations as the only normal way to update Production schema;
+   - no automatic schema mutation on Stage or Production startup.
+4. If the document conflicts with the ticket, stop and report the conflict before implementation.
+
 ## 0. Authority and purpose
 
 This workflow defines how the repository must be investigated, changed, and validated.

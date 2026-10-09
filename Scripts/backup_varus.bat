@@ -29,6 +29,10 @@ if errorlevel 1 (
 
 echo Backup successfully created:
 echo %BACKUP_DIR%\%BACKUP_NAME%_%CURDATE%.backup
+set "BACKUP_FILE=%BACKUP_DIR%\%BACKUP_NAME%_%CURDATE%.backup"
+
+for %%F in ("%BACKUP_FILE%") do echo File size: %%~zF bytes
+
 
 endlocal
 pause

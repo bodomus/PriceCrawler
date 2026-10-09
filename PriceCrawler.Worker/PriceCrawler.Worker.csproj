@@ -16,9 +16,13 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.4" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="appsettings.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Update="appsettings*.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Update="config\url-filters.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
       <Content Include="..\schema.sql" Link="schema.sql">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+          <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+      <Content Include="..\db\migrations\0001_baseline.sql" Link="db\migrations\0001_baseline.sql">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
           <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </Content>

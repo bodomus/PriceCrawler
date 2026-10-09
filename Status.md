@@ -206,3 +206,39 @@ Important:
 - These are UI/API result statuses for the explicit manual live check.
 - They are not stored in `price_snapshot` or `crawler_run`.
 - A manual live refresh does not create a new snapshot automatically.
+
+## 9. Database schema compatibility status
+
+Source: `PriceCrawler.Infrastructure.Persistence.DatabaseSchemaStartupCoordinator`.
+
+- Compatible: `schema_version` exists and `max(version)` equals `DatabaseSchema.ExpectedVersion` (`1`).
+- Missing metadata: startup fails and instructs the operator to run baseline/bootstrap.
+- Older schema: startup fails and instructs the operator to apply forward migrations.
+- Newer schema: startup fails and requires a compatible application release.
+- Development/Test use the explicit `Ensure` mode and validate after initialization.
+- Stage/Staging and Production use `ValidateOnly`; a configured `Ensure` is rejected before database access.
+
+Environment provisioning: `scripts/initialize-database-environments.ps1` creates disposable Test from baseline, creates/replaces Stage from a verified Development logical dump with a pre-replacement backup, and performs a one-time Production bootstrap with a durable independence marker and initial backup. Production has no refresh/force path and moves forward through migrations only. Operator guide: `docs/database-provisioning.md`.
+
+Runtime database access: `scripts/provision-database-runtime-roles.ps1` independently provisions `pricecrawler_stage_web`, `pricecrawler_stage_worker`, `pricecrawler_prod_web`, and `pricecrawler_prod_worker` from external secret environment variables. These roles are non-superuser, non-owner, non-DDL identities; Web/Worker remain `ValidateOnly`, and automated PostgreSQL/process tests verify successful startup plus `CREATE TABLE`/`ALTER TABLE` denial.
+- Web does not listen and Worker does not start crawler work until schema startup succeeds.
+- Validation-only startup succeeds for a runtime role without DDL permission.
+- Database schema downgrade is not supported.
+
+## 10. Release package compatibility status
+
+Source: `Scripts/build-release.ps1`, `PriceCrawler.Web.Tests/ReleaseDatabasePackagingTests`.
+
+- Default application version comes from Nerdbank.GitVersioning; `release.json` records the exact 40-character Git commit and normalized UTC build timestamp.
+- The migration inventory is validated for filename format, unique/contiguous ordering, baseline/bootstrap metadata and equality with `DatabaseSchema.ExpectedVersion`.
+- Current release schema compatibility is `minimum=1`, `target=1`; no schema version was changed by MPC-82.
+- ZIP root is limited to `web/`, `crawler/`, `db/`, and `release.json`; host copies of legacy DB initialization assets and Development/Test appsettings are removed from release staging.
+- Base packaged connection strings are sanitized to placeholders. Stage/Staging/Production templates must remain `ValidateOnly`.
+- Dumps, backups, logs, `.env`, `.pgpass`, graph databases, test results, plaintext secret-like configuration values and developer absolute paths are rejected.
+- Existing archives/checksums are not silently overwritten. Successful builds emit `PriceCrawler-<version>.zip` and `.zip.sha256` under `artifacts/releases/` by default.
+- Packaging does not open a database or execute SQL; migrations remain deployment artifacts.
+
+## MPC-83 Stage deployment
+
+- `Scripts/deploy-stage.ps1` now provides package/checksum/schema validation, verified Stage backup, explicit Development refresh, forward migrations, Stage-only least-privilege reprovisioning, immutable releases, safe `current`, owned PID lifecycle, Web listener/health gating, Worker stabilization, non-mutating dry-run, phase log, and JSON report.
+- Production targeting and schema downgrade are impossible by contract. Full operator guidance is in `docs/stage-deployment.md`.

@@ -100,8 +100,13 @@ product_catalog
 - `PgPriceCollectQueueRepository` executes queue enqueue/reserve/retry/dead/reap/stats through DB routines,
   preserving `FOR UPDATE SKIP LOCKED`, lease handling, and queue statistics semantics.
 - `price_collect_queue.product_catalog_id` links queue rows back to catalog rows for scheduling updates.
-- `SchemaBootstrapper` ensures required tables/indexes, applies versioned SQL routine scripts from `db/routines`,
-  tracks them in `db_routine_script`, and migrates legacy tables into the normalized schema.
+- `DatabaseSchemaStartupCoordinator` is shared by Web and Worker. It applies the environment safety policy before
+  database access, routes Development/Test `Ensure` through `DatabaseSchemaInitializer`, and routes
+  Stage/Staging/Production `ValidateOnly` directly to the read-only `DatabaseSchemaValidator`.
+- `DatabaseSchemaInitializer` creates an empty Development/Test database from `0001_baseline.sql`; for an existing
+  approved Development/Test database it delegates to `SchemaBootstrapper`, which ensures tables/indexes, applies
+  `db/routines`, tracks them in `db_routine_script`, and migrates legacy tables.
+- `DatabaseSchemaVersionReader` is the only validation data source and issues no DDL or DML.
 - `PgRoutineExecutor` provides reusable function/procedure invocation helpers for future write-side DB routines.
 - HTTP adapters: `SitemapReader`, `VarusProductCardExtractor`.
 - Composition root extension: `AddPriceCrawlerInfrastructure(configuration)`.
@@ -113,12 +118,14 @@ product_catalog
 - The product analytics panel is aggregated through `IProductAnalysisService`, which returns a unified payload for
   product card, history, and chart analytics by `snapshotId`.
 - Manual live product refresh reuses `IProductCardExtractor` explicitly from the web layer, but stays read-only and does not persist a new snapshot by itself.
+- Database schema startup completes before `app.Run()`, so validation failure prevents the HTTP listener from opening.
 
 ### PriceCrawler.Worker
 - Standalone console runner.
 - Parses CLI args and invokes `RunCrawlerUseCase` for `vegetables`, `RefreshProductCatalogUseCase` for
   `catalog-refresh`, or `CollectProductPricesUseCase` for `collect-prices` / `--collect-prices`.
 - No web host required.
+- Database schema startup completes before command-start logging, use-case resolution, or crawler processing.
 
 ## Run observability
 

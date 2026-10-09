@@ -2,6 +2,8 @@
 
 Сервис для сбора и обработки данных о товарах VARUS.
 
+Stage releases deploy only through `Scripts/deploy-stage.ps1`: validated ZIP/checksum, verified backup, optional explicit Development refresh, forward migrations with the deploy identity, Stage-only runtime grants, Web `ValidateOnly`/listener/health verification, and only then the explicitly selected Worker command. See `docs/stage-deployment.md`.
+
 ## Состав решения
 
 - `PriceCrawler.Domain` - доменные сущности и контракты.
@@ -463,6 +465,46 @@ where run_id = :run_id
 order by id;
 ```
 
+## Database schema versioning
+
+- Canonical clean-database entry point: `db/migrations/0001_baseline.sql`.
+- Existing version `1` database registration: `db/scripts/bootstrap-schema-version.sql`.
+- Current expected schema version is centralized in `DatabaseSchema.ExpectedVersion` and is validated by both Web and Worker.
+- `DatabaseSchema:StartupMode=Ensure` initializes an empty Development/Test database from the baseline, or runs the approved existing-database ensure path, and then validates version `1`.
+- `DatabaseSchema:StartupMode=ValidateOnly` executes only read-only metadata queries.
+- Development and Test configure `Ensure`; Stage, Staging, and Production configure `ValidateOnly`.
+- A hard policy permits `Ensure` only in Development/Test. Environment-variable or Web command-line overrides cannot enable it elsewhere; startup aborts before database access.
+- Web validates before opening its listening port. Worker validates before resolving or executing crawler work.
+- Missing, empty, older, or newer `schema_version` metadata stops startup with an operator-facing error.
+- Stage and Production schema changes belong to deployment, not application startup.
+- Release ZIPs include `db/migrations`, `db/scripts`, and `database.minimumSchemaVersion` / `targetSchemaVersion` in `release.json`.
+
+Release packages are built with `scripts/build-release.ps1` into `artifacts/releases/`. The builder resolves the default application version from Nerdbank.GitVersioning, records the exact Git commit and UTC timestamp, validates numbered migrations against `DatabaseSchema.ExpectedVersion`, sanitizes packaged connection strings, rejects forbidden paths/secrets, validates the staging tree and final ZIP, and emits a SHA-256 sidecar. Existing version artifacts are never overwritten unless `-ReplaceExistingArtifact` is explicitly supplied for an approved local rebuild.
+
+Current archive root:
+
+```text
+web/
+crawler/
+db/migrations/0001_baseline.sql
+db/scripts/bootstrap-schema-version.sql
+db/scripts/provision-database-runtime-roles.ps1
+db/README.md
+release.json
+```
+
+For schema version `1`, `release.json` declares `minimumSchemaVersion=1` and `targetSchemaVersion=1`. Database artifacts are consumed by deployment; Stage/Production application startup remains `ValidateOnly` and never executes them.
+
+Initial Test/Stage/Production provisioning uses `scripts/initialize-database-environments.ps1` and is documented in `docs/database-provisioning.md`. Test is created from the baseline without Development business data; Stage receives a verified logical Development snapshot; Production receives that snapshot exactly once and is then protected by a durable independence marker.
+
+Stage and Production use four separate non-superuser runtime identities provisioned by `scripts/provision-database-runtime-roles.ps1`: distinct Web and Worker roles for each environment. Credentials and complete runtime connection strings come from environment variables or the deployment secret store. Runtime roles run only with `ValidateOnly`, have no database/schema creation or object ownership, and are actively verified to reject `CREATE TABLE` and `ALTER TABLE`.
+
+> After initial bootstrap, Production must never be replaced from Development.
+
+Connection-string placeholders for all four environments are in `config/database-environments.example.json`. Real credentials remain in external configuration or a secret store.
+- Detailed operator commands and safety rules: `db/README.md` and `docs/database-environments.md`.
+- Schema downgrade is not supported.
+
 ## DB routine scripts
 
 - Версионируемые SQL-скрипты DB routines находятся в `db/routines`.
@@ -494,8 +536,8 @@ order by id;
   проверку meaningful change, conditional insert `price_snapshot`
   и возврат `(productId, snapshotId, snapshotCreated)`.
 - Общие SQL helper-объекты для будущих routines допускают префикс `routine_support_*`.
-- `schema.sql` и `db/routines/**/*.sql` копируются в output/publish для `PriceCrawler.Web` и `PriceCrawler.Worker`,
-  поэтому bootstrap работает как из репозитория, так и из опубликованного приложения.
+- `schema.sql` и `db/routines/**/*.sql` остаются legacy Development initialization assets.
+  Canonical deployment creation/registration assets находятся в `db/migrations` и `db/scripts` release-пакета.
 
 ## Integration tests for DB routines
 
@@ -580,6 +622,12 @@ dotnet msbuild PriceCrawler.Application/PriceCrawler.Application.csproj -t:GetBu
 ```bash
 dotnet test PriceCrawler.sln
 ```
+
+## Production deployment
+
+Production accepts only the exact release ZIP proven successful by a matching Stage report. Use `Scripts/deploy-production.ps1` with external Web/Worker configuration and explicit `-ConfirmProductionDeployment`; run `-WhatIf` first. The script verifies the independent Production marker and separate non-DDL runtime roles, creates and validates a Production backup, applies forward-only migrations with the deploy identity, and gates Worker startup on Web listener ownership and health. See `docs/production-deployment.md`.
+
+Production is never refreshed from Development or Stage, schema downgrade and automatic database restore are unsupported, and Web/Worker always start in `ValidateOnly`.
 
 
 ## Как делать backup
