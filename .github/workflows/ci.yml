@@ -119,4 +119,4 @@ jobs:
       - name: Test
         env:
           ConnectionStrings__Postgres: Host=localhost;Port=55432;Database=varprice;Username=var;Password=myPassword
-        run: dotnet test --configuration Release --no-build
+        run: dotnet test --configuration Release --no-build --filter "Platform!=Windows"

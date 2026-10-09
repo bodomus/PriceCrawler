@@ -49,6 +49,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Worker argument parsing now validates unsupported options and conflicting modes before host creation and DB bootstrap.
 
 ### Fixed
+- CI: tests that execute Windows PowerShell deployment/release scripts are tagged `Platform=Windows` and excluded on the Linux runner (`--filter "Platform!=Windows"`); they still run locally on Windows. Fixed `scripts` → `Scripts` path casing in script contract tests so they pass on case-sensitive file systems.
 - VARUS listing/category product discovery now uses server-rendered JSON-LD Product ItemList
   records instead of falling back to every page anchor, preventing navigation and service URLs
   from inflating discovery and queue progress metrics.

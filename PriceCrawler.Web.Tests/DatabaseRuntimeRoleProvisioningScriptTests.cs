@@ -12,7 +12,7 @@ public sealed class DatabaseRuntimeRoleProvisioningScriptTests
     private static readonly string RepositoryRoot = ResolveRepositoryRoot();
     private static readonly string ScriptPath = Path.Combine(
         RepositoryRoot,
-        "scripts",
+        "Scripts",
         "provision-database-runtime-roles.ps1");
     private static readonly string BaselinePath = Path.Combine(
         RepositoryRoot,
@@ -53,6 +53,7 @@ public sealed class DatabaseRuntimeRoleProvisioningScriptTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    [Trait("Platform", "Windows")]
     public async Task DockerWorkflow_ProvisionsRolesStartsHostsAndDeniesDdl()
     {
         var suffix = Guid.NewGuid().ToString("N");

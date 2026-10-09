@@ -58,6 +58,7 @@ public sealed class DeployProductionScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task InputsValidation_MatchingSuccessfulStageReportSucceeds()
     {
         using var fixture = new TemporaryDirectory();
@@ -76,6 +77,7 @@ public sealed class DeployProductionScriptTests
     [InlineData("commit", "ffffffffffffffffffffffffffffffffffffffff", "commit")]
     [InlineData("packageSha256", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "SHA-256")]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task InputsValidation_StageMismatchFails(string property, string value, string expected)
     {
         using var fixture = new TemporaryDirectory();
@@ -90,6 +92,7 @@ public sealed class DeployProductionScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task RealDeployment_RequiresExplicitConfirmationBeforeTargetAccess()
     {
         using var fixture = new TemporaryDirectory();
@@ -109,6 +112,7 @@ public sealed class DeployProductionScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task WhatIf_ValidProductionPreflightIsNonMutating()
     {
         using var fixture = new TemporaryDirectory();
@@ -143,6 +147,7 @@ public sealed class DeployProductionScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task WhatIf_MissingProductionIndependenceMarkerFailsWithoutMutation()
     {
         using var fixture = new TemporaryDirectory();

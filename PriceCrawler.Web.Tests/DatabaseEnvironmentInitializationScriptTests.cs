@@ -11,7 +11,7 @@ public sealed class DatabaseEnvironmentInitializationScriptTests
     private static readonly string RepositoryRoot = ResolveRepositoryRoot();
     private static readonly string ScriptPath = Path.Combine(
         RepositoryRoot,
-        "scripts",
+        "Scripts",
         "initialize-database-environments.ps1");
     private static readonly string BaselinePath = Path.Combine(
         RepositoryRoot,
@@ -52,6 +52,7 @@ public sealed class DatabaseEnvironmentInitializationScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task Script_DuplicateNamesFailBeforeToolOrDatabaseAccess()
     {
         var result = await RunScriptAsync(
@@ -70,6 +71,7 @@ public sealed class DatabaseEnvironmentInitializationScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task Script_ProductionRequiresConfirmationBeforeToolOrDatabaseAccess()
     {
         var result = await RunScriptAsync(
@@ -131,6 +133,7 @@ public sealed class DatabaseEnvironmentInitializationScriptTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    [Trait("Platform", "Windows")]
     public async Task DockerWorkflow_InitializesTestStageAndProductionAndRejectsSecondProductionBootstrap()
     {
         var suffix = Guid.NewGuid().ToString("N");

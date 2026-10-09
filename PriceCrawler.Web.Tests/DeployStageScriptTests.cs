@@ -52,6 +52,7 @@ public sealed class DeployStageScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task PackageValidation_ValidPackageSucceeds()
     {
         using var fixture = new TemporaryDirectory();
@@ -68,6 +69,7 @@ public sealed class DeployStageScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task PackageValidation_ChecksumMismatchFails()
     {
         using var fixture = new TemporaryDirectory();
@@ -88,6 +90,7 @@ public sealed class DeployStageScriptTests
     [InlineData("web/.env", "secret")]
     [InlineData("graphify-out/graph.json", "graph")]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task PackageValidation_ForbiddenEntryFails(string forbiddenEntry, string expected)
     {
         using var fixture = new TemporaryDirectory();
@@ -104,6 +107,7 @@ public sealed class DeployStageScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task PackageValidation_WrongProductFails()
     {
         using var fixture = new TemporaryDirectory();
@@ -117,6 +121,7 @@ public sealed class DeployStageScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task PackageValidation_SchemaMetadataMismatchFails()
     {
         using var fixture = new TemporaryDirectory();
@@ -130,6 +135,7 @@ public sealed class DeployStageScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task WhatIf_ProductionLikeStageTargetFailsWithoutMutation()
     {
         using var fixture = new TemporaryDirectory();
@@ -155,6 +161,7 @@ public sealed class DeployStageScriptTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task WhatIf_WithValidReadOnlyPreflightDoesNotCreateStageRoot()
     {
         using var fixture = new TemporaryDirectory();

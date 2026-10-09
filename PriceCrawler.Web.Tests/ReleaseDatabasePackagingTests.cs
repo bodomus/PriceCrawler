@@ -33,7 +33,7 @@ public sealed class ReleaseDatabasePackagingTests
     [Trait("Category", "Unit")]
     public void BuildReleaseScript_DeclaresDatabasePackageAndVersionMetadata()
     {
-        var script = File.ReadAllText(Path.Combine(ResolveRepositoryRoot(), "scripts", "build-release.ps1"));
+        var script = File.ReadAllText(Path.Combine(ResolveRepositoryRoot(), "Scripts", "build-release.ps1"));
 
         Assert.Contains("databaseMigrationsPath", script, StringComparison.Ordinal);
         Assert.Contains("databaseScriptsPath", script, StringComparison.Ordinal);
@@ -55,6 +55,7 @@ public sealed class ReleaseDatabasePackagingTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task InputValidation_RejectsDuplicateMigrationVersions()
     {
         using var fixture = CreateInputValidationFixture();
@@ -73,6 +74,7 @@ public sealed class ReleaseDatabasePackagingTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    [Trait("Platform", "Windows")]
     public async Task InputValidation_RejectsMissingBaseline()
     {
         using var fixture = CreateInputValidationFixture();
@@ -89,6 +91,7 @@ public sealed class ReleaseDatabasePackagingTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    [Trait("Platform", "Windows")]
     public async Task BuildRelease_FromDifferentWorkingDirectory_EnforcesReplacementAndProducesValidatedArchive()
     {
         var root = ResolveRepositoryRoot();
