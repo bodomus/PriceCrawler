@@ -17,6 +17,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings*.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <!-- Local developer overrides: copied to bin for the Development run, never published. -->
+    <None Update="appsettings.Local.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>Never</CopyToPublishDirectory></None>
+    <None Update="appsettings.Local.example.json"><CopyToOutputDirectory>Never</CopyToOutputDirectory><CopyToPublishDirectory>Never</CopyToPublishDirectory></None>
+    <None Update="run-dev.bat"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>Never</CopyToPublishDirectory></None>
     <None Update="config\url-filters.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
       <Content Include="..\schema.sql" Link="schema.sql">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

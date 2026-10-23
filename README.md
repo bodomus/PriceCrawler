@@ -132,6 +132,28 @@ dotnet run --project PriceCrawler.Worker -- collect-prices
 поддерживает динамическую перерисовку, панель автоматически отключается и Worker
 использует обычный консольный вывод; причина отключения пишется в диагностику.
 
+## Локальный запуск и отладка
+
+Локально Web и Worker запускаются в окружении **Development**: локальная БД из `appsettings.json`,
+`DatabaseSchema:StartupMode=Ensure` из `appsettings.Development.json`. Если окружение не задано,
+.NET считает его `Production`: тогда используется шаблон `appsettings.Production.json` с placeholder-хостом
+и Worker не стартует.
+
+- Web: `dotnet run --project PriceCrawler.Web` (профиль в `Properties/launchSettings.json` задает Development).
+- Worker через `dotnet run` или IDE: `dotnet run --project PriceCrawler.Worker -- collect-prices`
+  (профили в `PriceCrawler.Worker/Properties/launchSettings.json` задают `DOTNET_ENVIRONMENT=Development`).
+- Worker из каталога сборки: `PriceCrawler.Worker\bin\Debug\net8.0\run-dev.bat collect-prices`.
+
+Личные отладочные настройки (лимиты, другой файл category seeds, уровень логов) держите в
+`appsettings.Local.json` рядом с `appsettings.json` проекта. Образец: `appsettings.Local.example.json`.
+
+- Файл в `.gitignore`, читается только в Development, поверх `appsettings.Development.json`;
+  переменные окружения и аргументы командной строки по-прежнему имеют приоритет.
+- Worker читает его из каталога сборки: после изменения пересоберите проект.
+  Web читает его из каталога проекта при `dotnet run`.
+- В publish и release-пакет файл не попадает.
+- Не редактируйте файлы в `bin/`: сборка перезаписывает их из исходников.
+
 ## Local debug seed script
 
 Для локальной отладки есть отдельный destructive SQL seed-скрипт:

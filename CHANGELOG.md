@@ -6,6 +6,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 ### Added
+- Local Development run for Web and Worker: Worker launch profiles and `run-dev.bat` set `DOTNET_ENVIRONMENT=Development`; optional git-ignored `appsettings.Local.json` (Development only, never published) for personal debug overrides instead of editing files in `bin/`.
 - MPC-84: Stage-approved Production deployment with strict Production identity/independence guards, mandatory verified backup, forward-only migrations, Production-only runtime grants, immutable release activation, Web health gating, Worker stabilization, dry-run, recovery evidence, and JSON reporting.
 - MPC-83: guarded Stage deployment with package/hash validation, verified backup, explicit Development refresh, forward migrations, Stage-only runtime grants, safe `current` switching, Web health gating, Worker stabilization, dry-run, logs, and JSON reports.
 - Validated release-package contract with canonical NBGV/Git metadata, ordered migration inventory, safe Web/Crawler configuration staging, deterministic ZIP entry ordering, SHA-256 sidecar, forbidden-content checks, and behavioral packaging tests.
@@ -47,6 +48,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `price_collect_queue` lifecycle operations now go through DB routines as well, including enqueue, reserve with `FOR UPDATE SKIP LOCKED`, retry/dead transitions, reaper, outstanding checks, and run stats.
 - `StoreObservationAsync` now executes as a single DB-side business operation through `price_observation_store`, covering product lookup/upsert, snapshot comparison, conditional insert, and write result return.
 - Worker argument parsing now validates unsupported options and conflicting modes before host creation and DB bootstrap.
+
+### Security
+- Upgraded AngleSharp 1.1.2 → 1.8.5 to resolve GHSA-pgww-w46g-26qg (CVE-2026-54570, mXSS in HTML serialization), which failed Release restore with NU1902 as error.
 
 ### Fixed
 - CI: tests that execute Windows PowerShell deployment/release scripts are tagged `Platform=Windows` and excluded on the Linux runner (`--filter "Platform!=Windows"`); they still run locally on Windows. Fixed `scripts` → `Scripts` path casing in script contract tests so they pass on case-sensitive file systems.
