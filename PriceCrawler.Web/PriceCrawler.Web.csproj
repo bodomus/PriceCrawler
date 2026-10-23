@@ -13,6 +13,9 @@
       <PackageReference Include="Telerik.UI.for.AspNet.Core" Version="2025.2.520"/>
   </ItemGroup>
   <ItemGroup>
+    <!-- Local developer overrides: read from the project directory by dotnet run, never copied or published. -->
+    <Content Update="appsettings.Local.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Local.example.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
     <None Update="config\url-filters.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -9,6 +9,7 @@ using PriceCrawler.Application.DependencyInjection;
 using PriceCrawler.Application.Grids.Runs;
 using PriceCrawler.Infrastructure.DependencyInjection;
 using PriceCrawler.Infrastructure.Persistence;
+using PriceCrawler.Web;
 using PriceCrawler.Web.Logging;
 
 using InfrastructureRuns = PriceCrawler.Infrastructure.Queries.Runs;
@@ -17,6 +18,7 @@ Console.InputEncoding = Encoding.UTF8;
 Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
+LocalDeveloperSettings.Add(builder.Configuration, builder.Environment);
 
 builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfiguration
     .ReadFrom.Configuration(context.Configuration)

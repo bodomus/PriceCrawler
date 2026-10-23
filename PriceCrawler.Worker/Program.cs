@@ -42,6 +42,7 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
     Args = [],
     ContentRootPath = executableDirectoryPath
 });
+LocalDeveloperSettings.Add(builder.Configuration, builder.Environment);
 var logsDirectoryPath = Path.Combine(executableDirectoryPath, "logs");
 Directory.CreateDirectory(logsDirectoryPath);
 var logFilePath = Path.Combine(logsDirectoryPath, "pricecrawler-worker.log");

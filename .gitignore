@@ -52,3 +52,6 @@ Thumbs.db
 # Local repository-intelligence state
 .code-review-graph/
 graphify-out/
+
+# Local developer configuration overrides (see README: Локальный запуск и отладка)
+appsettings.Local.json
