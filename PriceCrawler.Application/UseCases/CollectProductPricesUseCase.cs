@@ -183,7 +183,9 @@ public sealed class CollectProductPricesUseCase(
             stages.Add(CrawlerRunStages.QueueProcessing, processingWatch.ElapsedMilliseconds, enqueueResult.TotalAccepted);
             var stats = await queueRepository.GetRunStatsAsync(runId, ct);
             metrics.SetQueue(stats.Succeeded, stats.Retry, stats.Dead);
-            var runStatus = stats.Dead > 0 ? RunStatus.Error : RunStatus.Ok;
+            var runStatus = RunOutcomePolicy.Evaluate(stats.Succeeded, stats.Retry, stats.Dead,
+                opt.RunErrorDeadThresholdPercent);
+            var deadErrorCode = runStatus == RunStatus.Error && stats.Dead > 0 ? "price_collection_dead_items" : null;
             var failedCount = stats.Retry + stats.Dead;
             var note =
                 $"selected={selected.Count}, enqueued={enqueueResult.TotalAccepted}, succeeded={stats.Succeeded}, retry={stats.Retry}, dead={stats.Dead}";
@@ -200,8 +202,8 @@ public sealed class CollectProductPricesUseCase(
             }
 
             await crawlerRunRepository.CompleteAsync(runId, runStatus, metrics.Snapshot(), stages.Snapshot(), note,
-                stats.Dead > 0 ? "price_collection_dead_items" : null,
-                stats.Dead > 0 ? note : null, ct);
+                deadErrorCode,
+                deadErrorCode is not null ? note : null, ct);
             duration.Stop();
 
             logger.LogInformation(
@@ -212,12 +214,23 @@ public sealed class CollectProductPricesUseCase(
                 stats.Succeeded,
                 stats.Retry,
                 stats.Dead);
+            if (runStatus == RunStatus.Ok && stats.Dead > 0)
+            {
+                logger.LogWarning(
+                    "Price collection completed with dead items within threshold. RunId={RunId}; Dead={Dead}; DeadPercent={DeadPercent:F2}; ThresholdPercent={ThresholdPercent}",
+                    runId,
+                    stats.Dead,
+                    RunOutcomePolicy.DeadPercent(stats.Succeeded, stats.Retry, stats.Dead),
+                    opt.RunErrorDeadThresholdPercent);
+            }
 
-            progressReporter.SetCurrentStage(runStatus == RunStatus.Ok ? "Завершено" : "Ошибка");
+            progressReporter.SetCurrentStage(runStatus != RunStatus.Ok
+                ? "Ошибка"
+                : stats.Dead > 0 ? "Завершено с ошибками товаров" : "Завершено");
             progressReporter.SetCurrentItem(string.Empty);
 
             return BuildResult(runId, runStatus, metrics, stages,
-                stats.Dead > 0 ? "price_collection_dead_items" : null, note, duration.ElapsedMilliseconds);
+                deadErrorCode, note, duration.ElapsedMilliseconds);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

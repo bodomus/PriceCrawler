@@ -51,11 +51,14 @@ Source: `PriceCrawler.Domain.Enums.RunStatus`
 - Means the run exists but has not finished yet.
 
 ### `Ok`
-- Applied when the queue is fully drained and there are no dead items.
+- Applied when the queue is fully drained and the share of dead items does not exceed `Crawler:RunErrorDeadThresholdPercent` (default `1`%, MPC-93).
+- With 0 < dead <= threshold the run is `Ok`, a warning is logged and `dead_count` / `crawl_error` still record the failed items; `error_code` stays empty.
 - This is the successful final status of `crawler_run`.
 
 ### `Error`
-- Applied when the run ends with dead queue items or with a whole-process failure.
+- Applied when the share of dead queue items exceeds the threshold (`error_code = price_collection_dead_items` for `collect-prices`) or with a whole-process failure.
+- `RunErrorDeadThresholdPercent = 0` restores the strict rule: any dead item fails the run.
+- The decision is implemented once in `PriceCrawler.Application.UseCases.RunOutcomePolicy` and used by `collect-prices` and `vegetables`.
 - This is the failed final status of `crawler_run`.
 
 ## 3. How run statuses are stored in the database
