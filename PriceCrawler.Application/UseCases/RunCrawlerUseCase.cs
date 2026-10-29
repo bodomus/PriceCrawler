@@ -79,11 +79,24 @@ public sealed class RunCrawlerUseCase(
             await queueProcessor.DrainQueueAsync(runId, opt, queueOpt, callbacks: null, ct);
 
             var stats = await queueRepository.GetRunStatsAsync(runId, ct);
-            var runStatus = stats.Dead > 0 ? RunStatus.Error : RunStatus.Ok;
+            var runStatus = RunOutcomePolicy.Evaluate(stats.Succeeded, stats.Retry, stats.Dead,
+                opt.RunErrorDeadThresholdPercent);
             var note =
                 $"queued={queueItems.Count}, enqueued={enqueueResult.TotalAccepted}, succeeded={stats.Succeeded}, dead={stats.Dead}, pending={stats.Pending}, retry={stats.Retry}";
             logger.LogInformation("Crawler finished run_id={RunId} status={Status} {Note}", runId, runStatus, note);
-            progressReporter.SetCurrentStage("Завершено");
+            if (runStatus == RunStatus.Ok && stats.Dead > 0)
+            {
+                logger.LogWarning(
+                    "Crawler run completed with dead items within threshold. RunId={RunId}; Dead={Dead}; DeadPercent={DeadPercent:F2}; ThresholdPercent={ThresholdPercent}",
+                    runId,
+                    stats.Dead,
+                    RunOutcomePolicy.DeadPercent(stats.Succeeded, stats.Retry, stats.Dead),
+                    opt.RunErrorDeadThresholdPercent);
+            }
+
+            progressReporter.SetCurrentStage(runStatus != RunStatus.Ok
+                ? "Ошибка"
+                : stats.Dead > 0 ? "Завершено с ошибками товаров" : "Завершено");
             progressReporter.SetCurrentItem(string.Empty);
 
             await ingestionRunRepository.FinishAsync(ingestionRunId, runStatus, null, ct);

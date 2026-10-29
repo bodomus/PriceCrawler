@@ -30,6 +30,7 @@
 | `RetryBaseDelayMs` | `int` | Базовая задержка перед повторной попыткой HTTP-запроса в миллисекундах. Используется при расчете backoff. |
 | `BreakerFailureThreshold` | `int` | Число подряд идущих отказов, после которого circuit breaker временно открывается. Защищает от массовых ошибок и rate limit. |
 | `BreakerOpenSeconds` | `int` | Время открытого состояния circuit breaker в секундах. После достижения порога ошибок новые запросы временно откладываются. |
+| `RunErrorDeadThresholdPercent` | `double` | Допустимая доля окончательно упавших позиций очереди (dead) в процентах, при которой `collect-prices` и `vegetables` завершаются со статусом `ok` (с предупреждением в логе). При превышении или сбое процесса — `error` и код выхода 1. По умолчанию `1`; `0` — строгое правило «любая dead-позиция — ошибка». |
 
 ## Пример конфигурации
 
@@ -53,7 +54,8 @@
     "RetryCount": 2,
     "RetryBaseDelayMs": 500,
     "BreakerFailureThreshold": 20,
-    "BreakerOpenSeconds": 60
+    "BreakerOpenSeconds": 60,
+    "RunErrorDeadThresholdPercent": 1.0
   }
 }
 ```

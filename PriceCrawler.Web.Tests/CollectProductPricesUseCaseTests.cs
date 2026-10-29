@@ -117,6 +117,41 @@ public sealed class CollectProductPricesUseCaseTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_DeadItemsWithinThreshold_CompletesAsOk()
+    {
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1)]);
+        var queue = new FakeQueueRepository
+        {
+            StatsOverride = new QueueRunStats(0, 0, 0, 10258, 1)
+        };
+        var sut = CreateUseCase(catalog, queue, ProductExtractResult.Success(Card(), 200, 1, 1));
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Equal(1, result.DeadCount);
+        Assert.Null(result.ErrorCode);
+        Assert.Equal(RunStatus.Ok, catalog.Crawler.LastStatus);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DeadItemsAboveThreshold_CompletesAsError()
+    {
+        var catalog = new FakeProductCatalogRepository([CatalogItem(1)]);
+        var queue = new FakeQueueRepository
+        {
+            StatsOverride = new QueueRunStats(0, 0, 0, 97, 3)
+        };
+        var sut = CreateUseCase(catalog, queue, ProductExtractResult.Success(Card(), 200, 1, 1));
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal("error", result.Status);
+        Assert.Equal("price_collection_dead_items", result.ErrorCode);
+        Assert.Equal(RunStatus.Error, catalog.Crawler.LastStatus);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_FailedCount_IsRetryPlusDead()
     {
         var catalog = new FakeProductCatalogRepository([CatalogItem(1)]);

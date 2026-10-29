@@ -31,6 +31,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Explicit Worker CLI commands: `vegetables`, `catalog-refresh`, `collect-prices`, and `--help`.
 
 ### Changed
+- MPC-93: `collect-prices` and `vegetables` no longer fail the whole run because of single dead queue items. The run is `error` only when the share of dead items exceeds `Crawler:RunErrorDeadThresholdPercent` (default 1%) or the process fails; below the threshold it is `ok` with a warning. Worker exit codes are unchanged.
 - Release artifacts now default to `artifacts/releases`, refuse silent replacement, expose explicit output/replacement controls, and validate both the staging tree and final archive against schema/component metadata.
 - Partial Stage/Production bootstrap failures now retain the verified Development dump and print an explicit operator recovery procedure; failed initial Production databases are never deleted automatically and may be retried only after marker/history checks.
 - Web and Worker now use one shared schema startup coordinator. Development/Test explicitly `Ensure`; Stage/Staging/Production explicitly `ValidateOnly` and reject unsafe overrides before database access.

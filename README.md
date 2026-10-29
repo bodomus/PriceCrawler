@@ -306,8 +306,8 @@ dotnet run --project PriceCrawler.Worker -- --help
 
 ## Коды завершения Worker
 
-- `0` - успешный run (`status=ok`)
-- `1` - run завершился с ошибочным статусом
+- `0` - успешный run (`status=ok`), в том числе когда доля dead-позиций не превышает `Crawler:RunErrorDeadThresholdPercent`
+- `1` - run завершился с ошибочным статусом: доля dead-позиций выше порога или сбой процесса
 - `2` - передана неподдерживаемая команда, опция или конфликтующие режимы
 
 ## Конфигурация
@@ -339,6 +339,7 @@ dotnet run --project PriceCrawler.Worker -- --help
 - `Crawler:RetryBaseDelayMs` (default `500`)
 - `Crawler:BreakerFailureThreshold` (default `20`)
 - `Crawler:BreakerOpenSeconds` (default `60`)
+- `Crawler:RunErrorDeadThresholdPercent` (default `1`; `0` — любая dead-позиция делает run `error`)
 - `Queue:BatchSize` (default `32`)
 - `Queue:PollDelayMs` (default `250`)
 - `Queue:LeaseSeconds` (default `90`)
@@ -408,6 +409,7 @@ limit 20;
 - `Crawler__RetryBaseDelayMs`
 - `Crawler__BreakerFailureThreshold`
 - `Crawler__BreakerOpenSeconds`
+- `Crawler__RunErrorDeadThresholdPercent`
 - `Queue__BatchSize`
 - `Queue__PollDelayMs`
 - `Queue__LeaseSeconds`
