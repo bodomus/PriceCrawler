@@ -138,7 +138,8 @@ function Remove-OldLogs {
         }
 }
 
-$mutex = New-Object System.Threading.Mutex($false, "Local\PriceCrawlerScheduledRun")
+# Global\: visible across logon sessions, so a Task Scheduler run (even in session 0) and a manual run share one lock.
+$mutex = New-Object System.Threading.Mutex($false, "Global\PriceCrawlerScheduledRun")
 $hasLock = $false
 $exitCode = 0
 try {
