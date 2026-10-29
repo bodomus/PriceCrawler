@@ -654,6 +654,10 @@ Production accepts only the exact release ZIP proven successful by a matching St
 Production is never refreshed from Development or Stage, schema downgrade and automatic database restore are unsupported, and Web/Worker always start in `ValidateOnly`.
 
 
+## Регулярный сбор цен
+
+Ежедневный сбор запускается из опубликованной Release-сборки (`J:\Apps\PriceCrawler\worker\`), а не из `bin\Debug`: `Scripts/publish-collector.ps1` публикует версию, `Scripts/scheduled-run.ps1` выполняет Docker → PostgreSQL → Worker (`Production`, `ValidateOnly`) → проверенный бэкап → лог. Бэкап с ротацией: `Scripts/backup-database.ps1` (вручную `Scripts/backup_varus.bat`). Подробности и коды выхода: `docs/collector.md`.
+
 ## Как делать backup
 docker exec var_postgres pg_dump -U var -d varprice -F c -f /backups/varprice.backup
 

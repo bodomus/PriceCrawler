@@ -46,13 +46,13 @@ docker compose up -d postgres                 # контейнер var_postgres,
 
 - Каталог заполнен: первый `catalog-refresh` (run 212) — 10 259 товаров за 16 мин.
 - Рабочий режим сбора — **`collect-prices`** (весь каталог, `MaxProductsPerRun=11000`, ~3,2 ч, run 213). Legacy `vegetables` больше не нужен.
-- Сбор пока запускается вручную. Старая задача Планировщика `\Magazine Crawler` (`crawler.bat` → несуществующий `VarPrice.Worker.exe`) сломана, её заменит MPC-91.
+- Сбор пока запускается вручную; релизная сборка и `Scripts/scheduled-run.ps1` — MPC-89 (`docs/collector.md`). Старая задача Планировщика `\Magazine Crawler` (`crawler.bat` → несуществующий `VarPrice.Worker.exe`) сломана, её заменит MPC-91.
 - Stage/Prod-деплой (эпик MPC-78, скрипты `Scripts/deploy-*.ps1`) **заморожен**: не развивать. Известные баги там (`builtAtUtc` под PowerShell 7, путь `scripts\…` в `build-release.ps1`) — не чинить без задачи.
 
 ## План (веха MPC-87 «Регулярный сбор данных отдельно от разработки»)
 
-1. **MPC-88** — каталог: заполнен; открыт вопрос про 4 018 товаров в `product`, которых нет в каталоге (новинки после 24.10 и/или лимит `MaxCategoryPagesPerSeed=10`).
-2. **MPC-93** — статус запуска с порогом dead-позиций (`Crawler:RunErrorDeadThresholdPercent`, 1%): ветка `MPC-93-run-status-threshold`, ждёт PR.
+1. **MPC-88** — готово (каталог заполнен); открыт вопрос про 4 018 товаров в `product`, которых нет в каталоге (новинки после 24.10 и/или лимит `MaxCategoryPagesPerSeed=10`).
+2. **MPC-93** — готово (PR #47): статус запуска с порогом dead-позиций (`Crawler:RunErrorDeadThresholdPercent`, 1%).
 3. **MPC-89** — релизная сборка сборщика в отдельной папке (`J:\Apps\PriceCrawler\`) + `scheduled-run.ps1`: Docker → Worker → бэкап → лог.
 4. **MPC-90** — разработка на `varprice_stage`, обновление stage из бэкапа, документация ролей баз.
 5. **MPC-91** — Планировщик Windows + флаг `--scheduled` (не чаще 1 раза в сутки; ручные запуски без ограничений). Зависит от MPC-88/89/90/93.
