@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "CONTAINER_ID=b9c59ecb00ef"
+set "CONTAINER_ID=var_postgres"
 set "DB_USER=var"
 set "DB_NAME=varprice"
 set "BACKUP_DIR=D:\Backups\Varus\Postgres"
@@ -10,7 +10,8 @@ set "LOCAL_BACKUP=%BACKUP_DIR%\%BACKUP_NAME%"
 
 if "%~1"=="" (
     echo Error: date was not specified.
-    echo Usage example: restore_varus.bat 2026-03-15
+    echo Usage example: restore_varus.bat 2026-10-29_061500   (file varus_2026-10-29_061500.backup^)
+    echo Legacy daily file:    restore_varus.bat 2026-03-15
     exit /b 1
 )
 
