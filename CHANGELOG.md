@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
+### Fixed
+- MPC-89: `publish-collector.ps1` no longer fails at the cleanup step on the first publish (Windows PowerShell 5.1 StrictMode `.Count` on a single value).
+
 ### Added
 - MPC-89: separate Release collector. `Scripts/publish-collector.ps1` publishes the Worker to `J:\Apps\PriceCrawler\worker\<version>` with local settings outside git, a `current.txt` pointer, rollback and version retention; `Scripts/scheduled-run.ps1` runs Docker → PostgreSQL → Worker (Production, ValidateOnly; `catalog-refresh` on Sundays) → backup → per-run log with stage exit codes; `Scripts/backup-database.ps1` makes a verified, timestamped backup of `varprice` by container name with 14-day/13-week rotation (`backup_varus.bat` now calls it; `restore_varus.bat` uses the container name). See `docs/collector.md`.
 - Local Development run for Web and Worker: Worker launch profiles and `run-dev.bat` set `DOTNET_ENVIRONMENT=Development`; optional git-ignored `appsettings.Local.json` (Development only, never published) for personal debug overrides instead of editing files in `bin/`.

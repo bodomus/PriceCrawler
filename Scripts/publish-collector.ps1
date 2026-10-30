@@ -133,7 +133,8 @@ Set-Content -LiteralPath $currentPointerPath -Value $versionName -Encoding ASCII
 Write-Host "current -> $versionName (previous: $(if ($previousVersion) { $previousVersion } else { 'none' }))"
 
 Write-Step "Cleanup (keep $KeepVersions versions)"
-$protected = @($versionName, $previousVersion) | Where-Object { $_ }
+# @() keeps an array even when only one name is left (StrictMode has no .Count on a string in Windows PowerShell 5.1).
+$protected = @(@($versionName, $previousVersion) | Where-Object { $_ })
 $versions = @(Get-ChildItem -LiteralPath $workerRoot -Directory |
     Where-Object { (Test-Path -LiteralPath (Join-Path $_.FullName "collector-release.json")) -and ($protected -notcontains $_.Name) } |
     Sort-Object LastWriteTime -Descending)
