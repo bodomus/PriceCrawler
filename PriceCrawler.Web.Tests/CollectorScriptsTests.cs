@@ -9,6 +9,7 @@ public sealed class CollectorScriptsTests
     [InlineData("publish-collector.ps1")]
     [InlineData("scheduled-run.ps1")]
     [InlineData("backup-database.ps1")]
+    [InlineData("refresh-stage-from-backup.ps1")]
     public async Task Script_HasNoPowerShellSyntaxErrors(string scriptName)
     {
         var path = Path.Combine(ResolveRepositoryRoot(), "Scripts", scriptName);

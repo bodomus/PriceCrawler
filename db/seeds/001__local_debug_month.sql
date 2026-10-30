@@ -13,8 +13,9 @@ set client_min_messages = warning;
 
 do $guard$
 begin
-    if current_database() <> 'varprice' then
-        raise exception 'Seed script is guarded for database "varprice", current database is "%".', current_database();
+    -- MPC-90: the development database is varprice_stage; varprice holds the working (collected) data.
+    if current_database() <> 'varprice_stage' then
+        raise exception 'Seed script is guarded for database "varprice_stage", current database is "%".', current_database();
     end if;
 end;
 $guard$;
