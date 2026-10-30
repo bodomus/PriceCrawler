@@ -6,7 +6,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 ### Changed
-- MPC-90: development runs (Web, Worker from the repository) use `varprice_stage` instead of the working database `varprice`; Web and Worker log their database target at startup. New `Scripts/refresh-stage-from-backup.ps1` (`refresh_stage.bat`) replaces `varprice_stage` with the newest `varprice` backup, refuses any other target and asks for confirmation. Database roles documented in `docs/database-environments.md` (1.1).
+- MPC-90: development runs (Web, Worker from the repository) use `varprice_stage` instead of the working database `varprice`; Web and Worker log their database target at startup. New `Scripts/refresh-stage-from-backup.ps1` (`refresh_stage.bat`) replaces `varprice_stage` with the newest `varprice` backup, refuses any other target and asks for confirmation. Database roles documented in `docs/database-environments.md` (1.1). The destructive debug seed `db/seeds/001__local_debug_month.sql` is now guarded for `varprice_stage` instead of `varprice`.
 
 ### Fixed
 - MPC-89: `publish-collector.ps1` no longer fails at the cleanup step on the first publish (Windows PowerShell 5.1 StrictMode `.Count` on a single value).

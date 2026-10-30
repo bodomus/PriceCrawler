@@ -42,6 +42,16 @@ public sealed class DevelopmentDatabaseTests
         Assert.DoesNotContain("secret-value", target, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DestructiveDebugSeed_IsGuardedForDevelopmentDatabaseOnly()
+    {
+        var seed = File.ReadAllText(Path.Combine(ResolveRepositoryRoot(), "db", "seeds", "001__local_debug_month.sql"));
+
+        Assert.Contains("current_database() <> 'varprice_stage'", seed, StringComparison.Ordinal);
+        Assert.DoesNotContain("current_database() <> 'varprice' ", seed, StringComparison.Ordinal);
+    }
+
     [Theory]
     [Trait("Category", "Unit")]
     [InlineData("varprice")]

@@ -177,7 +177,8 @@ dotnet run --project PriceCrawler.Worker -- collect-prices
 
 Запуск:
 
-- открой `db/seeds/001__local_debug_month.sql` в `DataGrip` и выполни его против локальной БД `varprice`
+- открой `db/seeds/001__local_debug_month.sql` в `DataGrip` и выполни его против базы разработки `varprice_stage`
+  (скрипт откажется работать в любой другой базе; рабочая база `varprice` с ежедневным сбором защищена)
 - после завершения script сам вернет summary counts по основным таблицам и статусам
 
 ## Команды запуска Worker
