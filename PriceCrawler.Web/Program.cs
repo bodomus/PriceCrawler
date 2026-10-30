@@ -72,6 +72,11 @@ app.MapControllerRoute(
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
+app.Logger.LogInformation(
+    "Database target: {DatabaseTarget}; Environment={Environment}",
+    DatabaseTarget.Describe(app.Configuration),
+    app.Environment.EnvironmentName);
+
 using (var scope = app.Services.CreateScope())
 {
     var databaseStartup = scope.ServiceProvider.GetRequiredService<DatabaseSchemaStartupCoordinator>();

@@ -76,6 +76,10 @@ builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfigurati
 
 using var host = builder.Build();
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("PriceCrawler.Worker");
+logger.LogInformation(
+    "Database target: {DatabaseTarget}; Environment={Environment}",
+    DatabaseTarget.Describe(builder.Configuration),
+    builder.Environment.EnvironmentName);
 
 using (var scope = host.Services.CreateScope())
 {

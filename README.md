@@ -134,8 +134,10 @@ dotnet run --project PriceCrawler.Worker -- collect-prices
 
 ## Локальный запуск и отладка
 
-Локально Web и Worker запускаются в окружении **Development**: локальная БД из `appsettings.json`,
-`DatabaseSchema:StartupMode=Ensure` из `appsettings.Development.json`. Если окружение не задано,
+Локально Web и Worker запускаются в окружении **Development**: база разработки `varprice_stage` из `appsettings.json`,
+`DatabaseSchema:StartupMode=Ensure` из `appsettings.Development.json`. Рабочая база `varprice` (ежедневный сбор)
+из репозитория не используется; обновить `varprice_stage` свежими данными: `Scripts\refresh_stage.bat`.
+Роли баз: `docs/database-environments.md`, раздел 1.1. Если окружение не задано,
 .NET считает его `Production`: тогда используется шаблон `appsettings.Production.json` с placeholder-хостом
 и Worker не стартует.
 
