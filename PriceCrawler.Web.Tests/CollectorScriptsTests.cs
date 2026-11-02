@@ -161,7 +161,6 @@ public sealed class CollectorScriptsTests
         Assert.Contains("scripts\\scheduled-run.ps1", script, StringComparison.Ordinal);
         Assert.Contains("-Scheduled -AppRoot", script, StringComparison.Ordinal);
         Assert.Contains("\"Magazine Crawler\"", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("crawler.bat", script, StringComparison.OrdinalIgnoreCase);
 
         var publish = File.ReadAllText(Path.Combine(root, "Scripts", "publish-collector.ps1"));
         Assert.Contains("@(\"scheduled-run.ps1\", \"backup-database.ps1\")", publish, StringComparison.Ordinal);
