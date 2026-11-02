@@ -65,8 +65,14 @@ if (-not $KeepLegacyTask) {
         $legacy = @(Get-ScheduledTask -TaskName $legacyName -ErrorAction SilentlyContinue)
         foreach ($task in $legacy) {
             if ($PSCmdlet.ShouldProcess("$($task.TaskPath)$($task.TaskName)", "Remove legacy scheduled task")) {
-                Unregister-ScheduledTask -TaskName $task.TaskName -TaskPath $task.TaskPath -Confirm:$false
-                Write-Host "Removed legacy task '$($task.TaskPath)$($task.TaskName)'."
+                try {
+                    Unregister-ScheduledTask -TaskName $task.TaskName -TaskPath $task.TaskPath -Confirm:$false
+                    Write-Host "Removed legacy task '$($task.TaskPath)$($task.TaskName)'."
+                }
+                catch {
+                    # A task created by an administrator or another user can only be removed from an elevated shell.
+                    Write-Warning ("Could not remove legacy task '{0}{1}': {2} Remove it from an elevated PowerShell: Unregister-ScheduledTask -TaskName '{1}' -TaskPath '{0}' -Confirm:`$false" -f $task.TaskPath, $task.TaskName, $_.Exception.Message)
+                }
             }
         }
     }

@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
+### Fixed
+- MPC-91: `register-scheduled-task.ps1` warns instead of failing when the legacy `\Magazine Crawler` task cannot be removed without elevation (the new task is already registered).
+
 ### Added
 - MPC-91: daily collection through the Windows Task Scheduler. `Scripts/register-scheduled-task.ps1` registers `PriceCrawler Daily Collect` (08:00, hourly retries until 22:00, start when available after a missed run, no parallel instances) and removes the broken legacy `\Magazine Crawler` task. `scheduled-run.ps1 -Scheduled` skips a start when today's scheduled run already succeeded (marker `state\last-scheduled-success.txt`), so an interrupted run (power cut) is resumed by the next retry; manual runs stay unlimited. `publish-collector.ps1` copies the scheduled scripts to `J:\Apps\PriceCrawler\scripts\`.
 

@@ -89,7 +89,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\register-scheduled-t
 - работает только когда пользователь вошёл в систему: Docker Desktop запускается в сессии пользователя. После включения компьютера нужно войти в Windows (или настроить автоматический вход);
 - действие: `powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File J:\Apps\PriceCrawler\scripts\scheduled-run.ps1 -Scheduled -AppRoot J:\Apps\PriceCrawler`.
 
-Скрипт удаляет старую сломанную задачу `\Magazine Crawler` (`crawler.bat` → несуществующий `VarPrice.Worker.exe`); оставить её: `-KeepLegacyTask`. Посмотреть, что будет сделано, без изменений: `-WhatIf`.
+Скрипт удаляет старую сломанную задачу `\Magazine Crawler` (`crawler.bat` → несуществующий `VarPrice.Worker.exe`); оставить её: `-KeepLegacyTask`. Если старую задачу создал администратор, без повышенных прав её не удалить: скрипт выводит предупреждение, а новая задача при этом уже зарегистрирована. Удалить вручную из PowerShell, запущенного от имени администратора: `Unregister-ScheduledTask -TaskName "Magazine Crawler" -Confirm:$false`. Посмотреть, что будет сделано, без изменений: `-WhatIf`.
 
 Проверка: `Get-ScheduledTask "PriceCrawler Daily Collect" | Get-ScheduledTaskInfo` (следующий и последний запуск, `LastTaskResult` = код выхода `scheduled-run.ps1`) или «Планировщик заданий» → «Библиотека». Запустить сейчас: `Start-ScheduledTask "PriceCrawler Daily Collect"` (если сегодня уже был успешный запуск, он будет пропущен).
 
