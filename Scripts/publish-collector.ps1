@@ -11,6 +11,7 @@ param(
 #   <AppRoot>\worker\<version>\   one folder per published version
 #   <AppRoot>\worker\current.txt  name of the version scheduled-run.ps1 starts
 #   <AppRoot>\config\appsettings.Production.json  local settings, copied into every version, never in git
+#   <AppRoot>\scripts\                scheduled-run.ps1 + backup-database.ps1 started by the Task Scheduler (MPC-91)
 # Rebuilding or debugging in the repository does not affect the collector until the next publish.
 
 Set-StrictMode -Version Latest
@@ -131,6 +132,15 @@ if (Test-Path -LiteralPath $targetPath) {
 Move-Item -LiteralPath $stagingPath -Destination $targetPath
 Set-Content -LiteralPath $currentPointerPath -Value $versionName -Encoding ASCII
 Write-Host "current -> $versionName (previous: $(if ($previousVersion) { $previousVersion } else { 'none' }))"
+
+# The Task Scheduler runs these copies, so editing or switching branches in the repository
+# does not change the daily run until the next publish.
+$scriptsPath = Join-Path $AppRoot "scripts"
+New-Item -ItemType Directory -Path $scriptsPath -Force | Out-Null
+foreach ($scriptName in @("scheduled-run.ps1", "backup-database.ps1")) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $scriptName) -Destination (Join-Path $scriptsPath $scriptName) -Force
+}
+Write-Host "scripts -> $scriptsPath"
 
 Write-Step "Cleanup (keep $KeepVersions versions)"
 # @() keeps an array even when only one name is left (StrictMode has no .Count on a string in Windows PowerShell 5.1).

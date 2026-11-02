@@ -11,7 +11,10 @@ param(
     [ValidateRange(10, 1800)][int]$DockerTimeoutSeconds = 300,
     [ValidateRange(5, 600)][int]$PostgresTimeoutSeconds = 120,
     [ValidateRange(1, 365)][int]$LogRetentionDays = 30,
-    [switch]$SkipBackup
+    [switch]$SkipBackup,
+    # Task Scheduler mode (MPC-91): do nothing if a scheduled run already succeeded today.
+    # Manual runs (without -Scheduled) are never limited.
+    [switch]$Scheduled
 )
 
 # Daily price collection from the published Release build (MPC-89). Replaces the old crawler.bat.
@@ -24,6 +27,11 @@ param(
 #   20 published Worker not found         21 catalog-refresh failed
 #   22 collect-prices failed              30 backup failed
 #   40 another scheduled run is in progress
+# -Scheduled (MPC-91): the Task Scheduler starts the script every hour from 08:00 (power cuts are frequent).
+#   A run whose Worker steps all succeed writes today's date to <AppRoot>\state\last-scheduled-success.txt;
+#   later scheduled starts on the same day exit 0 at once, without starting Docker, and add one line to
+#   logs\scheduled-run_skipped.log. An interrupted or failed run writes nothing, so the next hourly start
+#   repeats it; collect-prices then only takes catalog items that are still due.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -32,6 +40,16 @@ $ErrorActionPreference = "Stop"
 $logDirectory = Join-Path $AppRoot "logs"
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 $startedAt = Get-Date
+$today = $startedAt.ToString("yyyy-MM-dd")
+$successMarkerPath = Join-Path (Join-Path $AppRoot "state") "last-scheduled-success.txt"
+
+if ($Scheduled -and (Test-Path -LiteralPath $successMarkerPath -PathType Leaf) -and
+    ((Get-Content -LiteralPath $successMarkerPath -Raw).Trim() -eq $today)) {
+    $line = "[{0:yyyy-MM-dd HH:mm:ss}] Scheduled run skipped: already completed today ({1})." -f $startedAt, $today
+    Add-Content -LiteralPath (Join-Path $logDirectory "scheduled-run_skipped.log") -Value $line -Encoding UTF8
+    Write-Host $line
+    exit 0
+}
 $logPath = Join-Path $logDirectory ("scheduled-run_{0:yyyy-MM-dd_HHmmss}.log" -f $startedAt)
 
 function Write-Log {
@@ -154,7 +172,7 @@ try {
         exit 40
     }
 
-    Write-Log "Scheduled run started. AppRoot=$AppRoot; Mode=$Mode; Log=$logPath"
+    Write-Log "Scheduled run started. AppRoot=$AppRoot; Mode=$Mode; Scheduled=$([bool]$Scheduled); Log=$logPath"
     $commands = switch ($Mode) {
         "collect-prices" { @("collect-prices") }
         "catalog-refresh" { @("catalog-refresh") }
@@ -164,6 +182,7 @@ try {
     }
 
     $databaseReady = $false
+    $workerSucceeded = $false
     if (-not (Start-DockerEngine)) {
         $exitCode = 10
     }
@@ -178,12 +197,16 @@ try {
         }
         else {
             $env:DOTNET_ENVIRONMENT = "Production"
+            $workerSucceeded = $true
             foreach ($command in $commands) {
                 Write-Log "Worker $command started (DOTNET_ENVIRONMENT=Production)."
                 $workerExitCode = Invoke-Logged -FilePath $exePath -Arguments @($command)
                 Write-Log "Worker $command finished with exit code $workerExitCode."
-                if ($workerExitCode -ne 0 -and $exitCode -eq 0) {
-                    $exitCode = if ($command -eq "catalog-refresh") { 21 } else { 22 }
+                if ($workerExitCode -ne 0) {
+                    $workerSucceeded = $false
+                    if ($exitCode -eq 0) {
+                        $exitCode = if ($command -eq "catalog-refresh") { 21 } else { 22 }
+                    }
                 }
             }
         }
@@ -208,6 +231,13 @@ try {
         if ($backupExitCode -ne 0 -and $exitCode -eq 0) {
             $exitCode = 30
         }
+    }
+
+    # A failed backup does not repeat the collection: the marker depends on the Worker steps only.
+    if ($Scheduled -and $workerSucceeded) {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $successMarkerPath) -Force | Out-Null
+        Set-Content -LiteralPath $successMarkerPath -Value $today -Encoding ASCII
+        Write-Log "Scheduled run marked as completed for $today."
     }
 
     Remove-OldLogs

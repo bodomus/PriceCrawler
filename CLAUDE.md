@@ -46,7 +46,7 @@ docker compose up -d postgres                 # контейнер var_postgres,
 
 - Каталог заполнен: первый `catalog-refresh` (run 212) — 10 259 товаров за 16 мин.
 - Рабочий режим сбора — **`collect-prices`** (весь каталог, `MaxProductsPerRun=11000`, ~3,2 ч, run 213). Legacy `vegetables` больше не нужен.
-- Сбор запускается вручную из релизной сборки: `Scripts/scheduled-run.ps1` (`docs/collector.md`). Старая задача Планировщика `\Magazine Crawler` (`crawler.bat` → несуществующий `VarPrice.Worker.exe`) сломана, её заменит MPC-91.
+- Сбор идёт из релизной сборки: `Scripts/scheduled-run.ps1` (`docs/collector.md`). С MPC-91 его запускает задача Планировщика `PriceCrawler Daily Collect` (`Scripts/register-scheduled-task.ps1`): 08:00 + ежечасные повторы до 22:00 из-за частых отключений света; `-Scheduled` пропускает запуск, если сегодня уже был успешный. Старая задача `\Magazine Crawler` удаляется этим скриптом.
 - Stage/Prod-деплой (эпик MPC-78, скрипты `Scripts/deploy-*.ps1`) **заморожен**: не развивать. Известные баги там (`builtAtUtc` под PowerShell 7, путь `scripts\…` в `build-release.ps1`) — не чинить без задачи.
 
 ## План (веха MPC-87 «Регулярный сбор данных отдельно от разработки»)
@@ -54,8 +54,8 @@ docker compose up -d postgres                 # контейнер var_postgres,
 1. **MPC-88** — готово (каталог заполнен); открыт вопрос про 4 018 товаров в `product`, которых нет в каталоге (новинки после 24.10 и/или лимит `MaxCategoryPagesPerSeed=10`).
 2. **MPC-93** — готово (PR #47): статус запуска с порогом dead-позиций (`Crawler:RunErrorDeadThresholdPercent`, 1%).
 3. **MPC-89** — готово (PR #49, #50): релизный сборщик в `J:\Apps\PriceCrawler\` + `scheduled-run.ps1`, первый прогон 30.10 (run 218) успешен.
-4. **MPC-90** — разработка на `varprice_stage`, `refresh-stage-from-backup.ps1`, роли баз в `docs/database-environments.md` (1.1).
-5. **MPC-91** — Планировщик Windows + флаг `--scheduled` (не чаще 1 раза в сутки; ручные запуски без ограничений). Зависит от MPC-88/89/90/93.
+4. **MPC-90** — готово (PR #51): разработка на `varprice_stage`, `refresh-stage-from-backup.ps1`, роли баз в `docs/database-environments.md` (1.1).
+5. **MPC-91** — Планировщик Windows, правило «раз в сутки» через `scheduled-run.ps1 -Scheduled` (маркер `state\last-scheduled-success.txt`), а не флаг Worker `--scheduled`; ручные запуски без ограничений.
 
 Потом — работа над сайтом (Web) на `varprice_stage`.
 
