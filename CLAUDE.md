@@ -34,11 +34,11 @@ docker compose up -d postgres                 # контейнер var_postgres,
 | База | Роль |
 |---|---|
 | `varprice` | **Рабочие данные** (ежедневный сбор цен). Фактически продакшен. |
-| `varprice_stage` | Будущая база разработки (MPC-90). Сейчас — копия от 15.07. |
+| `varprice_stage` | **База разработки** (Development, `Ensure`). Обновляется из бэкапа `varprice`: `Scripts/refresh_stage.bat`. |
 | `varprice_test` | Интеграционные тесты. |
 | `varprice_prod` | Устаревшая копия от 17.07, не используется до переезда на сервер. |
 
-- Пока разработка ещё смотрит на `varprice`, в локальных `PriceCrawler.Worker/appsettings.Local.json` и `PriceCrawler.Web/appsettings.Local.json` стоит `DatabaseSchema:StartupMode=ValidateOnly`, чтобы dev-запуски не меняли схему рабочей базы. Не удаляй это до MPC-90.
+- С MPC-90 строка подключения по умолчанию (`appsettings.json` Web и Worker) указывает на `varprice_stage`. К `varprice` подключается только релизный сборщик через локальный `J:\Apps\PriceCrawler\config\appsettings.Production.json`. Куда подключился запуск, видно в логе: `Database target: ...`.
 - Никаких записей в `varprice` без явного согласия владельца и свежего бэкапа (`Scripts/backup_varus.bat`). Диагностика — только `set default_transaction_read_only = on`.
 - Не запускай destructive-скрипты (`db/seeds/*`) и restore против `varprice`.
 
@@ -46,15 +46,15 @@ docker compose up -d postgres                 # контейнер var_postgres,
 
 - Каталог заполнен: первый `catalog-refresh` (run 212) — 10 259 товаров за 16 мин.
 - Рабочий режим сбора — **`collect-prices`** (весь каталог, `MaxProductsPerRun=11000`, ~3,2 ч, run 213). Legacy `vegetables` больше не нужен.
-- Сбор пока запускается вручную; релизная сборка и `Scripts/scheduled-run.ps1` — MPC-89 (`docs/collector.md`). Старая задача Планировщика `\Magazine Crawler` (`crawler.bat` → несуществующий `VarPrice.Worker.exe`) сломана, её заменит MPC-91.
+- Сбор запускается вручную из релизной сборки: `Scripts/scheduled-run.ps1` (`docs/collector.md`). Старая задача Планировщика `\Magazine Crawler` (`crawler.bat` → несуществующий `VarPrice.Worker.exe`) сломана, её заменит MPC-91.
 - Stage/Prod-деплой (эпик MPC-78, скрипты `Scripts/deploy-*.ps1`) **заморожен**: не развивать. Известные баги там (`builtAtUtc` под PowerShell 7, путь `scripts\…` в `build-release.ps1`) — не чинить без задачи.
 
 ## План (веха MPC-87 «Регулярный сбор данных отдельно от разработки»)
 
 1. **MPC-88** — готово (каталог заполнен); открыт вопрос про 4 018 товаров в `product`, которых нет в каталоге (новинки после 24.10 и/или лимит `MaxCategoryPagesPerSeed=10`).
 2. **MPC-93** — готово (PR #47): статус запуска с порогом dead-позиций (`Crawler:RunErrorDeadThresholdPercent`, 1%).
-3. **MPC-89** — релизная сборка сборщика в отдельной папке (`J:\Apps\PriceCrawler\`) + `scheduled-run.ps1`: Docker → Worker → бэкап → лог.
-4. **MPC-90** — разработка на `varprice_stage`, обновление stage из бэкапа, документация ролей баз.
+3. **MPC-89** — готово (PR #49, #50): релизный сборщик в `J:\Apps\PriceCrawler\` + `scheduled-run.ps1`, первый прогон 30.10 (run 218) успешен.
+4. **MPC-90** — разработка на `varprice_stage`, `refresh-stage-from-backup.ps1`, роли баз в `docs/database-environments.md` (1.1).
 5. **MPC-91** — Планировщик Windows + флаг `--scheduled` (не чаще 1 раза в сутки; ручные запуски без ограничений). Зависит от MPC-88/89/90/93.
 
 Потом — работа над сайтом (Web) на `varprice_stage`.
