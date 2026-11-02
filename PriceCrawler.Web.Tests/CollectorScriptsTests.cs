@@ -10,6 +10,7 @@ public sealed class CollectorScriptsTests
     [InlineData("scheduled-run.ps1")]
     [InlineData("backup-database.ps1")]
     [InlineData("refresh-stage-from-backup.ps1")]
+    [InlineData("register-scheduled-task.ps1")]
     public async Task Script_HasNoPowerShellSyntaxErrors(string scriptName)
     {
         var path = Path.Combine(ResolveRepositoryRoot(), "Scripts", scriptName);
@@ -109,6 +110,60 @@ public sealed class CollectorScriptsTests
                 "varus_2026-10-29_060000.backup"
             },
             remaining);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ScheduledRun_Scheduled_SkipsWhenTodayAlreadySucceeded()
+    {
+        using var fixture = new TemporaryDirectory();
+        Directory.CreateDirectory(Path.Combine(fixture.Path, "state"));
+        File.WriteAllText(
+            Path.Combine(fixture.Path, "state", "last-scheduled-success.txt"),
+            DateTime.Now.ToString("yyyy-MM-dd") + Environment.NewLine);
+
+        var result = await RunPowerShellAsync(
+            "-File", Path.Combine(ResolveRepositoryRoot(), "Scripts", "scheduled-run.ps1"),
+            "-Scheduled",
+            "-AppRoot", fixture.Path);
+
+        Assert.True(result.ExitCode == 0, result.Output);
+        var logs = Directory.GetFiles(Path.Combine(fixture.Path, "logs")).Select(file => Path.GetFileName(file)!).ToArray();
+        Assert.Equal(new[] { "scheduled-run_skipped.log" }, logs);
+        Assert.Contains("already completed today", File.ReadAllText(Path.Combine(fixture.Path, "logs", "scheduled-run_skipped.log")), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ScheduledRun_MarksSuccessOnlyForScheduledRunsWithSuccessfulWorker()
+    {
+        var script = File.ReadAllText(Path.Combine(ResolveRepositoryRoot(), "Scripts", "scheduled-run.ps1"));
+
+        Assert.Contains("if ($Scheduled -and $workerSucceeded)", script, StringComparison.Ordinal);
+        Assert.Contains("$workerSucceeded = $false", script, StringComparison.Ordinal);
+        Assert.True(
+            script.IndexOf("already completed today", StringComparison.Ordinal) <
+            script.IndexOf("Start-DockerEngine)", StringComparison.Ordinal),
+            "A skipped scheduled start must exit before Docker is touched.");
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void RegisterScheduledTask_RetriesHourlyFromEightAndReplacesLegacyTask()
+    {
+        var root = ResolveRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "Scripts", "register-scheduled-task.ps1"));
+
+        Assert.Contains("$StartTime = \"08:00\"", script, StringComparison.Ordinal);
+        Assert.Contains("-StartWhenAvailable", script, StringComparison.Ordinal);
+        Assert.Contains("-MultipleInstances IgnoreNew", script, StringComparison.Ordinal);
+        Assert.Contains("-RepetitionInterval (New-TimeSpan -Hours 1)", script, StringComparison.Ordinal);
+        Assert.Contains("scripts\\scheduled-run.ps1", script, StringComparison.Ordinal);
+        Assert.Contains("-Scheduled -AppRoot", script, StringComparison.Ordinal);
+        Assert.Contains("\"Magazine Crawler\"", script, StringComparison.Ordinal);
+
+        var publish = File.ReadAllText(Path.Combine(root, "Scripts", "publish-collector.ps1"));
+        Assert.Contains("@(\"scheduled-run.ps1\", \"backup-database.ps1\")", publish, StringComparison.Ordinal);
     }
 
     private static async Task<ProcessResult> RunPowerShellAsync(params string[] arguments)

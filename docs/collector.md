@@ -9,7 +9,10 @@ J:\Apps\PriceCrawler\
   config\appsettings.Production.json   локальные настройки сборщика (пароль), не в git
   worker\<version>\                    опубликованные версии (последние 5)
   worker\current.txt                   имя версии, которую запускает scheduled-run.ps1
+  scripts\                             копии scheduled-run.ps1 и backup-database.ps1 для Планировщика
+  state\last-scheduled-success.txt     дата последнего успешного запуска из Планировщика
   logs\scheduled-run_<дата_время>.log  лог каждого запуска (хранится 30 дней)
+  logs\scheduled-run_skipped.log       по строке на каждый пропущенный повтор («уже собрано сегодня»)
 D:\Backups\Varus\Postgres\
   varus_<yyyy-MM-dd_HHmmss>.backup     проверенные бэкапы varprice
 ```
@@ -21,6 +24,7 @@ D:\Backups\Varus\Postgres\
 1. Создать `J:\Apps\PriceCrawler\config\appsettings.Production.json` из шаблона `config\collector\appsettings.Production.example.json` и вписать пароль. База — рабочая `varprice`, `DatabaseSchema:StartupMode` обязательно `ValidateOnly`: сборщик никогда не меняет схему.
 2. Опубликовать сборщик (см. ниже).
 3. Один раз запустить `scheduled-run.ps1` вручную и проверить лог.
+4. Зарегистрировать задачу Планировщика (см. «Планировщик Windows»).
 
 ## Публикация новой версии
 
@@ -33,6 +37,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\publish-collector.ps
 - отказывается публиковать при незакоммиченных изменениях отслеживаемых файлов (`-AllowDirtyWorkingTree`, чтобы обойти; версия тогда получает суффикс `-dirty-<время>`);
 - берёт версию из Nerdbank.GitVersioning, делает `dotnet publish -c Release` во временную папку, кладёт туда локальный `appsettings.Production.json` и `collector-release.json` (версия, коммит, время, предыдущая версия);
 - проверяет запуск `PriceCrawler.Worker.exe --help`, затем переименовывает папку в `worker\<version>` и переключает `current.txt`;
+- копирует `scheduled-run.ps1` и `backup-database.ps1` в `J:\Apps\PriceCrawler\scripts\`: Планировщик запускает эти копии, поэтому смена ветки или правки скриптов в репозитории не влияют на ежедневный сбор до следующей публикации;
 - хранит последние 5 версий (`-KeepVersions`), текущую и предыдущую не удаляет никогда.
 
 Повторная публикация той же версии требует `-Force`.
@@ -57,7 +62,38 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\scheduled-run.ps1
 
 Одновременно может идти только один запуск (второй сразу выходит с кодом 40).
 
-Пока задача Планировщика не настроена (MPC-91), скрипт запускается вручную. Скрипт сам не проверяет правило «не чаще раза в сутки»; оно появится в MPC-91 (`--scheduled`).
+Ручной запуск (без `-Scheduled`) ничем не ограничен: его можно повторять сколько угодно раз в день.
+
+### Режим `-Scheduled` (MPC-91)
+
+С ключом `-Scheduled` (так его запускает Планировщик) действует правило «не чаще одного успешного сбора в сутки»:
+- если в `state\last-scheduled-success.txt` уже сегодняшняя дата, скрипт сразу выходит с кодом 0, **не запуская Docker**, и дописывает строку в `logs\scheduled-run_skipped.log`;
+- дата записывается, только когда все шаги Worker завершились с кодом 0. Неудачный бэкап (код 30) сбор не повторяет;
+- если запуск прервался (отключили свет, перезагрузка) или Worker упал, дата не записывается, и следующий повтор Планировщика запускает сбор снова. `collect-prices` берёт только те позиции каталога, которые ещё не собраны, поэтому повтор после обрыва дособирает остаток, а не начинает всё заново.
+
+Правило реализовано в `scheduled-run.ps1`, а не флагом `--scheduled` в Worker (как было сформулировано в MPC-91): так ежечасный повтор не будит Docker и PostgreSQL, а Worker не нужно перепубликовать.
+
+## Планировщик Windows
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\register-scheduled-task.ps1
+```
+
+Запускается один раз (и повторно после изменения параметров) от пользователя, под которым работает компьютер; права администратора не нужны. Перед этим должен быть выполнен `publish-collector.ps1`, иначе скрипт остановится: в `J:\Apps\PriceCrawler\scripts\` ещё нет `scheduled-run.ps1`.
+
+Задача `PriceCrawler Daily Collect`:
+- старт ежедневно в **08:00** (`-StartTime`), затем повтор **каждый час до 22:00** (`-RetryHours 14`). Из-за частых отключений света: первый повтор после включения компьютера доделает сбор, остальные повторы этого дня сразу выходят;
+- «Запускать при первой возможности, если пропущен плановый запуск» (`StartWhenAvailable`): если в 08:00 компьютер был выключен, задача стартует после включения;
+- если предыдущий запуск ещё идёт (сбор ~3,5 ч), новый экземпляр не стартует (`MultipleInstances IgnoreNew`); на всякий случай есть ещё мьютекс в скрипте (код 40);
+- лимит времени выполнения 8 ч (`-TimeLimitHours`);
+- работает только когда пользователь вошёл в систему: Docker Desktop запускается в сессии пользователя. После включения компьютера нужно войти в Windows (или настроить автоматический вход);
+- действие: `powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File J:\Apps\PriceCrawler\scripts\scheduled-run.ps1 -Scheduled -AppRoot J:\Apps\PriceCrawler`.
+
+Скрипт удаляет старую сломанную задачу `\Magazine Crawler` (`crawler.bat` → несуществующий `VarPrice.Worker.exe`); оставить её: `-KeepLegacyTask`. Посмотреть, что будет сделано, без изменений: `-WhatIf`.
+
+Проверка: `Get-ScheduledTask "PriceCrawler Daily Collect" | Get-ScheduledTaskInfo` (следующий и последний запуск, `LastTaskResult` = код выхода `scheduled-run.ps1`) или «Планировщик заданий» → «Библиотека». Запустить сейчас: `Start-ScheduledTask "PriceCrawler Daily Collect"` (если сегодня уже был успешный запуск, он будет пропущен).
+
+Отключить: `Disable-ScheduledTask "PriceCrawler Daily Collect"`; удалить: `Unregister-ScheduledTask "PriceCrawler Daily Collect"`.
 
 ### Коды выхода `scheduled-run.ps1`
 
