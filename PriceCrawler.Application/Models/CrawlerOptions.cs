@@ -65,6 +65,19 @@ public sealed class CrawlerOptions
     public int SuccessfulCheckIntervalHours { get; set; } = 24;
 
     /// <summary>
+    /// When true (default), a successful check makes the item due again at the start of a later local day
+    /// (interval rounded to whole days, at least 1) instead of exactly SuccessfulCheckIntervalHours later.
+    /// Keeps the daily collection window from drifting later every day (MPC-94).
+    /// </summary>
+    public bool AlignSuccessfulCheckToDayStart { get; set; } = true;
+
+    /// <summary>
+    /// Time zone for day alignment (for example "Europe/Kyiv" or "FLE Standard Time").
+    /// Empty = the local time zone of the computer that runs the Worker.
+    /// </summary>
+    public string? ScheduleTimeZoneId { get; set; }
+
+    /// <summary>
     /// Base delay for catalog-level final failure backoff, in minutes.
     /// Values below 1 are normalized by the use case.
     /// </summary>

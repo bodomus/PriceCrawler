@@ -36,6 +36,7 @@ public sealed class CollectProductPricesUseCase(
         var limit = Math.Max(1, opt.MaxProductsPerRun);
         var leaseDuration = TimeSpan.FromSeconds(Math.Max(30, opt.CatalogLeaseSeconds));
         var workerId = PriceCollectionQueueProcessor.BuildWorkerId();
+        var scheduleTimeZone = ProductCatalogCheckSchedule.ResolveTimeZone(opt.ScheduleTimeZoneId);
         var selectedById = new Dictionary<long, ProductCatalogItem>();
         long runId = 0;
         long ingestionRunId = 0;
@@ -149,7 +150,11 @@ public sealed class CollectProductPricesUseCase(
                         new ProductCatalogCheckSuccess(
                             item.ProductCatalogId.Value,
                             checkedAt,
-                            checkedAt.AddHours(Math.Max(1, opt.SuccessfulCheckIntervalHours)),
+                            ProductCatalogCheckSchedule.ComputeNextSuccessfulCheck(
+                                checkedAt,
+                                opt.SuccessfulCheckIntervalHours,
+                                opt.AlignSuccessfulCheckToDayStart,
+                                scheduleTimeZone),
                             card.ExternalId,
                             card.Slug),
                         itemCt);

@@ -325,6 +325,8 @@ dotnet run --project PriceCrawler.Worker -- --help
 - `Crawler:MaxProductsPerRun`
 - `Crawler:CatalogLeaseSeconds` (default `1800`)
 - `Crawler:SuccessfulCheckIntervalHours` (default `24`)
+- `Crawler:AlignSuccessfulCheckToDayStart` (default `true`: a checked item is due again at the start of the next local day, so the daily run window does not drift; MPC-94)
+- `Crawler:ScheduleTimeZoneId` (default empty = local time zone of the Worker computer)
 - `Crawler:CatalogFailureBaseDelayMinutes` (default `60`)
 - `Crawler:CatalogFailureMaxDelayHours` (default `24`)
 - `Crawler:CatalogDeactivationEnabled` (default `true`)
@@ -394,6 +396,8 @@ limit 20;
 - `Crawler__MaxProductsPerRun`
 - `Crawler__CatalogLeaseSeconds`
 - `Crawler__SuccessfulCheckIntervalHours`
+- `Crawler__AlignSuccessfulCheckToDayStart`
+- `Crawler__ScheduleTimeZoneId`
 - `Crawler__CatalogFailureBaseDelayMinutes`
 - `Crawler__CatalogFailureMaxDelayHours`
 - `Crawler__CatalogDeactivationEnabled`
