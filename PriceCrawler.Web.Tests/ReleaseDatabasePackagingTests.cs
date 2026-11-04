@@ -151,8 +151,8 @@ public sealed class ReleaseDatabasePackagingTests
             Assert.Equal(version, rootElement.GetProperty("version").GetString());
             Assert.Equal(40, rootElement.GetProperty("commit").GetString()!.Length);
             Assert.EndsWith("Z", rootElement.GetProperty("builtAtUtc").GetString(), StringComparison.Ordinal);
-            Assert.Equal(1, rootElement.GetProperty("database").GetProperty("minimumSchemaVersion").GetInt32());
-            Assert.Equal(1, rootElement.GetProperty("database").GetProperty("targetSchemaVersion").GetInt32());
+            Assert.Equal(DatabaseSchema.ExpectedVersion, rootElement.GetProperty("database").GetProperty("minimumSchemaVersion").GetInt32());
+            Assert.Equal(DatabaseSchema.ExpectedVersion, rootElement.GetProperty("database").GetProperty("targetSchemaVersion").GetInt32());
             Assert.True(rootElement.GetProperty("components").GetProperty("web").GetBoolean());
             Assert.True(rootElement.GetProperty("components").GetProperty("crawler").GetBoolean());
 
