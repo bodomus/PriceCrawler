@@ -824,6 +824,7 @@ public sealed class WorkerIntegrationTests
             source,
             CreateProductCatalogRepository(factory),
             CreateProductCatalogRefreshRepository(factory),
+            new PgCategoryRepository(factory),
             CreateCrawlerRunRepository(factory),
             Options.Create(new CrawlerOptions
             {

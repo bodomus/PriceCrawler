@@ -16,6 +16,7 @@ public sealed class RefreshProductCatalogUseCase(
     IProductUrlDiscoveryService productUrlDiscoveryService,
     IProductCatalogRepository productCatalogRepository,
     IProductCatalogRefreshRepository refreshRepository,
+    ICategoryRepository categoryRepository,
     ICrawlerRunRepository crawlerRunRepository,
     IOptions<CrawlerOptions> crawlerOptions,
     ICrawlerProgressReporter progressReporter,
@@ -300,6 +301,11 @@ public sealed class RefreshProductCatalogUseCase(
                     "Product catalog deactivation skipped. RefreshId={RefreshId}; Reason={Reason}",
                     refreshId,
                     safety.Reason);
+            }
+
+            if (discovery.Categories is not null)
+            {
+                await UpdateCategoriesAsync(discovery.Categories, refreshId, discoveredAt, stages, ct);
             }
 
             var note = BuildNote(
@@ -588,6 +594,75 @@ public sealed class RefreshProductCatalogUseCase(
         catch (Exception ex)
         {
             logger.LogError(ex, "Product catalog refresh cancellation cleanup failed. RunId={RunId}", runId);
+        }
+    }
+
+    /// <summary>
+    /// Stores the category tree and links products to the categories that listed them. Failures here
+    /// are logged and do not fail the refresh: the product catalog is already up to date.
+    /// </summary>
+    /// <param name="categories">Category facts from discovery.</param>
+    /// <param name="refreshId">Current catalog refresh.</param>
+    /// <param name="seenAtUtc">Time the categories were read.</param>
+    /// <param name="stages">Stage recorder of the run.</param>
+    /// <param name="ct">Cancellation token.</param>
+    private async Task UpdateCategoriesAsync(
+        CategoryDiscovery categories,
+        long refreshId,
+        DateTimeOffset seenAtUtc,
+        CrawlerRunStageRecorder stages,
+        CancellationToken ct)
+    {
+        try
+        {
+            if (categories.Tree is { } tree)
+            {
+                progressReporter.SetCurrentStage("Обновление категорий");
+                var activeBefore = await categoryRepository.GetActiveCountAsync(tree.Source, ct);
+                if (activeBefore > 0 && tree.Nodes.Count * 2 < activeBefore)
+                {
+                    logger.LogWarning(
+                        "Category tree sync skipped: tree is less than half of the stored one. RefreshId={RefreshId}; TreeCategories={TreeCategories}; ActiveBefore={ActiveBefore}",
+                        refreshId,
+                        tree.Nodes.Count,
+                        activeBefore);
+                }
+                else
+                {
+                    var syncWatch = Stopwatch.StartNew();
+                    var sync = await categoryRepository.SyncTreeAsync(tree, refreshId, seenAtUtc, ct);
+                    stages.Add(CrawlerRunStages.CategorySync, syncWatch.ElapsedMilliseconds, sync.ReceivedCount);
+                    logger.LogInformation(
+                        "Category tree synced. RefreshId={RefreshId}; Received={Received}; Inserted={Inserted}; Renamed={Renamed}; Moved={Moved}; Reactivated={Reactivated}; Deactivated={Deactivated}; Duplicates={Duplicates}",
+                        refreshId,
+                        sync.ReceivedCount,
+                        sync.InsertedCount,
+                        sync.RenamedCount,
+                        sync.MovedCount,
+                        sync.ReactivatedCount,
+                        sync.DeactivatedCount,
+                        tree.DuplicateCount);
+                }
+            }
+
+            if (categories.Listings.Count > 0)
+            {
+                var linkWatch = Stopwatch.StartNew();
+                var links = await categoryRepository.LinkProductsAsync(
+                    ProductCatalogSource, categories.Listings, refreshId, seenAtUtc, ct);
+                stages.Add(CrawlerRunStages.CategoryLink, linkWatch.ElapsedMilliseconds, links.LinkedCount);
+                logger.LogInformation(
+                    "Products linked to categories. RefreshId={RefreshId}; Categories={Categories}; Linked={Linked}; Removed={Removed}; UnknownProducts={UnknownProducts}",
+                    refreshId,
+                    categories.Listings.Count,
+                    links.LinkedCount,
+                    links.RemovedCount,
+                    links.UnknownProductCount);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Category update failed; product catalog refresh continues. RefreshId={RefreshId}", refreshId);
         }
     }
 

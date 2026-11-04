@@ -28,7 +28,8 @@ public sealed class ProductUrlDiscoveryService(
                 strategy.SourceKind,
                 strategy.SourceName,
                 urls.Count);
-            return new ProductUrlDiscoveryResult(strategy.SourceKind, urls);
+            var categories = (strategy as ICategoryAwareDiscoveryStrategy)?.LastCategoryDiscovery;
+            return new ProductUrlDiscoveryResult(strategy.SourceKind, urls, categories);
         }
 
         var message = $"Product URL discovery failed. No product URLs available from {strategy.SourceName}.";
