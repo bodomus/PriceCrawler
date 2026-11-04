@@ -8,6 +8,12 @@ public static class SqlAssetLocator
     public static string ResolveBaselinePath()
         => ResolveFile("db", "migrations", "0001_baseline.sql");
 
+    /// <summary>Finds the <c>db/migrations</c> directory next to the application or the repository.</summary>
+    /// <returns>Absolute directory path.</returns>
+    /// <exception cref="DirectoryNotFoundException">The directory is not shipped with the application.</exception>
+    public static string ResolveMigrationsDirectory()
+        => ResolveDirectory("db", "migrations");
+
     public static string ResolveRoutineScriptsDirectory()
         => ResolveDirectory("db", "routines");
 

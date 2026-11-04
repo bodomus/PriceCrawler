@@ -36,7 +36,8 @@ public sealed class DatabaseSchemaVersioningTests
 
         await using var context = CreateDbContext(database.ConnectionString);
         var result = await new DatabaseSchemaVersionReader(context).ReadAsync();
-        Assert.True(result.IsCompatible);
+        Assert.Equal(DatabaseSchema.BaselineVersion, result.ActualVersion);
+        Assert.False(result.IsCompatible, "A baseline-only database still needs the forward migrations.");
     }
 
     [Fact]
@@ -134,8 +135,9 @@ public sealed class DatabaseSchemaVersioningTests
 
         await coordinator.ExecuteAsync(environmentName);
 
-        Assert.Equal(1, await database.ScalarAsync<int>("select max(version) from schema_version"));
+        Assert.Equal(DatabaseSchema.ExpectedVersion, await database.ScalarAsync<int>("select max(version) from schema_version"));
         Assert.True(await database.ScalarAsync<bool>("select to_regclass('public.product') is not null"));
+        Assert.True(await database.ScalarAsync<bool>("select to_regclass('public.category') is not null"));
     }
 
     [Fact]
@@ -151,7 +153,8 @@ public sealed class DatabaseSchemaVersioningTests
 
         await coordinator.ExecuteAsync("Test");
 
-        Assert.Equal(1, await database.ScalarAsync<int>("select max(version) from schema_version"));
+        Assert.Equal(DatabaseSchema.ExpectedVersion, await database.ScalarAsync<int>("select max(version) from schema_version"));
+        Assert.Equal(DatabaseSchema.ExpectedVersion, await database.ScalarAsync<int>("select count(*) from schema_version"));
         Assert.Equal(1, await database.ScalarAsync<int>("select count(*) from product where external_id='repeat'"));
     }
 
@@ -163,7 +166,7 @@ public sealed class DatabaseSchemaVersioningTests
     public async Task ValidateOnly_CompatibleSchema_SucceedsWithoutMutation(string environmentName)
     {
         await using var database = await TemporaryPostgresDatabase.CreateAsync();
-        await database.ExecuteFileAsync(BaselinePath);
+        await ApplyAllMigrationsAsync(database);
         await database.ExecuteAsync(
             "insert into product(external_id,name,url) values('readonly','preserved','https://example.test/readonly');");
         var before = await CaptureDatabaseStateAsync(database);
@@ -183,9 +186,11 @@ public sealed class DatabaseSchemaVersioningTests
 
     [Theory]
     [InlineData("Stage", 0)]
-    [InlineData("Stage", 2)]
+    [InlineData("Stage", 1)]
+    [InlineData("Stage", 3)]
     [InlineData("Production", 0)]
-    [InlineData("Production", 2)]
+    [InlineData("Production", 1)]
+    [InlineData("Production", 3)]
     [Trait("Category", "Integration")]
     public async Task ValidateOnly_VersionMismatchFailsWithoutRepair(string environmentName, int actualVersion)
     {
@@ -239,7 +244,7 @@ public sealed class DatabaseSchemaVersioningTests
                                         checksum varchar(128)
                                     );
                                     insert into schema_version(version, migration_name, application_version)
-                                    values (1, '0001_baseline', 'v0.4.1-alpha');
+                                    values (2, '0002_category_tree', null);
                                     """);
         await using var context = CreateDbContext(database.ConnectionString);
         var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.ValidateOnly);
@@ -275,7 +280,7 @@ public sealed class DatabaseSchemaVersioningTests
     public async Task ProductionValidateOnly_SucceedsWithRoleThatHasNoDdlPermission()
     {
         await using var database = await TemporaryPostgresDatabase.CreateAsync();
-        await database.ExecuteFileAsync(BaselinePath);
+        await ApplyAllMigrationsAsync(database);
         var runtimeConnectionString = await database.CreateReadOnlyRuntimeRoleAsync();
         Assert.False(await TemporaryPostgresDatabase.ScalarAsync<bool>(
             runtimeConnectionString,
@@ -285,7 +290,86 @@ public sealed class DatabaseSchemaVersioningTests
 
         await coordinator.ExecuteAsync("Production");
 
-        Assert.Equal(1, await database.ScalarAsync<int>("select max(version) from schema_version"));
+        Assert.Equal(DatabaseSchema.ExpectedVersion, await database.ScalarAsync<int>("select max(version) from schema_version"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task Ensure_ExistingVersionOneDatabase_AppliesForwardMigrationsAndKeepsRows()
+    {
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
+        await database.ExecuteFileAsync(BaselinePath);
+        await database.ExecuteAsync(
+            "insert into product(external_id,name,url) values('v1','preserved','https://example.test/v1');");
+        await using var context = CreateDbContext(database.ConnectionString);
+        var coordinator = CreateCoordinator(context, DatabaseSchemaStartupMode.Ensure);
+
+        await coordinator.ExecuteAsync("Development");
+
+        Assert.Equal(DatabaseSchema.ExpectedVersion, await database.ScalarAsync<int>("select max(version) from schema_version"));
+        Assert.Equal("0002_category_tree", await database.ScalarAsync<string>(
+            "select migration_name from schema_version where version = 2"));
+        Assert.True(await database.ScalarAsync<bool>("select to_regclass('public.product_catalog_category') is not null"));
+        Assert.Equal(1, await database.ScalarAsync<int>("select count(*) from product where external_id='v1'"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task Migration0002_AppliedTwice_FailsWithoutChanges()
+    {
+        await using var database = await TemporaryPostgresDatabase.CreateAsync();
+        await ApplyAllMigrationsAsync(database);
+
+        var error = await Assert.ThrowsAsync<PostgresException>(
+            () => database.ExecuteFileAsync(ResolveRepositoryFile("db", "migrations", "0002_category_tree.sql")));
+
+        Assert.Contains("requires schema version 1", error.MessageText, StringComparison.Ordinal);
+        Assert.Equal(2, await database.ScalarAsync<int>("select count(*) from schema_version"));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void MigrationCatalog_ShipsContiguousMigrationsUpToExpectedVersion()
+    {
+        var migrations = DatabaseMigrationCatalog.LoadForwardMigrations(
+            Path.GetDirectoryName(BaselinePath)!,
+            DatabaseSchema.ExpectedVersion);
+
+        Assert.Equal(
+            Enumerable.Range(DatabaseSchema.BaselineVersion + 1, DatabaseSchema.ExpectedVersion - DatabaseSchema.BaselineVersion),
+            migrations.Select(migration => migration.Version));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void MigrationCatalog_GapInVersions_IsRejected()
+    {
+        var directory = Directory.CreateTempSubdirectory("pricecrawler-migrations-");
+        try
+        {
+            File.WriteAllText(Path.Combine(directory.FullName, "0001_baseline.sql"), "-- fixture");
+            File.WriteAllText(Path.Combine(directory.FullName, "0003_skipped.sql"), "-- fixture");
+
+            var error = Assert.Throws<InvalidOperationException>(
+                () => DatabaseMigrationCatalog.LoadForwardMigrations(directory.FullName, 3));
+
+            Assert.Contains("contiguous", error.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    private static async Task ApplyAllMigrationsAsync(TemporaryPostgresDatabase database)
+    {
+        await database.ExecuteFileAsync(BaselinePath);
+        foreach (var migration in DatabaseMigrationCatalog.LoadForwardMigrations(
+                     Path.GetDirectoryName(BaselinePath)!,
+                     DatabaseSchema.ExpectedVersion))
+        {
+            await database.ExecuteFileAsync(migration.FullPath);
+        }
     }
 
     private static async Task<TemporaryPostgresDatabase> CreateExistingDatabaseWithoutMetadataAsync()

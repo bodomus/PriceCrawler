@@ -20,11 +20,11 @@ public sealed class ReleaseDatabasePackagingTests
         Assert.True(File.Exists(baselinePath));
         Assert.True(File.Exists(bootstrapPath));
         Assert.Contains(
-            $"VALUES ({DatabaseSchema.ExpectedVersion}, '0001_baseline'",
+            $"VALUES ({DatabaseSchema.BaselineVersion}, '0001_baseline'",
             File.ReadAllText(baselinePath),
             StringComparison.OrdinalIgnoreCase);
         Assert.Contains(
-            $"VALUES ({DatabaseSchema.ExpectedVersion}, '0001_baseline'",
+            $"VALUES ({DatabaseSchema.BaselineVersion}, '0001_baseline'",
             File.ReadAllText(bootstrapPath),
             StringComparison.OrdinalIgnoreCase);
     }
@@ -192,7 +192,7 @@ public sealed class ReleaseDatabasePackagingTests
             Assert.DoesNotContain("EnsureSchemaAsync", program, StringComparison.Ordinal);
 
             var project = File.ReadAllText(Path.Combine(root, host, $"{host}.csproj"));
-            Assert.Contains("db\\migrations\\0001_baseline.sql", project, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("db\\migrations\\*.sql", project, StringComparison.OrdinalIgnoreCase);
         }
     }
 

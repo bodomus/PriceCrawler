@@ -23,7 +23,7 @@
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
           <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </Content>
-      <Content Include="..\db\migrations\0001_baseline.sql" Link="db\migrations\0001_baseline.sql">
+      <Content Include="..\db\migrations\*.sql" Link="db\migrations\%(Filename)%(Extension)">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
           <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </Content>
