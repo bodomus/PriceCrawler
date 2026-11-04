@@ -13,8 +13,18 @@ Packaging only copies and validates SQL. It never connects to PostgreSQL, execut
 Current baseline:
 
 - application release: `v0.4.1-alpha`;
-- schema version: `1`;
-- expected version in code: `DatabaseSchema.ExpectedVersion`.
+- baseline schema version: `1` (`DatabaseSchema.BaselineVersion`);
+- expected version in code: `DatabaseSchema.ExpectedVersion` (currently `2`).
+
+## Forward migrations
+
+`migrations/NNNN_description.sql` after the baseline are forward migrations (`0002_category_tree.sql`: category
+tree, MPC-96). Each file checks the previous version, runs in its own transaction and inserts its own
+`schema_version` row. Versions are contiguous; the newest must equal `DatabaseSchema.ExpectedVersion`.
+
+- Development/Test (`Ensure`): applied automatically after the baseline or the legacy ensure path.
+- Working database of the release collector (`varprice`, `ValidateOnly`): `Scripts/apply-collector-migrations.ps1`
+  (verified backup first), then `Scripts/publish-collector.ps1`. See `docs/collector.md`.
 
 The environment policy in `docs/database-environments.md` remains the source of truth.
 
