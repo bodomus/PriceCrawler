@@ -11,6 +11,7 @@ public sealed class CollectorScriptsTests
     [InlineData("backup-database.ps1")]
     [InlineData("refresh-stage-from-backup.ps1")]
     [InlineData("register-scheduled-task.ps1")]
+    [InlineData("apply-collector-migrations.ps1")]
     public async Task Script_HasNoPowerShellSyntaxErrors(string scriptName)
     {
         var path = Path.Combine(ResolveRepositoryRoot(), "Scripts", scriptName);
@@ -164,6 +165,25 @@ public sealed class CollectorScriptsTests
 
         var publish = File.ReadAllText(Path.Combine(root, "Scripts", "publish-collector.ps1"));
         Assert.Contains("@(\"scheduled-run.ps1\", \"backup-database.ps1\")", publish, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void CollectorMigrations_BackUpBeforeApplyingAndPublishRefusesStaleSchema()
+    {
+        var root = ResolveRepositoryRoot();
+        var migrate = File.ReadAllText(Path.Combine(root, "Scripts", "apply-collector-migrations.ps1"));
+        var backupAt = migrate.IndexOf("backup-database.ps1", StringComparison.Ordinal);
+        var applyAt = migrate.IndexOf("docker exec -i", StringComparison.Ordinal);
+        Assert.True(backupAt > 0 && applyAt > backupAt, "The backup must run before any migration is applied.");
+        Assert.Contains("ON_ERROR_STOP=1", migrate, StringComparison.Ordinal);
+        Assert.Contains("ExpectedVersion", migrate, StringComparison.Ordinal);
+        Assert.Contains("Read-Host", migrate, StringComparison.Ordinal);
+
+        var publish = File.ReadAllText(Path.Combine(root, "Scripts", "publish-collector.ps1"));
+        Assert.Contains("Assert-WorkingDatabaseSchema", publish, StringComparison.Ordinal);
+        Assert.Contains("apply-collector-migrations.ps1", publish, StringComparison.Ordinal);
+        Assert.Contains("[switch]$SkipSchemaCheck", publish, StringComparison.Ordinal);
     }
 
     private static async Task<ProcessResult> RunPowerShellAsync(params string[] arguments)

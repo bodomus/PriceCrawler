@@ -4,7 +4,12 @@ param(
     [string]$Configuration = "Release",
     [ValidateRange(2, 50)][int]$KeepVersions = 5,
     [switch]$AllowDirtyWorkingTree,
-    [switch]$Force
+    [switch]$Force,
+    [string]$ContainerName = "var_postgres",
+    [string]$DatabaseUser = "var",
+    [string]$DatabaseName = "varprice",
+    # Publish without comparing the working database schema with the release (e.g. Docker is not running).
+    [switch]$SkipSchemaCheck
 )
 
 # Publishes the Worker (price collector) as a Release build outside the repository (MPC-89):
@@ -52,6 +57,31 @@ function Assert-CollectorSettings {
     }
 }
 
+function Assert-WorkingDatabaseSchema {
+    # The collector runs with ValidateOnly and stops when the database schema differs from
+    # DatabaseSchema.ExpectedVersion, so a release must not be activated before its migrations
+    # are applied (Scripts\apply-collector-migrations.ps1, MPC-96).
+    $contractPath = Join-Path $repositoryRoot "PriceCrawler.Infrastructure\Persistence\DatabaseSchema.cs"
+    $match = [regex]::Match((Get-Content -LiteralPath $contractPath -Raw), 'public\s+const\s+int\s+ExpectedVersion\s*=\s*(?<value>\d+)\s*;')
+    if (-not $match.Success) {
+        throw "Could not read DatabaseSchema.ExpectedVersion from $contractPath"
+    }
+    $expected = [int]$match.Groups["value"].Value
+    $output = @(& docker exec $ContainerName psql -U $DatabaseUser -d $DatabaseName -tAX `
+        -c "select coalesce(max(version), 0) from public.schema_version;" 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not read the schema version of $ContainerName/$DatabaseName ($($output -join ' ')). Start Docker and the container, or pass -SkipSchemaCheck."
+    }
+    $actual = [int](($output -join "").Trim())
+    if ($actual -lt $expected) {
+        throw "Working database $DatabaseName is at schema version $actual, this release needs $expected. Run Scripts\apply-collector-migrations.ps1 first (it makes a backup), then publish again."
+    }
+    if ($actual -gt $expected) {
+        throw "Working database $DatabaseName is at schema version $actual, newer than this release ($expected). Publish a newer commit."
+    }
+    Write-Host "Working database schema version: $actual (matches the release)"
+}
+
 function Get-BuildVersion {
     $output = @(& dotnet msbuild $projectPath -t:GetBuildVersion -getProperty:NuGetPackageVersion -getProperty:GitCommitId 2>&1)
     if ($LASTEXITCODE -ne 0) {
@@ -68,6 +98,12 @@ function Get-BuildVersion {
 
 Write-Step "Checks"
 Assert-CollectorSettings -Path $settingsPath
+if ($SkipSchemaCheck) {
+    Write-Warning "Schema check skipped: the collector will refuse to start if $DatabaseName is not at the release schema version."
+}
+else {
+    Assert-WorkingDatabaseSchema
+}
 
 $status = @(& git -C $repositoryRoot status --porcelain --untracked-files=no)
 if ($LASTEXITCODE -ne 0) {
