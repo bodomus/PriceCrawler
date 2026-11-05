@@ -12,6 +12,7 @@ using PriceCrawler.Application.Abstractions;
 using PriceCrawler.Application.DependencyInjection;
 using PriceCrawler.Application.Models;
 using PriceCrawler.Application.UseCases;
+using PriceCrawler.Domain.Categories;
 using PriceCrawler.Infrastructure.Crawler;
 
 namespace PriceCrawler.Web.Tests;
@@ -266,6 +267,111 @@ public sealed class ProductUrlDiscoveryTests
             ],
             result.Select(x => x.AbsoluteUri).OrderBy(x => x, StringComparer.Ordinal));
         Assert.Equal(3, handler.RequestUris.Count);
+    }
+
+    [Fact]
+    public async Task CategorySeedSource_TreeMode_CrawlsLeavesToLastPageAndRecordsListings()
+    {
+        using var temp = new TempDirectory();
+        var seedPath = temp.WriteSeedFile(SeedJson("Unused", "https://varus.ua/unused-seed"));
+        var tree = CategoryTreeSnapshot.Create("varus",
+        [
+            new DiscoveredCategory("frukti-svizhi", "Фрукти свіжі", "https://varus.ua/frukti-svizhi", null, 0),
+            new DiscoveredCategory("banani", "Банани", "https://varus.ua/banani", "frukti-svizhi", 0),
+            new DiscoveredCategory("yabluka", "Яблука", "https://varus.ua/yabluka", "frukti-svizhi", 1)
+        ]);
+        using var client = CreateTrackedHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://varus.ua/banani"] = Html(
+                """
+                <div class="product-card"><a href="/banan-1">1</a></div>
+                <a rel="next" href="/banani?page=2">Next</a>
+                """),
+            ["https://varus.ua/banani?page=2"] = Html(
+                """
+                <div class="product-card"><a href="/banan-2">2</a></div>
+                """),
+            ["https://varus.ua/yabluka"] = Html(
+                """
+                <div class="product-card"><a href="/banan-1">shared</a></div>
+                <a rel="next" href="/yabluka?page=2">Next</a>
+                """),
+            ["https://varus.ua/yabluka?page=2"] = Html(
+                """
+                <div class="product-card"><a href="/yabluko-1">apple</a></div>
+                """)
+        }, out var handler);
+
+        await using var source = CreateCategorySource(seedPath, client, maxPagesPerSeed: 5,
+            treeSource: new FixedCategoryTreeSource(tree));
+        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Equal(3, result.Count);
+        Assert.DoesNotContain(handler.RequestUris, uri => uri.Contains("frukti-svizhi", StringComparison.Ordinal));
+        Assert.Contains(handler.RequestUris, uri => uri == "https://varus.ua/yabluka?page=2");
+        var discovery = source.Strategy.LastCategoryDiscovery;
+        Assert.NotNull(discovery);
+        Assert.Same(tree, discovery.Tree);
+        Assert.Collection(discovery.Listings,
+            banani =>
+            {
+                Assert.Equal("banani", banani.CategoryExternalId);
+                Assert.True(banani.IsComplete);
+                Assert.Equal(["https://varus.ua/banan-1", "https://varus.ua/banan-2"], banani.ProductUrls.Order());
+            },
+            yabluka =>
+            {
+                Assert.Equal("yabluka", yabluka.CategoryExternalId);
+                Assert.True(yabluka.IsComplete);
+                Assert.Equal(["https://varus.ua/banan-1", "https://varus.ua/yabluko-1"], yabluka.ProductUrls.Order());
+            });
+    }
+
+    [Fact]
+    public async Task CategorySeedSource_TreeUnavailable_FallsBackToSeedFileWithIncompleteListings()
+    {
+        using var temp = new TempDirectory();
+        var seedPath = temp.WriteSeedFile(SeedJson("Fresh", "https://varus.ua/ovochi-svizhi"));
+        using var client = CreateTrackedHttpClient(new Dictionary<string, HttpResponseMessage>
+        {
+            ["https://varus.ua/ovochi-svizhi"] = Html(
+                """
+                <div class="product-card"><a href="/morkva">1</a></div>
+                <a rel="next" href="/ovochi-svizhi?page=2">Next</a>
+                """)
+        }, out _);
+        var treeSource = new FixedCategoryTreeSource(null);
+
+        await using var source = CreateCategorySource(seedPath, client, maxPagesPerSeed: 1, treeSource: treeSource);
+        var result = await source.DiscoverProductUrlsAsync(CancellationToken.None);
+
+        Assert.Single(result);
+        Assert.Equal(1, treeSource.Calls);
+        var discovery = source.Strategy.LastCategoryDiscovery;
+        Assert.NotNull(discovery);
+        Assert.Null(discovery.Tree);
+        var listing = Assert.Single(discovery.Listings);
+        Assert.Equal("ovochi-svizhi", listing.CategoryExternalId);
+        Assert.False(listing.IsComplete);
+    }
+
+    [Theory]
+    [InlineData("https://varus.ua/banani", "banani")]
+    [InlineData("https://varus.ua/Banani/", "banani")]
+    [InlineData("https://varus.ua/catalog/category/view/s/prochee-mjaso/id/59995/", "catalog/category/view/s/prochee-mjaso/id/59995")]
+    [InlineData("https://varus.ua/moloko~brand_galichina", null)]
+    [InlineData("https://varus.ua/ru/banani", null)]
+    [InlineData("https://varus.ua/", null)]
+    [InlineData("https://example.com/banani", null)]
+    public void VarusUrlRules_TryGetCategoryKey(string url, string? expected)
+    {
+        var found = VarusUrlRules.TryGetCategoryKey(new Uri(url), out var key);
+
+        Assert.Equal(expected is not null, found);
+        if (expected is not null)
+        {
+            Assert.Equal(expected, key);
+        }
     }
 
     [Fact]
@@ -572,7 +678,8 @@ public sealed class ProductUrlDiscoveryTests
         string seedPath,
         HttpClient client,
         int maxPagesPerSeed = 3,
-        ICrawlerProgressReporter? progressReporter = null)
+        ICrawlerProgressReporter? progressReporter = null,
+        ICategoryTreeSource? treeSource = null)
     {
         var crawlerOptions = Options.Create(new CrawlerOptions
         {
@@ -590,6 +697,7 @@ public sealed class ProductUrlDiscoveryTests
                     ResolvedPath = seedPath
                 }),
                 NullLogger<CategorySeedProvider>.Instance),
+            treeSource ?? new FixedCategoryTreeSource(null),
             new CategoryPageLoader(
                 new StubHttpClientFactory(client),
                 coordinator,

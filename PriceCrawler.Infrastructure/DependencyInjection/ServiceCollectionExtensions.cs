@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPriceCollectQueueRepository, PgPriceCollectQueueRepository>();
         services.AddScoped<IProductCatalogRepository, PgProductCatalogRepository>();
         services.AddScoped<IProductCatalogRefreshRepository, PgProductCatalogRefreshRepository>();
+        services.AddScoped<ICategoryRepository, PgCategoryRepository>();
 
         services.AddSingleton<ISitemapUrlProvider, SitemapUrlProvider>();
         services.AddSingleton<ISitemapHttpClient, SitemapHttpClient>();
@@ -56,6 +57,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SitemapDiscoveryService>();
         services.AddScoped<IProductUrlSource, SitemapReader>();
         services.AddScoped<ICategorySeedProvider, CategorySeedProvider>();
+        services.AddScoped<ICategoryTreeSource, VarusCategoryTreeSource>();
+        services.AddScoped<IVarusCategoryMenuParser, VarusCategoryMenuParser>();
         services.AddScoped<ICategoryPageLoader, CategoryPageLoader>();
         services.AddScoped<ICategoryProductLinkExtractor, CategoryProductLinkExtractor>();
         services.AddScoped<ICategoryPaginationStrategy, CategoryPaginationStrategy>();

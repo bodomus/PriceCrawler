@@ -125,9 +125,9 @@ function Get-DatabaseMigrationInventory {
     }
     $baseline = Get-Content -LiteralPath $baselinePath -Raw
     $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw
-    $metadataPattern = "(?is)insert\s+into\s+public\.schema_version.*?values\s*\(\s*$ExpectedVersion\s*,\s*'0001_baseline'"
+    $metadataPattern = "(?is)insert\s+into\s+public\.schema_version.*?values\s*\(\s*1\s*,\s*'0001_baseline'"
     if ($baseline -notmatch $metadataPattern -or $bootstrap -notmatch $metadataPattern) {
-        throw "Baseline/bootstrap metadata does not register expected schema version $ExpectedVersion."
+        throw "Baseline/bootstrap metadata does not register baseline schema version 1."
     }
     return [pscustomobject]@{
         Files = @($records | ForEach-Object File)

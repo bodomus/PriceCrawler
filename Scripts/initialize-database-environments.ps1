@@ -821,6 +821,11 @@ if (-not (Test-Path -LiteralPath $schemaContractPath -PathType Leaf)) {
 if (-not (Test-Path -LiteralPath $baselinePath -PathType Leaf)) {
     throw "Baseline migration was not found: $baselinePath"
 }
+# Forward migrations (0002_*.sql and later) bring a fresh baseline up to the current schema version.
+$forwardMigrationPaths = @(Get-ChildItem -LiteralPath (Split-Path -Parent $baselinePath) -File -Filter "*.sql" |
+    Where-Object { $_.Name -match '^\d{4}_[a-z0-9_]+\.sql$' -and [int]$_.Name.Substring(0, 4) -gt 1 } |
+    Sort-Object Name |
+    ForEach-Object FullName)
 
 if ($InitializeAll -and ($InitializeTest -or $InitializeStage -or $InitializeProduction)) {
     throw "-InitializeAll cannot be combined with individual initialization switches."
@@ -960,6 +965,9 @@ try {
         }
         New-Database -Database $TestDatabase
         Invoke-PsqlFile -Database $TestDatabase -Path $baselinePath
+        foreach ($migrationPath in $forwardMigrationPaths) {
+            Invoke-PsqlFile -Database $TestDatabase -Path $migrationPath
+        }
         Grant-RuntimeAccess -Database $TestDatabase -Role $TestRuntimeRole
         $version = Assert-DatabaseSchema -Database $TestDatabase -ExpectedVersion $schemaContract.Version
         $counts = Get-RowCounts -Database $TestDatabase

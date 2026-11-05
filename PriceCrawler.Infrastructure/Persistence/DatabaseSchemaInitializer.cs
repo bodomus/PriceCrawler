@@ -33,11 +33,60 @@ public sealed class DatabaseSchemaInitializer(
             log.LogInformation(
                 "Initialized empty database from baseline {BaselineMigrationName}",
                 DatabaseSchema.BaselineMigrationName);
-            return;
+        }
+        else
+        {
+            await schemaBootstrapper.EnsureSchemaAsync(ct);
+            log.LogInformation("Completed approved existing Development/Test database ensure path");
         }
 
-        await schemaBootstrapper.EnsureSchemaAsync(ct);
-        log.LogInformation("Completed approved existing Development/Test database ensure path");
+        await ApplyPendingMigrationsAsync(ct);
+    }
+
+    /// <summary>
+    /// Applies, in order, every forward migration newer than the version recorded in <c>schema_version</c>.
+    /// Each migration file owns its transaction and registers its own version row.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="InvalidOperationException">A migration did not register the version it produces.</exception>
+    private async Task ApplyPendingMigrationsAsync(CancellationToken ct)
+    {
+        var migrations = DatabaseMigrationCatalog.LoadForwardMigrations();
+        var connection = dbContext.Database.GetDbConnection();
+        var current = await ReadCurrentVersionAsync(ct);
+        foreach (var migration in migrations.Where(migration => migration.Version > current))
+        {
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = await File.ReadAllTextAsync(migration.FullPath, ct);
+                command.CommandTimeout = 300;
+                await command.ExecuteNonQueryAsync(ct);
+            }
+
+            var applied = await ReadCurrentVersionAsync(ct);
+            if (applied != migration.Version)
+            {
+                throw new InvalidOperationException(
+                    $"Migration {migration.Name} finished but schema version is {applied}, expected {migration.Version}.");
+            }
+
+            log.LogInformation(
+                "Applied forward migration {MigrationName}; SchemaVersion={SchemaVersion}",
+                migration.Name,
+                migration.Version);
+        }
+    }
+
+    private async Task<int> ReadCurrentVersionAsync(CancellationToken ct)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              select case when to_regclass('public.schema_version') is null then 0
+                                          else (select coalesce(max(version), 0) from public.schema_version) end;
+                              """;
+        var value = await command.ExecuteScalarAsync(ct);
+        return value is null or DBNull ? 0 : Convert.ToInt32(value);
     }
 
     private async Task<bool> IsPublicSchemaEmptyAsync(CancellationToken ct)

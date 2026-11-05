@@ -242,6 +242,12 @@ dotnet run --project PriceCrawler.Worker -- catalog-refresh
 - выполняет один batch upsert в `product_catalog` с catalog source `varus` и текущим refresh id;
 - после безопасного полного refresh soft-деактивирует активные товары, которые давно не встречались;
 - inactive товар автоматически реактивируется при повторном discovery;
+- читает дерево категорий из меню varus.ua (`Crawler:CategoryTreeUrl`), сохраняет его в `category` и обходит
+  только листовые категории до последней страницы; если дерево не прочиталось или в нём меньше
+  `Crawler:CategoryTreeMinimumNodes` категорий, берёт список из `Crawler:CategorySeedUrlsFilePath` (MPC-96);
+- связывает товары каталога с категориями, на страницах которых они встретились (`product_catalog_category`);
+  у полностью прочитанной категории удаляет связи товаров, которых в ней больше нет;
+- ошибки на шаге категорий не роняют refresh: каталог товаров к этому моменту уже обновлён;
 - не создает `ingestion_run`, `price_collect_queue`, `price_snapshot` и `product`;
 - завершает процесс с кодом `0` при `status=ok` и `1` при ошибке.
 
@@ -255,6 +261,8 @@ crawler_run_start
 -> catalog_upsert
 -> safety_check
 -> deactivate_missing
+-> category_sync (дерево: добавить, переименовать, перевесить, выключить исчезнувшие)
+-> category_link (товар -> категория)
 -> refresh_session_complete
 -> crawler_run_finish
 ```
@@ -266,6 +274,15 @@ discovered -> active -> missing during refresh -> grace period -> inactive -> di
 ```
 
 `is_active = false` does not physically delete catalog rows, products, queue history, or price snapshots.
+
+Дерево категорий (MPC-96):
+
+- `category` — по строке на категорию магазина (`source`, `external_id` = путь URL, например `banani`,
+  `parent_id`, `name`, `url`, `sort_order`, `is_active`). Строки не удаляются: исчезнувшая категория выключается,
+  вернувшаяся включается, перенесённая получает нового родителя.
+- `product_catalog_category` — какие товары каталога перечислены на странице листовой категории. Товары
+  родителя получаются через дерево. Ссылки-фильтры вида `/moloko~brand_galichina` категориями не считаются.
+- Если новое дерево меньше половины сохранённого, синхронизация пропускается (защита от сломанной разметки меню).
 
 ### `collect-prices`
 

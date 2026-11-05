@@ -114,6 +114,22 @@ public sealed class CrawlerOptions
     public int MaxCategoryPagesPerSeed { get; set; } = 10;
 
     /// <summary>
+    /// Where category-seed discovery takes its categories from: <c>Tree</c> (default) reads the category
+    /// menu of the store and crawls its leaf categories; <c>File</c> uses <see cref="CategorySeedUrlsFilePath"/>.
+    /// When the tree cannot be read, discovery falls back to the file.
+    /// </summary>
+    public string CategorySeedSource { get; set; } = CategorySeedSources.Tree;
+
+    /// <summary>Page whose category menu holds the full category tree of the store.</summary>
+    public string CategoryTreeUrl { get; set; } = "https://varus.ua/";
+
+    /// <summary>
+    /// Fewest categories a parsed tree must have to be trusted. A smaller tree usually means the menu
+    /// markup changed; it is then neither stored nor used, so stored categories are not deactivated by mistake.
+    /// </summary>
+    public int CategoryTreeMinimumNodes { get; set; } = 50;
+
+    /// <summary>
     /// Максимальное количество URL из очереди, обрабатываемых параллельно в рамках запуска.
     /// Используется `RunCrawlerUseCase` при drain очереди через `Parallel.ForEachAsync`.
     /// Увеличение ускоряет обработку, но повышает нагрузку на Varus, сеть, CPU и базу данных.

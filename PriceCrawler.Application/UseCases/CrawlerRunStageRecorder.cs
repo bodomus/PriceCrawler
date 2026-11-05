@@ -12,6 +12,8 @@ public sealed class CrawlerRunStageRecorder
         CrawlerRunStages.Discovery,
         CrawlerRunStages.CatalogUpsert,
         CrawlerRunStages.CatalogDeactivation,
+        CrawlerRunStages.CategorySync,
+        CrawlerRunStages.CategoryLink,
         CrawlerRunStages.CatalogSelection,
         CrawlerRunStages.QueueEnqueue,
         CrawlerRunStages.QueueProcessing,

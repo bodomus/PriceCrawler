@@ -23,6 +23,8 @@ public static class CrawlerRunStages
     public const string Discovery = "discovery";
     public const string CatalogUpsert = "catalog-upsert";
     public const string CatalogDeactivation = "catalog-deactivation";
+    public const string CategorySync = "category-sync";
+    public const string CategoryLink = "category-link";
     public const string CatalogSelection = "catalog-selection";
     public const string QueueEnqueue = "queue-enqueue";
     public const string QueueProcessing = "queue-processing";

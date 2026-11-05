@@ -42,6 +42,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\publish-collector.ps
 
 Повторная публикация той же версии требует `-Force`.
 
+Перед публикацией скрипт сравнивает версию схемы рабочей базы (`docker exec var_postgres psql … schema_version`) с `DatabaseSchema.ExpectedVersion` релиза и отказывается публиковать, если база отстаёт: сборщик работает в `ValidateOnly` и с другой версией схемы не стартует. Если Docker сейчас не запущен, проверку можно пропустить ключом `-SkipSchemaCheck` (тогда миграцию нужно применить до следующего запуска).
+
+### Новая версия схемы (миграции)
+
+Если релиз поднимает версию схемы (например, MPC-96: версия 2, таблицы категорий), сначала применить миграции к `varprice`, потом публиковать:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\apply-collector-migrations.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\publish-collector.ps1
+```
+
+`apply-collector-migrations.ps1` показывает текущую и нужную версию, спрашивает подтверждение (`yes`), делает проверенный бэкап через `backup-database.ps1` и применяет недостающие `db\migrations\NNNN_*.sql` по порядку, каждую в своей транзакции. Ошибка в миграции оставляет базу на предыдущей версии. `-WhatIf` только показывает, что будет сделано.
+
 **Откат:** записать в `worker\current.txt` имя предыдущей версии (оно есть в `collector-release.json` текущей).
 
 ## Ежедневный запуск

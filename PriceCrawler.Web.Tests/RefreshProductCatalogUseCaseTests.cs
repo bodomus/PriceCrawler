@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using PriceCrawler.Application.Abstractions;
 using PriceCrawler.Application.Models;
 using PriceCrawler.Application.UseCases;
+using PriceCrawler.Domain.Categories;
 using PriceCrawler.Domain.Constants;
 using PriceCrawler.Domain.Enums;
 using PriceCrawler.Domain.Interfaces;
@@ -53,6 +54,76 @@ public sealed class RefreshProductCatalogUseCaseTests
             calls);
         Assert.Equal(1001, catalog.LastRefreshId);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_DiscoveryWithCategories_SyncsTreeAndLinksProducts()
+    {
+        var calls = new List<string>();
+        var categories = new FakeCategoryRepository();
+        var discovery = new FakeDiscoveryService(calls, ["https://varus.ua/banan-1"])
+        {
+            Categories = new CategoryDiscovery(SmallTree(),
+                [new CategoryProductListing("banani", ["https://varus.ua/banan-1"], IsComplete: true)])
+        };
+        var sut = CreateUseCase(discovery,
+            new FakeProductCatalogRepository(calls) { ActiveCount = 1, Result = new ProductCatalogUpsertResult(1, 1, 0, 0) },
+            new FakeRefreshRepository(calls), new FakeCrawlerRunRepository(calls), categories: categories);
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(RefreshProductCatalogStatus.Ok, result.Status);
+        Assert.Single(categories.SyncedTrees);
+        Assert.Equal("banani", Assert.Single(Assert.Single(categories.LinkedListings)).CategoryExternalId);
+        Assert.Contains(result.StageTimings!, stage => stage.Stage == CrawlerRunStages.CategorySync);
+        Assert.Contains(result.StageTimings!, stage => stage.Stage == CrawlerRunStages.CategoryLink);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TreeMuchSmallerThanStored_SkipsSyncButLinksProducts()
+    {
+        var calls = new List<string>();
+        var categories = new FakeCategoryRepository { ActiveCount = 100 };
+        var discovery = new FakeDiscoveryService(calls, ["https://varus.ua/banan-1"])
+        {
+            Categories = new CategoryDiscovery(SmallTree(),
+                [new CategoryProductListing("banani", ["https://varus.ua/banan-1"], IsComplete: true)])
+        };
+        var sut = CreateUseCase(discovery,
+            new FakeProductCatalogRepository(calls) { ActiveCount = 1, Result = new ProductCatalogUpsertResult(1, 1, 0, 0) },
+            new FakeRefreshRepository(calls), new FakeCrawlerRunRepository(calls), categories: categories);
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(RefreshProductCatalogStatus.Ok, result.Status);
+        Assert.Empty(categories.SyncedTrees);
+        Assert.Single(categories.LinkedListings);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CategorySyncFails_RefreshStillSucceeds()
+    {
+        var calls = new List<string>();
+        var categories = new FakeCategoryRepository { ThrowOnSync = true };
+        var discovery = new FakeDiscoveryService(calls, ["https://varus.ua/banan-1"])
+        {
+            Categories = new CategoryDiscovery(SmallTree(), [])
+        };
+        var refresh = new FakeRefreshRepository(calls);
+        var sut = CreateUseCase(discovery,
+            new FakeProductCatalogRepository(calls) { ActiveCount = 1, Result = new ProductCatalogUpsertResult(1, 1, 0, 0) },
+            refresh, new FakeCrawlerRunRepository(calls), categories: categories);
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal(RefreshProductCatalogStatus.Ok, result.Status);
+        Assert.Equal(RunStatus.Ok, refresh.LastRunStatus);
+    }
+
+    private static CategoryTreeSnapshot SmallTree() => CategoryTreeSnapshot.Create("varus",
+    [
+        new DiscoveredCategory("frukti-svizhi", "Фрукти свіжі", "https://varus.ua/frukti-svizhi", null, 0),
+        new DiscoveredCategory("banani", "Банани", "https://varus.ua/banani", "frukti-svizhi", 0)
+    ]);
 
     [Fact]
     public async Task ExecuteAsync_DiscoveryFails_DoesNotDeactivate()
@@ -274,11 +345,13 @@ public sealed class RefreshProductCatalogUseCaseTests
         IProductCatalogRefreshRepository refresh,
         ICrawlerRunRepository crawler,
         CrawlerOptions? options = null,
-        ICrawlerProgressReporter? progressReporter = null) =>
+        ICrawlerProgressReporter? progressReporter = null,
+        ICategoryRepository? categories = null) =>
         new(
             discovery,
             catalog,
             refresh,
+            categories ?? new FakeCategoryRepository(),
             crawler,
             Options.Create(options ?? new CrawlerOptions
             {
@@ -294,10 +367,12 @@ public sealed class RefreshProductCatalogUseCaseTests
         ProductUrlDiscoverySourceKind sourceKind = ProductUrlDiscoverySourceKind.CategorySeed)
         : IProductUrlDiscoveryService
     {
+        public CategoryDiscovery? Categories { get; init; }
+
         public Task<ProductUrlDiscoveryResult> DiscoverProductUrlsAsync(CancellationToken ct)
         {
             calls.Add("discover");
-            return Task.FromResult(new ProductUrlDiscoveryResult(sourceKind, urls));
+            return Task.FromResult(new ProductUrlDiscoveryResult(sourceKind, urls, Categories));
         }
     }
 
