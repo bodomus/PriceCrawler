@@ -10,7 +10,7 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
-      <PackageReference Include="Telerik.UI.for.AspNet.Core" Version="2025.2.520"/>
+      <PackageReference Include="Telerik.UI.for.AspNet.Core" Version="2025.4.1321"/>
   </ItemGroup>
   <ItemGroup>
     <!-- Local developer overrides: read from the project directory by dotnet run, never copied or published. -->
