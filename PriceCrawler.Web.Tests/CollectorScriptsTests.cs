@@ -186,6 +186,20 @@ public sealed class CollectorScriptsTests
         Assert.Contains("[switch]$SkipSchemaCheck", publish, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void PublishCollector_ChecksTheTargetFrameworkRuntimeBeforePublishing()
+    {
+        var root = ResolveRepositoryRoot();
+        var publish = File.ReadAllText(Path.Combine(root, "Scripts", "publish-collector.ps1"));
+
+        var checkAt = publish.IndexOf("\nAssert-DotNetRuntime", StringComparison.Ordinal);
+        var publishAt = publish.IndexOf("dotnet publish $projectPath", StringComparison.Ordinal);
+        Assert.True(checkAt > 0 && publishAt > checkAt, "The runtime check must run before dotnet publish.");
+        Assert.Contains("--list-runtimes", publish, StringComparison.Ordinal);
+        Assert.Contains("Microsoft.AspNetCore.App", publish, StringComparison.Ordinal);
+    }
+
     private static async Task<ProcessResult> RunPowerShellAsync(params string[] arguments)
     {
         var startInfo = new ProcessStartInfo

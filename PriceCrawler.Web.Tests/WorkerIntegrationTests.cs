@@ -382,10 +382,10 @@ public sealed class WorkerIntegrationTests
             queueRepo.ReserveBatchAsync(runId, batchSize: 6, workerId: "worker-a", lease, CancellationToken.None);
         var secondTask =
             queueRepo.ReserveBatchAsync(runId, batchSize: 6, workerId: "worker-b", lease, CancellationToken.None);
-        await Task.WhenAll(firstTask, secondTask);
+        var batches = await Task.WhenAll(firstTask, secondTask);
 
-        var first = firstTask.Result.Select(x => x.Id).ToHashSet();
-        var second = secondTask.Result.Select(x => x.Id).ToHashSet();
+        var first = batches[0].Select(x => x.Id).ToHashSet();
+        var second = batches[1].Select(x => x.Id).ToHashSet();
 
         Assert.True(first.Count > 0);
         Assert.True(second.Count > 0);

@@ -3,7 +3,7 @@
 Thanks for your interest in improving VARUS Price Crawler.
 
 ## Prerequisites
-- .NET SDK 9.0.311 (see `global.json`)
+- .NET SDK 10.0.100+ (see `global.json`)
 - Docker (optional, for Postgres via `docker compose`)
 
 ## Build

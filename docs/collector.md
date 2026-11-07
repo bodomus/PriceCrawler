@@ -34,6 +34,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\publish-collector.ps
 
 Скрипт:
 - проверяет `config\appsettings.Production.json` (нет `<placeholder>`, `ValidateOnly`);
+- проверяет, что на этой машине установлены рантаймы целевой версии .NET (`Microsoft.NETCore.App` и `Microsoft.AspNetCore.App` 10.x): сборщик публикуется framework-dependent и без них не запустится;
 - отказывается публиковать при незакоммиченных изменениях отслеживаемых файлов (`-AllowDirtyWorkingTree`, чтобы обойти; версия тогда получает суффикс `-dirty-<время>`);
 - берёт версию из Nerdbank.GitVersioning, делает `dotnet publish -c Release` во временную папку, кладёт туда локальный `appsettings.Production.json` и `collector-release.json` (версия, коммит, время, предыдущая версия);
 - проверяет запуск `PriceCrawler.Worker.exe --help`, затем переименовывает папку в `worker\<version>` и переключает `current.txt`;

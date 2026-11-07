@@ -119,17 +119,17 @@ public sealed class RunsControllerTests
         Assert.Equal("24.03.2026 (2)", rootNode.Title);
         Assert.Equal(SnapshotScopes.None, rootNode.SnapshotScope);
 
-        var runNode = Assert.Single(nodes.Where(node => node.Id == "run:21"));
+        var runNode = Assert.Single(nodes, node => node.Id == "run:21");
         Assert.Equal("run", runNode.NodeType);
         Assert.Equal(21, runNode.RunId);
         Assert.Equal(SnapshotScopes.All, runNode.SnapshotScope);
         Assert.Equal(5, runNode.ItemsCount);
 
-        var successfulNode = Assert.Single(nodes.Where(node => node.Id == "run:21:successful"));
+        var successfulNode = Assert.Single(nodes, node => node.Id == "run:21:successful");
         Assert.Equal("Successful snapshots (4)", successfulNode.Title);
         Assert.Equal(SnapshotScopes.Successful, successfulNode.SnapshotScope);
 
-        var failedNode = Assert.Single(nodes.Where(node => node.Id == "run:18:failed"));
+        var failedNode = Assert.Single(nodes, node => node.Id == "run:18:failed");
         Assert.Equal("Failed snapshots (2)", failedNode.Title);
         Assert.Equal(SnapshotScopes.Failed, failedNode.SnapshotScope);
     }

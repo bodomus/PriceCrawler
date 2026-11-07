@@ -335,7 +335,7 @@ public sealed class DatabaseRuntimeRoleProvisioningScriptTests
             projectName,
             "bin",
             configuration,
-            "net8.0",
+            "net10.0",
             $"{projectName}.dll");
         return File.Exists(path)
             ? path

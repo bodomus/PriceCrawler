@@ -82,6 +82,26 @@ function Assert-WorkingDatabaseSchema {
     Write-Host "Working database schema version: $actual (matches the release)"
 }
 
+function Assert-DotNetRuntime {
+    # The collector is published framework-dependent and runs on this machine, so the shared
+    # runtimes of the Worker's target framework must be installed here (MPC-97: net10.0).
+    $match = [regex]::Match((Get-Content -LiteralPath $projectPath -Raw), '<TargetFramework>net(?<major>\d+)\.\d+</TargetFramework>')
+    if (-not $match.Success) {
+        throw "Could not read TargetFramework from $projectPath"
+    }
+    $major = $match.Groups["major"].Value
+    $runtimes = @(& dotnet --list-runtimes 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet --list-runtimes failed: $($runtimes -join ' ')"
+    }
+    foreach ($name in @("Microsoft.NETCore.App", "Microsoft.AspNetCore.App")) {
+        if (-not ($runtimes | Where-Object { $_ -match "^$([regex]::Escape($name)) $major\." })) {
+            throw "$name $major.x is not installed on this machine; the collector would not start. Install the .NET $major SDK or runtimes, then publish again."
+        }
+    }
+    Write-Host ".NET $major runtimes: installed"
+}
+
 function Get-BuildVersion {
     $output = @(& dotnet msbuild $projectPath -t:GetBuildVersion -getProperty:NuGetPackageVersion -getProperty:GitCommitId 2>&1)
     if ($LASTEXITCODE -ne 0) {
@@ -98,6 +118,7 @@ function Get-BuildVersion {
 
 Write-Step "Checks"
 Assert-CollectorSettings -Path $settingsPath
+Assert-DotNetRuntime
 if ($SkipSchemaCheck) {
     Write-Warning "Schema check skipped: the collector will refuse to start if $DatabaseName is not at the release schema version."
 }

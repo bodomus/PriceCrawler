@@ -26,7 +26,7 @@ docker compose up -d postgres                 # контейнер var_postgres,
 
 - Тесты с `[Trait("Platform", "Windows")]` запускают PowerShell-скрипты деплоя; в CI (Linux) они исключены фильтром `Platform!=Windows`, локально на Windows — выполняются.
 - Интеграционные тесты используют `varprice_test` (`PriceCrawler.Web.Tests/PostgresIntegrationFixture.cs`), не рабочую базу.
-- Worker локально: `PriceCrawler.Worker\bin\Debug\net8.0\run-dev.bat <collect-prices|catalog-refresh|vegetables|--help>` (окружение Development). Web: `dotnet run --project PriceCrawler.Web`.
+- Worker локально: `PriceCrawler.Worker\bin\Debug\net10.0\run-dev.bat <collect-prices|catalog-refresh|vegetables|--help>` (окружение Development). Web: `dotnet run --project PriceCrawler.Web`.
 - Личные отладочные настройки — только в `appsettings.Local.json` (git-ignored, только Development). **Не редактируй файлы в `bin/`.**
 
 ## Базы данных (решение от 23.10.2026)
@@ -66,5 +66,4 @@ docker compose up -d postgres                 # контейнер var_postgres,
 - `crawl_error` с кодом `unknown`: 266 в октябре (последний 14.10).
 - Статистика `crawler_run.*_count` не заполняется в legacy-режиме `vegetables`.
 - CI не ловит уязвимые пакеты: `dotnet restore` идёт без `-c Release` (NU1902 остаётся предупреждением).
-- Поддержка .NET 8 заканчивается 10.11.2026 — запланировать переход на net10.
 - Репозиторий публичный, при этом в нём лежат `key.snk` и dev-пароль Postgres.
