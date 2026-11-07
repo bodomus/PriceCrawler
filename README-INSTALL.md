@@ -35,9 +35,9 @@ development machine. The workflow explicitly prohibits Codex from inventing comm
 Repository-specific assumptions incorporated here:
 
 - solution: `PriceCrawler.sln`;
-- .NET SDK pinned to `9.0.311`;
-- current target framework documented as `net8.0`;
-- C# 12, nullable enabled, analyzers enabled;
+- .NET SDK pinned to `10.0.100` (roll forward to the latest feature band);
+- target framework `net10.0`;
+- C# 14, nullable enabled, analyzers enabled;
 - Release warnings treated as errors;
 - primary projects: Domain, Application, Infrastructure, Web, Worker, Web.Tests;
 - PostgreSQL/EF/Npgsql persistence;

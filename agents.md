@@ -61,9 +61,9 @@ This repository contains VARUS Price Crawler / PriceCrawler.
 
 Primary stack:
 
-- .NET SDK 9.0.311 pinned by `global.json`;
-- projects currently targeting `net8.0`;
-- C# 12 with nullable reference types and implicit usings;
+- .NET SDK 10.0.100 pinned by `global.json`;
+- projects targeting `net10.0`;
+- C# 14 with nullable reference types and implicit usings;
 - ASP.NET Core Web host;
 - console Worker host;
 - Domain, Application, Infrastructure, Web, Worker, and test projects;

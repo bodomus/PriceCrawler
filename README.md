@@ -82,7 +82,7 @@ Stage releases deploy only through `Scripts/deploy-stage.ps1`: validated ZIP/che
 
 ## Требования
 
-- .NET SDK 9.0.311+ (проект таргетится в `net8.0`, но в репо закреплен совместимый установленный SDK)
+- .NET SDK 10.0.100+ (`global.json`); проекты таргетятся в `net10.0`, C# 14
 - PostgreSQL 16+ (или `docker compose`)
 
 ## Быстрый запуск
@@ -144,7 +144,7 @@ dotnet run --project PriceCrawler.Worker -- collect-prices
 - Web: `dotnet run --project PriceCrawler.Web` (профиль в `Properties/launchSettings.json` задает Development).
 - Worker через `dotnet run` или IDE: `dotnet run --project PriceCrawler.Worker -- collect-prices`
   (профили в `PriceCrawler.Worker/Properties/launchSettings.json` задают `DOTNET_ENVIRONMENT=Development`).
-- Worker из каталога сборки: `PriceCrawler.Worker\bin\Debug\net8.0\run-dev.bat collect-prices`.
+- Worker из каталога сборки: `PriceCrawler.Worker\bin\Debug\net10.0\run-dev.bat collect-prices`.
 
 Личные отладочные настройки (лимиты, другой файл category seeds, уровень логов) держите в
 `appsettings.Local.json` рядом с `appsettings.json` проекта. Образец: `appsettings.Local.example.json`.
