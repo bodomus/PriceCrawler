@@ -24,7 +24,7 @@ public sealed class VarusCardRegexesTests
     [Fact]
     public void PriceRegex_DoesNotMatchSpecialPriceKey()
     {
-        Assert.False(VarusCardRegexes.Price().IsMatch("\"special_price\": 74.5"));
+        Assert.DoesNotMatch(VarusCardRegexes.Price(), "\"special_price\": 74.5");
     }
 
     [Fact]
