@@ -200,6 +200,77 @@ public sealed class CollectorScriptsTests
         Assert.Contains("Microsoft.AspNetCore.App", publish, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ScheduledRun_RunsWorkerFromFixedActiveFolderAndKeepsItsLogs()
+    {
+        using var fixture = new TemporaryDirectory();
+        var worker = Path.Combine(fixture.Path, "worker");
+        PublishFakeVersion(worker, "v1");
+        Directory.CreateDirectory(Path.Combine(worker, "v1", "logs"));
+        File.WriteAllText(Path.Combine(worker, "v1", "logs", "from-version-folder.log"), "old");
+        File.WriteAllText(Path.Combine(worker, "current.txt"), "v1");
+
+        var first = await RunCollectorActivationAsync(fixture.Path);
+
+        var active = Path.Combine(worker, "active");
+        Assert.True(first.ExitCode == 0, first.Output);
+        Assert.Contains(Path.Combine(active, "PriceCrawler.Worker.exe"), first.Output, StringComparison.Ordinal);
+        Assert.Contains("Activating collector v1", first.Output, StringComparison.Ordinal);
+        Assert.Equal("v1", File.ReadAllText(Path.Combine(active, "PriceCrawler.Worker.exe")));
+        Assert.False(Directory.Exists(Path.Combine(active, "logs")), "Logs of the version folder must not be copied.");
+
+        Directory.CreateDirectory(Path.Combine(active, "logs"));
+        File.WriteAllText(Path.Combine(active, "logs", "pricecrawler-worker.log"), "run 1");
+        var same = await RunCollectorActivationAsync(fixture.Path);
+        Assert.True(same.ExitCode == 0, same.Output);
+        Assert.DoesNotContain("Activating collector", same.Output, StringComparison.Ordinal);
+
+        PublishFakeVersion(worker, "v2");
+        File.WriteAllText(Path.Combine(worker, "current.txt"), "v2");
+        var second = await RunCollectorActivationAsync(fixture.Path);
+
+        Assert.True(second.ExitCode == 0, second.Output);
+        Assert.Contains("Activating collector v2", second.Output, StringComparison.Ordinal);
+        Assert.Equal("v2", File.ReadAllText(Path.Combine(active, "PriceCrawler.Worker.exe")));
+        Assert.Equal("run 1", File.ReadAllText(Path.Combine(active, "logs", "pricecrawler-worker.log")));
+        Assert.False(Directory.Exists(Path.Combine(worker, "active.new")));
+        Assert.True(File.Exists(Path.Combine(worker, "v1", "PriceCrawler.Worker.exe")), "Rollback needs the old version folder.");
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void PublishCollector_NeverCleansUpTheActiveFolder()
+    {
+        var publish = File.ReadAllText(Path.Combine(ResolveRepositoryRoot(), "Scripts", "publish-collector.ps1"));
+
+        Assert.Contains("$reserved = @(\"active\", \"active.new\")", publish, StringComparison.Ordinal);
+        Assert.Contains("($reserved -notcontains $_.Name)", publish, StringComparison.Ordinal);
+    }
+
+    private static void PublishFakeVersion(string workerRoot, string version)
+    {
+        var path = Path.Combine(workerRoot, version);
+        Directory.CreateDirectory(path);
+        File.WriteAllText(Path.Combine(path, "PriceCrawler.Worker.exe"), version);
+        File.WriteAllText(Path.Combine(path, "collector-release.json"), $$"""{ "version": "{{version}}" }""");
+    }
+
+    /// <summary>Loads Write-Log, Sync-ActiveCollector and Get-CollectorExecutable from scheduled-run.ps1 and runs the last one.</summary>
+    private static Task<ProcessResult> RunCollectorActivationAsync(string appRoot)
+    {
+        var path = Path.Combine(ResolveRepositoryRoot(), "Scripts", "scheduled-run.ps1");
+        var command =
+            "$ErrorActionPreference = 'Stop'; " +
+            $"$AppRoot = '{appRoot}'; $logPath = Join-Path '{appRoot}' 'activation.log'; " +
+            $"$ast = [System.Management.Automation.Language.Parser]::ParseFile('{path}', [ref]$null, [ref]$null); " +
+            "$names = @('Write-Log', 'Sync-ActiveCollector', 'Get-CollectorExecutable'); " +
+            "$ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $names -contains $node.Name }, $true) | " +
+            "ForEach-Object { . ([scriptblock]::Create($_.Extent.Text)) }; " +
+            "$exe = Get-CollectorExecutable; if ($null -eq $exe) { exit 20 }; Write-Output \"EXE=$exe\"";
+        return RunPowerShellAsync("-Command", command);
+    }
+
     private static async Task<ProcessResult> RunPowerShellAsync(params string[] arguments)
     {
         var startInfo = new ProcessStartInfo

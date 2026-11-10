@@ -57,6 +57,8 @@ Source: `PriceCrawler.Domain.Enums.RunStatus`
 
 ### `Error`
 - Applied when the share of dead queue items exceeds the threshold (`error_code = price_collection_dead_items` for `collect-prices`) or with a whole-process failure.
+- `collect-prices` stops early with `error_code = network_unavailable` after `Crawler:NetworkFailureStopThreshold` consecutive connection/DNS failures (MPC-108).
+- A run left `running` by a crashed process for longer than `Crawler:AbandonedRunTimeoutHours` (default 6) is closed as `Error` with `error_code = run_abandoned` at the start of the next `collect-prices` / `catalog-refresh` (MPC-108).
 - `RunErrorDeadThresholdPercent = 0` restores the strict rule: any dead item fails the run.
 - The decision is implemented once in `PriceCrawler.Application.UseCases.RunOutcomePolicy` and used by `collect-prices` and `vegetables`.
 - This is the failed final status of `crawler_run`.

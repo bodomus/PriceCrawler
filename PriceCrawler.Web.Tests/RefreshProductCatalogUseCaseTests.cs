@@ -353,6 +353,7 @@ public sealed class RefreshProductCatalogUseCaseTests
             refresh,
             categories ?? new FakeCategoryRepository(),
             crawler,
+            DisabledAbandonedRunCloser.Create(),
             Options.Create(options ?? new CrawlerOptions
             {
                 CatalogMinimumExpectedUrls = 1,

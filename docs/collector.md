@@ -9,6 +9,7 @@ J:\Apps\PriceCrawler\
   config\appsettings.Production.json   локальные настройки сборщика (пароль), не в git
   worker\<version>\                    опубликованные версии (последние 5)
   worker\current.txt                   имя версии, которую запускает scheduled-run.ps1
+  worker\active\                      постоянная папка, из которой запускается Worker (копия версии из current.txt)
   scripts\                             копии scheduled-run.ps1 и backup-database.ps1 для Планировщика
   state\last-scheduled-success.txt     дата последнего успешного запуска из Планировщика
   logs\scheduled-run_<дата_время>.log  лог каждого запуска (хранится 30 дней)
@@ -17,14 +18,15 @@ D:\Backups\Varus\Postgres\
   varus_<yyyy-MM-dd_HHmmss>.backup     проверенные бэкапы varprice
 ```
 
-Сам Worker дополнительно пишет свой лог в `worker\<version>\logs\pricecrawler-worker.log`.
+Сам Worker дополнительно пишет свой лог в `worker\active\logs\pricecrawler-worker.log` (до MPC-108 — в `worker\<version>\logs\`).
 
 ## Первая настройка
 
 1. Создать `J:\Apps\PriceCrawler\config\appsettings.Production.json` из шаблона `config\collector\appsettings.Production.example.json` и вписать пароль. База — рабочая `varprice`, `DatabaseSchema:StartupMode` обязательно `ValidateOnly`: сборщик никогда не меняет схему.
 2. Опубликовать сборщик (см. ниже).
 3. Один раз запустить `scheduled-run.ps1` вручную и проверить лог.
-4. Зарегистрировать задачу Планировщика (см. «Планировщик Windows»).
+4. Добавить исключение файрвола для `worker\active\PriceCrawler.Worker.exe` (см. «Файрвол (TinyWall)»).
+5. Зарегистрировать задачу Планировщика (см. «Планировщик Windows»).
 
 ## Публикация новой версии
 
@@ -56,7 +58,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\publish-collector.ps
 
 `apply-collector-migrations.ps1` показывает текущую и нужную версию, спрашивает подтверждение (`yes`), делает проверенный бэкап через `backup-database.ps1` и применяет недостающие `db\migrations\NNNN_*.sql` по порядку, каждую в своей транзакции. Ошибка в миграции оставляет базу на предыдущей версии. `-WhatIf` только показывает, что будет сделано.
 
-**Откат:** записать в `worker\current.txt` имя предыдущей версии (оно есть в `collector-release.json` текущей).
+**Откат:** записать в `worker\current.txt` имя предыдущей версии (оно есть в `collector-release.json` текущей). Следующий запуск `scheduled-run.ps1` сам скопирует её в `worker\active\`.
+
+## Постоянная папка Worker и файрвол (TinyWall)
+
+MPC-108. На машине сборщика стоит TinyWall: он разрешает сеть по **пути exe**. Раньше Worker запускался прямо из `worker\<version>\`, поэтому каждая новая версия получала `SocketException 10013` («доступ к сокету запрещён») на всех товарах (09.11, alpha.14).
+
+Теперь Worker всегда запускается из `worker\active\PriceCrawler.Worker.exe`:
+- перед запуском `scheduled-run.ps1` сравнивает версию в `worker\active\collector-release.json` с `current.txt`; если они разные (новая публикация или откат), копирует папку версии в `worker\active.new\`, переносит туда `active\logs` и подменяет `active`. В логе: `Activating collector <version> in ...`;
+- `publish-collector.ps1` папки `active` не трогает и при очистке старых версий её пропускает;
+- если `active` занята (например, Worker из неё запущен вручную), активация не удастся и скрипт выйдет с кодом 20.
+
+**Один раз** после перехода на MPC-108: в TinyWall разрешить `J:\Apps\PriceCrawler\worker\active\PriceCrawler.Worker.exe` (Manage → Application exceptions → Add application). Дальше при публикации и откате ничего менять не нужно. Исключения для старых `worker\<version>\` можно удалить.
+
+### Если сеть всё-таки заблокирована
+
+Ошибки соединения и DNS (`HttpRequestError.ConnectionError`/`NameResolutionError`, `SocketException`) записываются с кодом `network_unavailable` (раньше `unknown`). Если подряд упало `Crawler:NetworkFailureStopThreshold` позиций (по умолчанию 20; любая успешная сбрасывает счётчик), `collect-prices` останавливается сразу, а не перебирает весь каталог: запуск получает `error` с `error_code = network_unavailable`, `scheduled-run.ps1` — код 22. Необработанные товары остаются «к проверке» и попадут в следующий запуск.
+
+### Зависшие запуски
+
+Если процесс Worker умер, не завершив запуск (отключение света, падение CLR), запуск оставался в `running` навсегда (runs 228, 233, 234). Теперь каждый `collect-prices` и `catalog-refresh` при старте закрывает запуски, которые в `running` дольше `Crawler:AbandonedRunTimeoutHours` (по умолчанию 6 ч; полный сбор идёт ~3,2 ч): статус `error`, `error_code = run_abandoned`, у сборов цен — фактические счётчики очереди (succeeded/retry/dead). `finished_at` у такого запуска — время закрытия, а не падения.
 
 ## Ежедневный запуск
 
@@ -67,7 +88,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\scheduled-run.ps1
 Шаги:
 1. Docker Engine: если `docker info` не отвечает, запускает Docker Desktop и ждёт до 5 мин.
 2. PostgreSQL: `docker start var_postgres`, ждёт `pg_isready`. Контейнер должен существовать (создаётся один раз `docker compose up -d postgres` из репозитория).
-3. Worker из `worker\current.txt` с `DOTNET_ENVIRONMENT=Production`:
+3. Worker версии из `worker\current.txt`, запущенный из постоянной папки `worker\active\`, с `DOTNET_ENVIRONMENT=Production`:
    - по воскресеньям `catalog-refresh`, затем `collect-prices`;
    - в остальные дни `collect-prices`.
    Режим можно задать явно: `-Mode collect-prices` или `-Mode catalog-refresh`.
@@ -117,7 +138,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Scripts\register-scheduled-t
 | 1 | непредвиденная ошибка скрипта |
 | 10 | Docker Engine не поднялся |
 | 11 | контейнер PostgreSQL не найден или не готов |
-| 20 | опубликованный Worker не найден (нет `current.txt` или exe) |
+| 20 | опубликованный Worker не найден (нет `current.txt` или exe) или не удалось обновить `worker\active` |
 | 21 | `catalog-refresh` завершился с ошибкой |
 | 22 | `collect-prices` завершился с ошибкой |
 | 30 | бэкап не удался |

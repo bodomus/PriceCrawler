@@ -31,6 +31,8 @@
 | `BreakerFailureThreshold` | `int` | Число подряд идущих отказов, после которого circuit breaker временно открывается. Защищает от массовых ошибок и rate limit. |
 | `BreakerOpenSeconds` | `int` | Время открытого состояния circuit breaker в секундах. После достижения порога ошибок новые запросы временно откладываются. |
 | `RunErrorDeadThresholdPercent` | `double` | Допустимая доля окончательно упавших позиций очереди (dead) в процентах, при которой `collect-prices` и `vegetables` завершаются со статусом `ok` (с предупреждением в логе). При превышении или сбое процесса — `error` и код выхода 1. По умолчанию `1`; `0` — строгое правило «любая dead-позиция — ошибка». |
+| `NetworkFailureStopThreshold` | `int` | Сколько позиций очереди подряд должно упасть с `network_unavailable` (соединение заблокировано файрволом или отклонено, DNS), чтобы `collect-prices` остановился досрочно с `error_code = network_unavailable` (MPC-108). Успешная позиция сбрасывает счётчик. По умолчанию `20`; `0` отключает. |
+| `AbandonedRunTimeoutHours` | `int` | Через сколько часов запуск в `running` считается брошенным (процесс упал). `collect-prices` и `catalog-refresh` при старте закрывают такие запуски статусом `error` с `error_code = run_abandoned` (MPC-108). По умолчанию `6`; `0` отключает. |
 
 ## Пример конфигурации
 
@@ -55,7 +57,9 @@
     "RetryBaseDelayMs": 500,
     "BreakerFailureThreshold": 20,
     "BreakerOpenSeconds": 60,
-    "RunErrorDeadThresholdPercent": 1.0
+    "RunErrorDeadThresholdPercent": 1.0,
+    "NetworkFailureStopThreshold": 20,
+    "AbandonedRunTimeoutHours": 6
   }
 }
 ```

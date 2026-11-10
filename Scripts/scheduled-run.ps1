@@ -24,7 +24,8 @@ param(
 # Exit codes (first failure wins):
 #   0  ok
 #   10 Docker Engine not available        11 PostgreSQL container not ready
-#   20 published Worker not found         21 catalog-refresh failed
+#   20 published Worker not found or     21 catalog-refresh failed
+#      could not be activated in worker\active
 #   22 collect-prices failed              30 backup failed
 #   40 another scheduled run is in progress
 # -Scheduled (MPC-91): the Task Scheduler starts the script every hour from 08:00 (power cuts are frequent).
@@ -131,6 +132,44 @@ function Start-Postgres {
     return $ready
 }
 
+# MPC-108: TinyWall allows network access per executable path, so a Worker started from a new
+# worker\<version>\ folder is blocked (SocketException 10013). The Worker therefore always runs from
+# one fixed folder, worker\active\, which holds a copy of the version named in current.txt.
+# The copy is refreshed here when current.txt names another version (new publish or rollback);
+# active\logs is carried over, so Worker logs stay in one place.
+function Sync-ActiveCollector {
+    param([Parameter(Mandatory)][string]$Version, [Parameter(Mandatory)][string]$VersionPath)
+    $activePath = Join-Path $AppRoot "worker\active"
+    $activeExePath = Join-Path $activePath "PriceCrawler.Worker.exe"
+    $activeReleasePath = Join-Path $activePath "collector-release.json"
+    $activeVersion = $null
+    if (Test-Path -LiteralPath $activeReleasePath -PathType Leaf) {
+        $activeVersion = [string](Get-Content -LiteralPath $activeReleasePath -Raw | ConvertFrom-Json).version
+    }
+    if ($activeVersion -eq $Version -and (Test-Path -LiteralPath $activeExePath -PathType Leaf)) {
+        return $activeExePath
+    }
+
+    Write-Log "Activating collector $Version in $activePath (was: $(if ($activeVersion) { $activeVersion } else { 'none' }))."
+    $stagingPath = "$activePath.new"
+    if (Test-Path -LiteralPath $stagingPath) {
+        Remove-Item -LiteralPath $stagingPath -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $stagingPath -Force | Out-Null
+    Get-ChildItem -LiteralPath $VersionPath -Force |
+        Where-Object { $_.Name -ne "logs" } |
+        ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $stagingPath -Recurse -Force }
+    if (Test-Path -LiteralPath $activePath) {
+        $activeLogsPath = Join-Path $activePath "logs"
+        if (Test-Path -LiteralPath $activeLogsPath -PathType Container) {
+            Move-Item -LiteralPath $activeLogsPath -Destination (Join-Path $stagingPath "logs")
+        }
+        Remove-Item -LiteralPath $activePath -Recurse -Force
+    }
+    Move-Item -LiteralPath $stagingPath -Destination $activePath
+    return $activeExePath
+}
+
 function Get-CollectorExecutable {
     $pointerPath = Join-Path $AppRoot "worker\current.txt"
     if (-not (Test-Path -LiteralPath $pointerPath -PathType Leaf)) {
@@ -138,12 +177,19 @@ function Get-CollectorExecutable {
         return $null
     }
     $version = (Get-Content -LiteralPath $pointerPath -Raw).Trim()
-    $exePath = Join-Path $AppRoot "worker\$version\PriceCrawler.Worker.exe"
-    if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
-        Write-Log "Published Worker not found: $exePath"
+    $versionPath = Join-Path $AppRoot "worker\$version"
+    if (-not (Test-Path -LiteralPath (Join-Path $versionPath "PriceCrawler.Worker.exe") -PathType Leaf)) {
+        Write-Log "Published Worker not found: $versionPath\PriceCrawler.Worker.exe"
         return $null
     }
-    Write-Log "Collector version: $version"
+    try {
+        $exePath = Sync-ActiveCollector -Version $version -VersionPath $versionPath
+    }
+    catch {
+        Write-Log "Could not activate collector ${version}: $($_.Exception.Message). Is PriceCrawler.Worker.exe still running from worker\active?"
+        return $null
+    }
+    Write-Log "Collector version: $version; executable: $exePath"
     return $exePath
 }
 

@@ -362,6 +362,8 @@ dotnet run --project PriceCrawler.Worker -- --help
 - `Crawler:BreakerFailureThreshold` (default `20`)
 - `Crawler:BreakerOpenSeconds` (default `60`)
 - `Crawler:RunErrorDeadThresholdPercent` (default `1`; `0` — любая dead-позиция делает run `error`)
+- `Crawler:NetworkFailureStopThreshold` (default `20`; `collect-prices` останавливается после стольких `network_unavailable` подряд; `0` — выключено)
+- `Crawler:AbandonedRunTimeoutHours` (default `6`; запуски в `running` дольше этого закрываются как `run_abandoned`; `0` — выключено)
 - `Queue:BatchSize` (default `32`)
 - `Queue:PollDelayMs` (default `250`)
 - `Queue:LeaseSeconds` (default `90`)
@@ -434,6 +436,8 @@ limit 20;
 - `Crawler__BreakerFailureThreshold`
 - `Crawler__BreakerOpenSeconds`
 - `Crawler__RunErrorDeadThresholdPercent`
+- `Crawler__NetworkFailureStopThreshold`
+- `Crawler__AbandonedRunTimeoutHours`
 - `Queue__BatchSize`
 - `Queue__PollDelayMs`
 - `Queue__LeaseSeconds`

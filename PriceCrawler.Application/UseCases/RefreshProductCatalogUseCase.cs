@@ -18,6 +18,7 @@ public sealed class RefreshProductCatalogUseCase(
     IProductCatalogRefreshRepository refreshRepository,
     ICategoryRepository categoryRepository,
     ICrawlerRunRepository crawlerRunRepository,
+    AbandonedRunCloser abandonedRunCloser,
     IOptions<CrawlerOptions> crawlerOptions,
     ICrawlerProgressReporter progressReporter,
     ILogger<RefreshProductCatalogUseCase> logger) : IRefreshProductCatalogUseCase
@@ -29,6 +30,7 @@ public sealed class RefreshProductCatalogUseCase(
     {
         var options = crawlerOptions.Value;
         var discoverySource = ToConfiguredDiscoverySource(options.DiscoveryMode);
+        await abandonedRunCloser.CloseAbandonedRunsAsync(ct);
         var runId = await crawlerRunRepository.StartAsync(
             CrawlerRunTypes.CatalogRefresh, CatalogRunSource, discoverySource, ct);
         var metrics = new CrawlerRunMetrics();
