@@ -145,6 +145,21 @@ public sealed class VarusListingPageExtractor(
         {
             throw;
         }
+        catch (Exception ex) when (NetworkFailureClassifier.IsNetworkUnavailable(ex))
+        {
+            sw.Stop();
+            rps = requestCoordinator.GetApproximateRps();
+            logger.LogWarning("Listing extractor network unavailable for {Url} error={Error}", url, ex.Message);
+            return ListingExtractionResult.WithIssue(
+                url,
+                [],
+                CrawlerErrorCodes.NetworkUnavailable,
+                httpStatus,
+                ex.Message,
+                sw.ElapsedMilliseconds,
+                rps,
+                true);
+        }
         catch (Exception ex)
         {
             sw.Stop();

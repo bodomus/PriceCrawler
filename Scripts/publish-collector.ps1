@@ -15,6 +15,8 @@ param(
 # Publishes the Worker (price collector) as a Release build outside the repository (MPC-89):
 #   <AppRoot>\worker\<version>\   one folder per published version
 #   <AppRoot>\worker\current.txt  name of the version scheduled-run.ps1 starts
+#   <AppRoot>\worker\active\      fixed folder the Worker runs from (MPC-108): scheduled-run.ps1 copies the
+#                                  current version there, so a per-path firewall rule (TinyWall) survives publishes
 #   <AppRoot>\config\appsettings.Production.json  local settings, copied into every version, never in git
 #   <AppRoot>\scripts\                scheduled-run.ps1 + backup-database.ps1 started by the Task Scheduler (MPC-91)
 # Rebuilding or debugging in the repository does not affect the collector until the next publish.
@@ -139,6 +141,9 @@ $versionName = $build.Version
 if ($status.Count -gt 0) {
     $versionName = "$versionName-dirty-$(Get-Date -Format yyyyMMddHHmmss)"
 }
+if ($versionName -in @("active", "active.new")) {
+    throw "Version name '$versionName' is reserved for the fixed Worker folder."
+}
 $targetPath = Join-Path $workerRoot $versionName
 Write-Host "Version: $versionName (commit $($build.Commit))"
 Write-Host "Target:  $targetPath"
@@ -201,9 +206,11 @@ Write-Host "scripts -> $scriptsPath"
 
 Write-Step "Cleanup (keep $KeepVersions versions)"
 # @() keeps an array even when only one name is left (StrictMode has no .Count on a string in Windows PowerShell 5.1).
+# worker\active is the running copy (MPC-108), never a version to clean up.
 $protected = @(@($versionName, $previousVersion) | Where-Object { $_ })
+$reserved = @("active", "active.new")
 $versions = @(Get-ChildItem -LiteralPath $workerRoot -Directory |
-    Where-Object { (Test-Path -LiteralPath (Join-Path $_.FullName "collector-release.json")) -and ($protected -notcontains $_.Name) } |
+    Where-Object { (Test-Path -LiteralPath (Join-Path $_.FullName "collector-release.json")) -and ($protected -notcontains $_.Name) -and ($reserved -notcontains $_.Name) } |
     Sort-Object LastWriteTime -Descending)
 $keepOthers = [Math]::Max(0, $KeepVersions - $protected.Count)
 foreach ($old in $versions | Select-Object -Skip $keepOthers) {
@@ -217,4 +224,5 @@ foreach ($old in $versions | Select-Object -Skip $keepOthers) {
 }
 
 Write-Host ""
-Write-Host "Published $versionName. Rollback: Set-Content '$currentPointerPath' '<older version>'" -ForegroundColor Green
+Write-Host "Published $versionName. The next scheduled-run.ps1 copies it to $(Join-Path $workerRoot 'active') and runs it from there." -ForegroundColor Green
+Write-Host "Rollback: Set-Content '$currentPointerPath' '<older version>'" -ForegroundColor Green

@@ -826,6 +826,7 @@ public sealed class WorkerIntegrationTests
             CreateProductCatalogRefreshRepository(factory),
             new PgCategoryRepository(factory),
             CreateCrawlerRunRepository(factory),
+            DisabledAbandonedRunCloser.Create(),
             Options.Create(new CrawlerOptions
             {
                 CatalogMinimumExpectedUrls = 1,

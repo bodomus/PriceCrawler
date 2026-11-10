@@ -6,6 +6,10 @@ public static class CrawlerErrorCodes
     public const string TooManyRequests = "too_many_requests";
     public const string Timeout = "timeout";
     public const string Http5xx = "http_5xx";
+
+    /// <summary>The request never reached the site: connection refused or blocked (e.g. a firewall, SocketException 10013) or DNS failure (MPC-108).</summary>
+    public const string NetworkUnavailable = "network_unavailable";
+
     public const string ParseFailed = "parse_failed";
     public const string ListingParsed = "listing_parsed";
     public const string ListingNoProductsFound = "listing_no_products_found";

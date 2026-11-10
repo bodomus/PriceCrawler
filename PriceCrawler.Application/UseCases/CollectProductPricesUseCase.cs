@@ -23,6 +23,7 @@ public sealed class CollectProductPricesUseCase(
     IIngestionRunRepository ingestionRunRepository,
     IPriceCollectQueueRepository queueRepository,
     PriceCollectionQueueProcessor queueProcessor,
+    AbandonedRunCloser abandonedRunCloser,
     ICrawlerProgressReporter progressReporter,
     ILogger<CollectProductPricesUseCase> logger) : ICollectProductPricesUseCase
 {
@@ -44,6 +45,7 @@ public sealed class CollectProductPricesUseCase(
         try
         {
             progressReporter.Reset();
+            await abandonedRunCloser.CloseAbandonedRunsAsync(ct);
             runId = await crawlerRunRepository.StartAsync(
                 CrawlerRunTypes.PriceCollection, CrawlerRunTypes.PriceCollection, null, ct);
             logger.LogInformation("Price collection started. RunId={RunId}; Limit={Limit}", runId, limit);
@@ -260,7 +262,9 @@ public sealed class CollectProductPricesUseCase(
         }
         catch (Exception ex)
         {
-            const string errorCode = "price_collection_failed";
+            var errorCode = ex is NetworkUnavailableException
+                ? CrawlerErrorCodes.NetworkUnavailable
+                : "price_collection_failed";
             progressReporter.SetCurrentStage("Ошибка");
             progressReporter.SetCurrentItem(string.Empty);
             logger.LogError(ex, "Price collection failed. RunId={RunId}; ErrorCode={ErrorCode}", runId, errorCode);

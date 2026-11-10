@@ -199,4 +199,20 @@ public sealed class CrawlerOptions
     /// «любая dead-позиция — ошибка запуска». Допустимый диапазон 0–100.
     /// </summary>
     public double RunErrorDeadThresholdPercent { get; set; } = 1.0d;
+
+    /// <summary>
+    /// Сколько позиций очереди подряд должно упасть с `network_unavailable` (соединение заблокировано или отклонено,
+    /// например TinyWall/SocketException 10013, или не разрешилось имя), чтобы `collect-prices` остановился досрочно
+    /// с кодом ошибки `network_unavailable` (MPC-108). Любая успешная позиция сбрасывает счётчик.
+    /// Не входящие в остановленный запуск товары остаются «к проверке» для следующего запуска. 0 отключает остановку.
+    /// </summary>
+    public int NetworkFailureStopThreshold { get; set; } = 20;
+
+    /// <summary>
+    /// Через сколько часов после старта запуск в статусе `running` считается брошенным (процесс упал или был убит,
+    /// например при отключении света). Каждый `collect-prices` и `catalog-refresh` при старте закрывает такие запуски
+    /// статусом `error` с кодом `run_abandoned` (MPC-108). Значение должно быть больше самого долгого нормального
+    /// запуска (~3,2 ч на полном каталоге). 0 отключает автозакрытие.
+    /// </summary>
+    public int AbandonedRunTimeoutHours { get; set; } = 6;
 }

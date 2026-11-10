@@ -276,6 +276,23 @@ public sealed class VarusProductCardExtractor(
                 rps,
                 true);
         }
+        catch (Exception ex) when (!ct.IsCancellationRequested && NetworkFailureClassifier.IsNetworkUnavailable(ex))
+        {
+            sw.Stop();
+            var rps = requestCoordinator.GetApproximateRps();
+            log.LogWarning(
+                "Extractor network unavailable for {Url} latency_ms={LatencyMs} error={Error}",
+                url,
+                sw.ElapsedMilliseconds,
+                ex.Message);
+            return ProductExtractResult.Fail(
+                CrawlerErrorCodes.NetworkUnavailable,
+                httpStatus,
+                ex.Message,
+                sw.ElapsedMilliseconds,
+                rps,
+                true);
+        }
         catch (Exception ex)
         {
             sw.Stop();

@@ -152,6 +152,44 @@ public sealed class CollectProductPricesUseCaseTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MassNetworkFailure_StopsEarlyWithNetworkUnavailable()
+    {
+        var catalog = new FakeProductCatalogRepository(Enumerable.Range(1, 30).Select(id => CatalogItem(id)).ToList());
+        var queue = new FakeQueueRepository();
+        var sut = CreateUseCase(
+            catalog,
+            queue,
+            ProductExtractResult.Fail(CrawlerErrorCodes.NetworkUnavailable, null, "forbidden socket (10013)", 1, 1, true),
+            maxProducts: 30,
+            networkFailureStopThreshold: 5);
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal("error", result.Status);
+        Assert.Equal(CrawlerErrorCodes.NetworkUnavailable, result.ErrorCode);
+        Assert.Equal(RunStatus.Error, catalog.Crawler.LastStatus);
+        Assert.Equal(5, queue.CountByStatus(QueueItemStatuses.Dead));
+        Assert.Equal(0, queue.CountByStatus(QueueItemStatuses.Succeeded));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NetworkFailuresBelowThreshold_FinishTheRun()
+    {
+        var catalog = new FakeProductCatalogRepository(Enumerable.Range(1, 3).Select(id => CatalogItem(id)).ToList());
+        var queue = new FakeQueueRepository();
+        var sut = CreateUseCase(
+            catalog,
+            queue,
+            ProductExtractResult.Fail(CrawlerErrorCodes.NetworkUnavailable, null, "connection refused", 1, 1, true),
+            networkFailureStopThreshold: 5);
+
+        var result = await sut.ExecuteAsync(CancellationToken.None);
+
+        Assert.Equal("price_collection_dead_items", result.ErrorCode);
+        Assert.Equal(3, queue.CountByStatus(QueueItemStatuses.Dead));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_FailedCount_IsRetryPlusDead()
     {
         var catalog = new FakeProductCatalogRepository([CatalogItem(1)]);
@@ -286,7 +324,8 @@ public sealed class CollectProductPricesUseCaseTests
         int maxProducts = 10,
         int maxAttempts = 1,
         ProductObservationWriteResult? writeResult = null,
-        ICrawlerProgressReporter? progressReporter = null)
+        ICrawlerProgressReporter? progressReporter = null,
+        int networkFailureStopThreshold = 20)
     {
         var progress = progressReporter ?? new CrawlerProgressState();
         var crawlerOptions = Options.Create(new CrawlerOptions
@@ -296,7 +335,8 @@ public sealed class CollectProductPricesUseCaseTests
             CatalogLeaseSeconds = 1800,
             SuccessfulCheckIntervalHours = 24,
             CatalogFailureBaseDelayMinutes = 60,
-            CatalogFailureMaxDelayHours = 24
+            CatalogFailureMaxDelayHours = 24,
+            NetworkFailureStopThreshold = networkFailureStopThreshold
         });
         var queueOptions = Options.Create(new QueueOptions
         {
@@ -325,6 +365,7 @@ public sealed class CollectProductPricesUseCaseTests
             catalog.Ingestion,
             queue,
             processor,
+            DisabledAbandonedRunCloser.Create(),
             progress,
             NullLogger<CollectProductPricesUseCase>.Instance);
     }

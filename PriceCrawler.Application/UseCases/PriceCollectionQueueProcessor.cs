@@ -37,6 +37,7 @@ public sealed class PriceCollectionQueueProcessor(
         var reaperInterval = TimeSpan.FromSeconds(Math.Max(1, queueOptionsValue.ReaperIntervalSeconds));
         var nextReaperAt = DateTimeOffset.UtcNow;
         var workerId = BuildWorkerId();
+        var networkFailures = new NetworkFailureStreak(crawlerOptionsValue.NetworkFailureStopThreshold);
 
         while (true)
         {
@@ -76,12 +77,22 @@ public sealed class PriceCollectionQueueProcessor(
             await Parallel.ForEachAsync(batch, parallelOptions,
                 async (item, itemCt) =>
                 {
-                    await ProcessQueueItemAsync(runId, item, queueOptionsValue, callbacks, itemCt);
+                    var outcome = await ProcessQueueItemAsync(runId, item, queueOptionsValue, callbacks, itemCt);
+                    if (networkFailures.Record(outcome))
+                    {
+                        logger.LogError(
+                            "Price collection stopped: network unavailable run_id={RunId} consecutive_failures={Failures}",
+                            runId,
+                            networkFailures.Count);
+                        throw new NetworkUnavailableException(networkFailures.Count);
+                    }
                 });
         }
     }
 
-    private async Task ProcessQueueItemAsync(
+    /// <summary>Processes one reserved queue item (product or listing page).</summary>
+    /// <returns>Whether the item succeeded, failed because the network was unavailable, or failed otherwise.</returns>
+    private async Task<QueueItemOutcome> ProcessQueueItemAsync(
         long runId,
         ReservedQueueItem item,
         QueueOptions queueOpt,
@@ -94,8 +105,7 @@ public sealed class PriceCollectionQueueProcessor(
             progressReporter.SetCurrentItem(item.Url);
             if (pageKind == QueueItemKind.ListingPage || pageKind == QueueItemKind.CategoryPage)
             {
-                await ProcessListingQueueItemAsync(runId, item, pageKind, queueOpt, callbacks, ct);
-                return;
+                return await ProcessListingQueueItemAsync(runId, item, pageKind, queueOpt, callbacks, ct);
             }
 
             var extractResult = await extractor.ExtractAsync(item.Url, ct);
@@ -124,7 +134,7 @@ public sealed class PriceCollectionQueueProcessor(
                     progressReporter.IncrementProductFailed();
                 }
 
-                return;
+                return ToFailureOutcome(issue);
             }
 
             var card = extractResult.Card;
@@ -179,6 +189,7 @@ public sealed class PriceCollectionQueueProcessor(
                 card.ExternalId,
                 extractResult.LatencyMs,
                 extractResult.Issue?.HttpStatus);
+            return QueueItemOutcome.Succeeded;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -219,6 +230,7 @@ public sealed class PriceCollectionQueueProcessor(
 
             logger.LogWarning(ex, "Queue item processing failed run_id={RunId} queue_id={QueueId}", runId,
                 item.Id);
+            return QueueItemOutcome.Failed;
         }
     }
 
@@ -274,7 +286,7 @@ public sealed class PriceCollectionQueueProcessor(
         return true;
     }
 
-    private async Task ProcessListingQueueItemAsync(
+    private async Task<QueueItemOutcome> ProcessListingQueueItemAsync(
         long runId,
         ReservedQueueItem item,
         QueueItemKind pageKind,
@@ -307,7 +319,7 @@ public sealed class PriceCollectionQueueProcessor(
                 progressReporter.IncrementListingFailed();
             }
 
-            return;
+            return ToFailureOutcome(issue);
         }
 
         if (result.Issue is not null)
@@ -356,7 +368,13 @@ public sealed class PriceCollectionQueueProcessor(
             enqueueResult.ProductAccepted,
             result.Issue?.ErrorCode ?? CrawlerErrorCodes.ListingParsed,
             result.IsTransient);
+        return QueueItemOutcome.Succeeded;
     }
+
+    private static QueueItemOutcome ToFailureOutcome(ProductExtractIssue issue) =>
+        string.Equals(issue.ErrorCode, CrawlerErrorCodes.NetworkUnavailable, StringComparison.OrdinalIgnoreCase)
+            ? QueueItemOutcome.NetworkUnavailable
+            : QueueItemOutcome.Failed;
 
     private void IncrementTerminalFailure(QueueItemKind pageKind)
     {
@@ -381,6 +399,7 @@ public sealed class PriceCollectionQueueProcessor(
             CrawlerErrorCodes.TooManyRequests => CrawlerErrorCodes.TooManyRequests,
             CrawlerErrorCodes.Timeout => CrawlerErrorCodes.Timeout,
             CrawlerErrorCodes.Http5xx => CrawlerErrorCodes.Http5xx,
+            CrawlerErrorCodes.NetworkUnavailable => CrawlerErrorCodes.NetworkUnavailable,
             CrawlerErrorCodes.ParseFailed => CrawlerErrorCodes.ParseFailed,
             CrawlerErrorCodes.ListingParsed => CrawlerErrorCodes.ListingParsed,
             CrawlerErrorCodes.ListingNoProductsFound => CrawlerErrorCodes.ListingNoProductsFound,
@@ -442,5 +461,44 @@ public sealed class PriceCollectionQueueProcessor(
         var bytes = Encoding.UTF8.GetBytes($"{runId}:listing:{listingQueueId}:{normalizedUrl.Trim()}");
         var hash = sha.ComputeHash(bytes);
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+}
+
+/// <summary>Result of processing one queue item, used to detect a mass network failure (MPC-108).</summary>
+internal enum QueueItemOutcome
+{
+    Succeeded,
+    NetworkUnavailable,
+    Failed
+}
+
+/// <summary>
+/// Counts queue items that failed in a row because the network was unavailable (MPC-108).
+/// A successful item resets the count; other failures leave it as is, because they do not show
+/// that the network works again. Thread-safe: items of one batch are processed in parallel.
+/// </summary>
+/// <param name="threshold">Count at which the run must stop; 0 or less disables the stop.</param>
+internal sealed class NetworkFailureStreak(int threshold)
+{
+    private int _count;
+
+    /// <summary>Current number of consecutive network failures.</summary>
+    public int Count => Volatile.Read(ref _count);
+
+    /// <summary>Records the outcome of one item.</summary>
+    /// <param name="outcome">Outcome of the processed item.</param>
+    /// <returns><c>true</c> when the threshold is reached and the run must stop.</returns>
+    public bool Record(QueueItemOutcome outcome)
+    {
+        switch (outcome)
+        {
+            case QueueItemOutcome.Succeeded:
+                Interlocked.Exchange(ref _count, 0);
+                return false;
+            case QueueItemOutcome.NetworkUnavailable:
+                return Interlocked.Increment(ref _count) >= threshold && threshold > 0;
+            default:
+                return false;
+        }
     }
 }
