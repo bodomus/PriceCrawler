@@ -591,11 +591,7 @@ file static class JsonLdProductParser
     private static IEnumerable<string> ExtractLdJsonScripts(string html)
     {
         // Matches: <script ... type="application/ld+json" ...> ... </script>
-        var rx = new Regex(
-            "<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>[\\s\\S]*?)</script>",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        foreach (Match m in rx.Matches(html))
+        foreach (Match m in VarusCardRegexes.LdJsonScript().Matches(html))
         {
             var json = m.Groups["json"].Value.Trim();
             if (!string.IsNullOrWhiteSpace(json))
@@ -733,11 +729,11 @@ file static class SkuInlineJsonFallback
 
         var tail = slice.Substring(sqppIdx);
 
-        var special = TryMatchDecimal(tail, "special_price");
-        var regular = TryMatchDecimal(tail, "price");
-        var discount = TryMatchInt(tail, "special_price_discount");
-        var available = TryMatchBool(tail, "available");
-        var fromDate = TryMatchDate(tail, "special_price_from_date");
+        var special = TryParseDecimal(VarusCardRegexes.SpecialPrice().Match(tail));
+        var regular = TryParseDecimal(VarusCardRegexes.Price().Match(tail));
+        var discount = TryParseInt(VarusCardRegexes.SpecialPriceDiscount().Match(tail));
+        var available = TryParseBool(VarusCardRegexes.Available().Match(tail));
+        var fromDate = TryParseDate(VarusCardRegexes.SpecialPriceFromDate().Match(tail));
 
         if (special is null && regular is null && discount is null && available is null && fromDate is null)
             return null;
@@ -756,50 +752,58 @@ file static class SkuInlineJsonFallback
         return html.IndexOf(sku, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static decimal? TryMatchDecimal(string text, string key)
-    {
-        var rx = new Regex($"\\\"{Regex.Escape(key)}\\\"\\s*:\\s*(?<v>[0-9]+(?:\\.[0-9]+)?)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        var m = rx.Match(text);
-        if (!m.Success) return null;
-
-        return decimal.TryParse(m.Groups["v"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)
+    private static decimal? TryParseDecimal(Match m)
+        => m.Success && decimal.TryParse(m.Groups["v"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)
             ? v
             : null;
-    }
 
-    private static int? TryMatchInt(string text, string key)
-    {
-        var rx = new Regex($"\\\"{Regex.Escape(key)}\\\"\\s*:\\s*(?<v>[0-9]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        var m = rx.Match(text);
-        if (!m.Success) return null;
-
-        return int.TryParse(m.Groups["v"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)
+    private static int? TryParseInt(Match m)
+        => m.Success && int.TryParse(m.Groups["v"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)
             ? v
             : null;
-    }
 
-    private static bool? TryMatchBool(string text, string key)
-    {
-        var rx = new Regex($"\\\"{Regex.Escape(key)}\\\"\\s*:\\s*(?<v>true|false)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        var m = rx.Match(text);
-        if (!m.Success) return null;
+    private static bool? TryParseBool(Match m)
+        => m.Success ? string.Equals(m.Groups["v"].Value, "true", StringComparison.OrdinalIgnoreCase) : null;
 
-        return string.Equals(m.Groups["v"].Value, "true", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static DateOnly? TryMatchDate(string text, string key)
-    {
-        var rx = new Regex($"\\\"{Regex.Escape(key)}\\\"\\s*:\\s*\\\"(?<v>[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}})\\\"",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        var m = rx.Match(text);
-        if (!m.Success) return null;
-
-        return DateOnly.TryParseExact(m.Groups["v"].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+    private static DateOnly? TryParseDate(Match m)
+        => m.Success && DateOnly.TryParseExact(m.Groups["v"].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture,
             DateTimeStyles.None, out var d)
             ? d
             : null;
-    }
+}
+
+/// <summary>
+/// Regular expressions of the product card parser, generated at build time.
+/// </summary>
+/// <remarks>
+/// They used to be built with <c>new Regex(..., RegexOptions.Compiled)</c> on every call: about six
+/// Reflection.Emit compilations per product. After ~33 000 of them the .NET 8 runtime crashed with an
+/// access violation inside a dynamic regex method (run 234, 10.11.2026, MPC-109). Generated regexes
+/// emit no code at run time.
+/// </remarks>
+internal static partial class VarusCardRegexes
+{
+    /// <summary>Matches a <c>&lt;script type="application/ld+json"&gt;</c> element; group <c>json</c> is its body.</summary>
+    [GeneratedRegex("<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>[\\s\\S]*?)</script>", RegexOptions.IgnoreCase)]
+    public static partial Regex LdJsonScript();
+
+    /// <summary>Matches <c>"special_price": 12.34</c>; group <c>v</c> is the number.</summary>
+    [GeneratedRegex("\"special_price\"\\s*:\\s*(?<v>[0-9]+(?:\\.[0-9]+)?)", RegexOptions.IgnoreCase)]
+    public static partial Regex SpecialPrice();
+
+    /// <summary>Matches <c>"price": 12.34</c>; group <c>v</c> is the number.</summary>
+    [GeneratedRegex("\"price\"\\s*:\\s*(?<v>[0-9]+(?:\\.[0-9]+)?)", RegexOptions.IgnoreCase)]
+    public static partial Regex Price();
+
+    /// <summary>Matches <c>"special_price_discount": 15</c>; group <c>v</c> is the integer.</summary>
+    [GeneratedRegex("\"special_price_discount\"\\s*:\\s*(?<v>[0-9]+)", RegexOptions.IgnoreCase)]
+    public static partial Regex SpecialPriceDiscount();
+
+    /// <summary>Matches <c>"available": true|false</c>; group <c>v</c> is the literal.</summary>
+    [GeneratedRegex("\"available\"\\s*:\\s*(?<v>true|false)", RegexOptions.IgnoreCase)]
+    public static partial Regex Available();
+
+    /// <summary>Matches <c>"special_price_from_date": "2026-11-10"</c>; group <c>v</c> is the date.</summary>
+    [GeneratedRegex("\"special_price_from_date\"\\s*:\\s*\"(?<v>[0-9]{4}-[0-9]{2}-[0-9]{2})\"", RegexOptions.IgnoreCase)]
+    public static partial Regex SpecialPriceFromDate();
 }
