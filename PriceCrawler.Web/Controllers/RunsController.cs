@@ -363,7 +363,9 @@ public sealed class RunsController(
             if (snapshot is null || string.IsNullOrWhiteSpace(snapshot.Url))
             {
                 return NotFound(new
-                    { error = $"Snapshot #{snapshotId.Value} does not have a resolvable product URL." });
+                {
+                    error = $"Snapshot #{snapshotId.Value} does not have a resolvable product URL."
+                });
             }
 
             var liveResult = await productCardExtractor.ExtractAsync(snapshot.Url, ct);
@@ -411,16 +413,6 @@ public sealed class RunsController(
         }
 
         return Task.FromResult(query.ToList());
-    }
-
-    private static Task<T?> FirstOrDefaultAsyncOrSync<T>(IQueryable<T> query, CancellationToken ct)
-    {
-        if (query.Provider is IAsyncQueryProvider)
-        {
-            return EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(query, ct);
-        }
-
-        return Task.FromResult(query.FirstOrDefault());
     }
 
     private static ProductLiveResultDto MapLiveResult(long snapshotId, string requestedUrl,
