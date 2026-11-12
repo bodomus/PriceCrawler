@@ -94,5 +94,7 @@ public sealed class CrawlerRunStatisticsIntegrationTests
 
     private static PgConnectionFactory CreateFactory() => new(new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?>
-            { ["ConnectionStrings:Postgres"] = PostgresIntegrationFixture.ConnectionString }).Build());
+        {
+            ["ConnectionStrings:Postgres"] = PostgresIntegrationFixture.ConnectionString
+        }).Build());
 }

@@ -588,14 +588,13 @@ public sealed class RunsControllerTests
     {
         return new RunsController(
             new EmptyRunsGridQuerySource(),
-            new StubRunsTreeQuerySource(treeRows ?? Array.Empty<RunTreeQueryRow>()),
-            new StubSnapshotsGridQuerySource(snapshotRows ?? Array.Empty<SnapshotGridQueryRow>()),
+            new StubRunsTreeQuerySource(treeRows ?? []),
+            new StubSnapshotsGridQuerySource(snapshotRows ?? []),
             new EmptyProductsGridQuerySource(),
             new ProductAnalysisService(
                 new StubProductDetailsQuerySource(productDetails),
-                new StubProductPriceHistoryQuerySource(productHistoryRows ??
-                                                       Array.Empty<ProductPriceHistoryQueryRow>())),
-            new StubProductPriceHistoryQuerySource(productHistoryRows ?? Array.Empty<ProductPriceHistoryQueryRow>()),
+                new StubProductPriceHistoryQuerySource(productHistoryRows ?? [])),
+            new StubProductPriceHistoryQuerySource(productHistoryRows ?? []),
             new StubProductCardExtractor(liveExtractResult),
             new FakeRunCrawlerUseCase(crawlerResponse),
             NullLogger<RunsController>.Instance);

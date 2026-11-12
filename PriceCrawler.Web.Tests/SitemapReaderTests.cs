@@ -285,11 +285,11 @@ public sealed class SitemapReaderTests
     }
 
     public static TheoryData<string> ValidSitemapXml()
-        => new()
-        {
+        =>
+        [
             SitemapIndexXml("https://example.com/sitemap-products.xml"),
             UrlSetXml("https://example.com/products/example")
-        };
+        ];
 
     private static HttpResponseMessage CreateXmlResponse(string xml, string? contentEncoding = null)
     {
