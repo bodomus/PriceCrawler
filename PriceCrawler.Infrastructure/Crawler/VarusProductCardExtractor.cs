@@ -352,71 +352,39 @@ public sealed class VarusProductCardExtractor(
 
         var (packValue, packUnit) = PackParser.TryParse(text);
 
-        // Price strategy:
-        // 1) Current price from JSON-LD offers.price
-        // 2) Old/regular/special from inline JSON fragment near SKU (sqpp.price / sqpp.special_price)
-        // 3) Fallback to legacy text scraping (last resort)
-        decimal? finalPrice = ld?.Price;
-        decimal? regularPrice = null;
-        int? discountPercent = null;
-        bool? inStock = null;
-
-        var sqpp = SkuInlineJsonFallback.TryExtractSqpp(html, externalId ?? string.Empty);
-        if (sqpp is not null)
-        {
-            // On Varus: sqpp.special_price is promo price, sqpp.price is regular price.
-            if (sqpp.SpecialPrice is not null)
-                finalPrice = sqpp.SpecialPrice.Value;
-
-            if (sqpp.RegularPrice is not null)
-                regularPrice = sqpp.RegularPrice.Value;
-
-            discountPercent = sqpp.DiscountPercent;
-            inStock = sqpp.Available;
-
-            log.LogDebug("SQPP found for {Sku}: regular={Regular} special={Special} available={Available}",
-                externalId, sqpp.RegularPrice, sqpp.SpecialPrice, sqpp.Available);
-        }
-        else
+        // Price strategy (MPC-92):
+        // 1) current price = JSON-LD offers.price of the main product;
+        // 2) regular (old) price and promo price from the main product's own "sqpp" object only;
+        // 3) no text scraping: the first "₴" on the page belongs to the related-products carousel.
+        var sqpp = VarusProductPrices.FindMainSqpp(html, externalId ?? string.Empty);
+        if (sqpp is null)
         {
             log.LogDebug("SQPP not found for {ExternalId}", externalId);
         }
 
-        if (!finalPrice.HasValue || finalPrice.Value <= 0m)
+        var prices = VarusProductPrices.Resolve(ld?.Price, sqpp);
+        if (prices.OldPriceDropped)
         {
-            var legacy = PriceParser.Parse(text);
-            if (legacy.price > 0m)
-            {
-                finalPrice = legacy.price;
-            }
-
-            regularPrice ??= legacy.oldPrice;
+            log.LogWarning(
+                "Regular price below current price, old price dropped url={Url} price={Price} regular={Regular}",
+                url, prices.Price, sqpp?.RegularPrice);
         }
 
-        if ((!finalPrice.HasValue || finalPrice.Value <= 0m) && regularPrice.HasValue)
-        {
-            finalPrice = regularPrice;
-        }
-
-        if ((!finalPrice.HasValue || finalPrice.Value <= 0m) && !regularPrice.HasValue && !inStock.HasValue)
+        if (!prices.Price.HasValue && !prices.InStock.HasValue)
         {
             log.LogDebug("No valid price found for {Url}", url);
             return null;
         }
-
-        discountPercent ??= CalculateDiscountPercent(regularPrice, finalPrice);
-        var promoFlag = (discountPercent.HasValue && discountPercent.Value > 0)
-                        || (regularPrice.HasValue && finalPrice.HasValue && regularPrice.Value > finalPrice.Value);
 
         return new ProductCard(
             externalId,
             name ?? externalId ?? url,
             url,
             TryBuildSlug(url),
-            finalPrice,
-            regularPrice,
-            promoFlag,
-            inStock ?? false,
+            prices.Price,
+            prices.OldPrice,
+            prices.PromoFlag,
+            prices.InStock ?? false,
             packValue,
             packUnit);
     }
@@ -460,18 +428,6 @@ public sealed class VarusProductCardExtractor(
         }
 
         return null;
-    }
-
-    private static int? CalculateDiscountPercent(decimal? regularPrice, decimal? finalPrice)
-    {
-        if (!regularPrice.HasValue || !finalPrice.HasValue || regularPrice.Value <= 0m ||
-            finalPrice.Value >= regularPrice.Value)
-        {
-            return null;
-        }
-
-        var value = ((regularPrice.Value - finalPrice.Value) / regularPrice.Value) * 100m;
-        return (int)Math.Round(value, MidpointRounding.AwayFromZero);
     }
 
     private static string? TryBuildSlug(string url)
@@ -533,54 +489,6 @@ public static class PackParser
         }
 
         return (null, null);
-    }
-}
-
-public static class PriceParser
-{
-    public static (decimal price, decimal? oldPrice) Parse(string text)
-    {
-        var p = FindFirstMoney(text) ?? 0m;
-        var old = FindOldMoney(text);
-        return (p, old);
-    }
-
-    private static decimal? FindFirstMoney(string text)
-    {
-        var markers = new[] { "₴", "грн" };
-        foreach (var m in markers)
-        {
-            var idx = text.IndexOf(m, StringComparison.OrdinalIgnoreCase);
-            if (idx < 0) continue;
-
-            var j = idx - 1;
-            while (j >= 0 && (char.IsDigit(text[j]) || text[j] == ',' || text[j] == '.' || text[j] == ' ')) j--;
-            var num = text[(j + 1)..idx].Trim();
-            num = new string(num.Where(c => char.IsDigit(c) || c == ',' || c == '.').ToArray());
-
-            if (decimal.TryParse(num.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
-                return v;
-        }
-
-        return null;
-    }
-
-    private static decimal? FindOldMoney(string text)
-    {
-        var marker = "~~";
-        var idx = text.IndexOf(marker, StringComparison.Ordinal);
-        if (idx < 0) return null;
-
-        var idx2 = text.IndexOf(marker, idx + 2, StringComparison.Ordinal);
-        if (idx2 < 0) return null;
-
-        var num = text[(idx + 2)..idx2].Trim();
-        num = new string(num.Where(c => char.IsDigit(c) || c == ',' || c == '.').ToArray());
-
-        if (decimal.TryParse(num.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
-            return v;
-
-        return null;
     }
 }
 
@@ -717,78 +625,6 @@ file static class JsonLdProductParser
         => obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 }
 
-file sealed record SqppInfo(
-    decimal? RegularPrice,
-    decimal? SpecialPrice,
-    int? DiscountPercent,
-    DateOnly? SpecialFromDate,
-    bool? Available);
-
-file static class SkuInlineJsonFallback
-{
-    // Extracts "sqpp" fields from inline JSON fragment near a given SKU.
-    public static SqppInfo? TryExtractSqpp(string html, string sku)
-    {
-        if (string.IsNullOrWhiteSpace(sku)) return null;
-
-        var idx = FindSkuIndex(html, sku);
-        if (idx < 0) return null;
-
-        const int before = 200_000;
-        const int window = 400_000;
-
-        var start = Math.Max(0, idx - before);
-        var len = Math.Min(html.Length - start, window);
-        var slice = html.Substring(start, len);
-
-        var sqppIdx = slice.IndexOf("\"sqpp\"", StringComparison.OrdinalIgnoreCase);
-        if (sqppIdx < 0) return null;
-
-        var tail = slice.Substring(sqppIdx);
-
-        var special = TryParseDecimal(VarusCardRegexes.SpecialPrice().Match(tail));
-        var regular = TryParseDecimal(VarusCardRegexes.Price().Match(tail));
-        var discount = TryParseInt(VarusCardRegexes.SpecialPriceDiscount().Match(tail));
-        var available = TryParseBool(VarusCardRegexes.Available().Match(tail));
-        var fromDate = TryParseDate(VarusCardRegexes.SpecialPriceFromDate().Match(tail));
-
-        if (special is null && regular is null && discount is null && available is null && fromDate is null)
-            return null;
-
-        return new SqppInfo(regular, special, discount, fromDate, available);
-    }
-
-    private static int FindSkuIndex(string html, string sku)
-    {
-        var a = html.IndexOf($"\"sku\":\"{sku}\"", StringComparison.OrdinalIgnoreCase);
-        if (a >= 0) return a;
-
-        var b = html.IndexOf($"\"sku\": \"{sku}\"", StringComparison.OrdinalIgnoreCase);
-        if (b >= 0) return b;
-
-        return html.IndexOf(sku, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static decimal? TryParseDecimal(Match m)
-        => m.Success && decimal.TryParse(m.Groups["v"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)
-            ? v
-            : null;
-
-    private static int? TryParseInt(Match m)
-        => m.Success && int.TryParse(m.Groups["v"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)
-            ? v
-            : null;
-
-    private static bool? TryParseBool(Match m)
-        => m.Success ? string.Equals(m.Groups["v"].Value, "true", StringComparison.OrdinalIgnoreCase) : null;
-
-    private static DateOnly? TryParseDate(Match m)
-        => m.Success && DateOnly.TryParseExact(m.Groups["v"].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out var d)
-            ? d
-            : null;
-}
-
 /// <summary>
 /// Regular expressions of the product card parser, generated at build time.
 /// </summary>
@@ -803,24 +639,4 @@ internal static partial class VarusCardRegexes
     /// <summary>Matches a <c>&lt;script type="application/ld+json"&gt;</c> element; group <c>json</c> is its body.</summary>
     [GeneratedRegex("<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>[\\s\\S]*?)</script>", RegexOptions.IgnoreCase)]
     public static partial Regex LdJsonScript();
-
-    /// <summary>Matches <c>"special_price": 12.34</c>; group <c>v</c> is the number.</summary>
-    [GeneratedRegex("\"special_price\"\\s*:\\s*(?<v>[0-9]+(?:\\.[0-9]+)?)", RegexOptions.IgnoreCase)]
-    public static partial Regex SpecialPrice();
-
-    /// <summary>Matches <c>"price": 12.34</c>; group <c>v</c> is the number.</summary>
-    [GeneratedRegex("\"price\"\\s*:\\s*(?<v>[0-9]+(?:\\.[0-9]+)?)", RegexOptions.IgnoreCase)]
-    public static partial Regex Price();
-
-    /// <summary>Matches <c>"special_price_discount": 15</c>; group <c>v</c> is the integer.</summary>
-    [GeneratedRegex("\"special_price_discount\"\\s*:\\s*(?<v>[0-9]+)", RegexOptions.IgnoreCase)]
-    public static partial Regex SpecialPriceDiscount();
-
-    /// <summary>Matches <c>"available": true|false</c>; group <c>v</c> is the literal.</summary>
-    [GeneratedRegex("\"available\"\\s*:\\s*(?<v>true|false)", RegexOptions.IgnoreCase)]
-    public static partial Regex Available();
-
-    /// <summary>Matches <c>"special_price_from_date": "2026-11-10"</c>; group <c>v</c> is the date.</summary>
-    [GeneratedRegex("\"special_price_from_date\"\\s*:\\s*\"(?<v>[0-9]{4}-[0-9]{2}-[0-9]{2})\"", RegexOptions.IgnoreCase)]
-    public static partial Regex SpecialPriceFromDate();
 }

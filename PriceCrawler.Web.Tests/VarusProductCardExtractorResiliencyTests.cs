@@ -26,6 +26,25 @@ public sealed class VarusProductCardExtractorResiliencyTests
     }
 
     [Fact]
+    public async Task ExtractAsync_NoPromo_TakesMainProductPriceNotCarousel()
+    {
+        // MPC-92: wine 6089 was stored as 337.50 (carousel price glued with "239 ₴").
+        var html = VarusProductPricesTests.Page("2586678", "162",
+            """{"price":162,"special_price":0,"available":true}""");
+        await using var harness = CreateHarness(
+            new SequenceHttpMessageHandler((_, _) => Task.FromResult(Response(HttpStatusCode.OK, html))));
+
+        var result = await harness.Extractor.ExtractAsync("https://varus.ua/vino-6089", CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("2586678", result.Card!.ExternalId);
+        Assert.Equal(162m, result.Card.Price);
+        Assert.Equal(162m, result.Card.OldPrice);
+        Assert.False(result.Card.PromoFlag);
+        Assert.True(result.Card.InStock);
+    }
+
+    [Fact]
     public async Task ExtractAsync_When404_ReturnsNotFoundWithoutRetry()
     {
         await using var harness = CreateHarness(
