@@ -1,5 +1,9 @@
 ﻿root = true
 
+# Code conventions: docs/code-conventions.md (MPC-98).
+# Severity "warning" is enforced in the build (EnforceCodeStyleInBuild) and becomes
+# an error in Release (TreatWarningsAsErrors). "suggestion" is IDE-only.
+
 [*]
 charset = utf-8
 end_of_line = lf
@@ -8,19 +12,70 @@ indent_size = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
 
+[*.{json,yml,yaml,xml,csproj,props,targets,config}]
+indent_size = 2
+
+[*.{ts,tsx,js,jsx,css,scss}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
 [*.cs]
-csharp_using_directive_placement = outside_namespace
+# --- Usings and namespaces ---
+csharp_using_directive_placement = outside_namespace:warning
 dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = true
+csharp_style_namespace_declarations = file_scoped:warning
+# Unnecessary using directive (needs GenerateDocumentationFile, see Directory.Build.props).
+dotnet_diagnostic.IDE0005.severity = warning
 
-csharp_prefer_braces = true:suggestion
-dotnet_style_require_accessibility_modifiers = always:suggestion
+# --- Braces, modifiers, `this.` ---
+csharp_prefer_braces = true:warning
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+dotnet_diagnostic.IDE0036.severity = warning
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+dotnet_style_readonly_field = true:warning
 
-csharp_style_var_for_built_in_types = false:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
-csharp_style_var_elsewhere = false:suggestion
+# --- var ---
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = false:warning
 
-# Naming: public members use PascalCase (no underscore prefix)
+# --- Modern C# (latest language features) ---
+csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
+csharp_prefer_simple_using_statement = true:warning
+csharp_style_prefer_switch_expression = true:warning
+dotnet_style_collection_initializer = true:warning
+dotnet_style_prefer_collection_expression = when_types_loosely_match:warning
+dotnet_diagnostic.IDE0300.severity = warning
+dotnet_diagnostic.IDE0301.severity = warning
+# `.ToList()` / `.ToArray()` over LINQ stays allowed (IDE0305 is IDE-only).
+dotnet_diagnostic.IDE0305.severity = suggestion
+# Primary constructors: preferred for new code, not forced on existing classes.
+csharp_style_prefer_primary_constructors = true:suggestion
+
+# --- Unused code ---
+dotnet_diagnostic.IDE0051.severity = warning
+dotnet_diagnostic.IDE0052.severity = warning
+dotnet_diagnostic.IDE0059.severity = warning
+dotnet_diagnostic.IDE0060.severity = warning
+dotnet_code_quality_unused_parameters = all:warning
+
+# --- Formatting ---
+dotnet_diagnostic.IDE0055.severity = warning
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+
+# --- Naming ---
+# Public members use PascalCase (no underscore prefix).
 dotnet_naming_rule.public_members_pascal_case.severity = warning
 dotnet_naming_rule.public_members_pascal_case.symbols = public_members
 dotnet_naming_rule.public_members_pascal_case.style = pascal_case
@@ -29,3 +84,12 @@ dotnet_naming_symbols.public_members.applicable_kinds = class, struct, interface
 dotnet_naming_symbols.public_members.applicable_accessibilities = public, internal, protected, protected_internal, private_protected
 
 dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_diagnostic.IDE1006.severity = warning
+
+# Projects created before MPC-98: rules the old code does not follow yet stay IDE suggestions
+# there. Old code is brought to the rules where it is changed.
+[{PriceCrawler.Domain,PriceCrawler.Application,PriceCrawler.Infrastructure,PriceCrawler.Web,PriceCrawler.Worker,PriceCrawler.Web.Tests,PriceCrawler.Worker.Tests}/**.cs]
+csharp_prefer_braces = true:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion

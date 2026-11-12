@@ -4,5 +4,5 @@ namespace PriceCrawler.Application.Models;
 public sealed class UrlFilterOptions
 {
     /// <summary>Substrings that exclude URLs when matched (case-insensitive).</summary>
-    public string[] ExcludedUrlSubstrings { get; set; } = Array.Empty<string>();
+    public string[] ExcludedUrlSubstrings { get; set; } = [];
 }

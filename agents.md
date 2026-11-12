@@ -250,6 +250,23 @@ When changing it:
 - keep progress rendering out of file logs;
 - verify cancellation and process termination.
 
+## Code conventions
+
+Read `docs/code-conventions.md` before writing C# code. Summary:
+
+- Use the latest C# features (C# 14): file-scoped namespaces, target-typed `new()`, collection
+  expressions, switch expressions, `using var`, primary constructors, `[GeneratedRegex]`,
+  `[LoggerMessage]`.
+- Every function gets a short XML doc comment in English: `<summary>` (what it does),
+  `<param>` for each parameter, `<returns>`, and `<exception>` for exceptions thrown on purpose.
+  Use `<inheritdoc/>` on interface implementations and overrides. Inline comments are English too.
+- `.editorconfig` rules with severity `warning` are enforced by the build (`EnforceCodeStyleInBuild`);
+  Release treats warnings as errors.
+- New projects: CS1591 (missing XML comment) is an error in Release and the `Recommended` analyzer
+  set is on. Projects that existed before MPC-98 skip CS1591 and keep braces/`var` rules as IDE
+  suggestions; bring old code to the rules only where you change it.
+- Do not suppress analyzer rules globally; use a local `#pragma` or `[SuppressMessage]` with a reason.
+
 ## Build and validation
 
 Canonical commands documented by the repository:

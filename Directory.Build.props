@@ -19,6 +19,33 @@
       <NBGV_CacheMode>None</NBGV_CacheMode>
   </PropertyGroup>
 
+  <!--
+    MPC-98: code conventions in the build (docs/code-conventions.md).
+    - .editorconfig style rules with severity "warning" are checked by the compiler.
+    - Every project writes an XML documentation file; malformed XML comments are warnings.
+    - CS1591 (missing XML comment on a public member) is a warning in Debug and an error in
+      Release for new projects. Projects that existed before MPC-98 and test projects skip
+      CS1591: old code gets comments where it is changed.
+    - New projects also use the "Recommended" .NET analyzer set.
+  -->
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+
+    <PriceCrawlerIsTestProject>$(MSBuildProjectName.EndsWith('.Tests'))</PriceCrawlerIsTestProject>
+    <PriceCrawlerIsLegacyProject>false</PriceCrawlerIsLegacyProject>
+    <PriceCrawlerIsLegacyProject Condition="'$(MSBuildProjectName)'=='PriceCrawler.Domain' or '$(MSBuildProjectName)'=='PriceCrawler.Application' or '$(MSBuildProjectName)'=='PriceCrawler.Infrastructure' or '$(MSBuildProjectName)'=='PriceCrawler.Web' or '$(MSBuildProjectName)'=='PriceCrawler.Worker'">true</PriceCrawlerIsLegacyProject>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(PriceCrawlerIsLegacyProject)'=='true' or '$(PriceCrawlerIsTestProject)'=='true'">
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(PriceCrawlerIsLegacyProject)'!='true' and '$(PriceCrawlerIsTestProject)'!='true'">
+    <AnalysisMode>Recommended</AnalysisMode>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.146" PrivateAssets="all" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.403" PrivateAssets="All" />

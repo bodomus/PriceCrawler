@@ -31,10 +31,12 @@ If you touch crawler persistence, also check that docs stay in sync with the nor
 `price_snapshot` / `crawl_error` model introduced in `MPC-21`.
 
 ## Linting and analyzers
-The project relies on built-in .NET analyzers (see `Directory.Build.props`) and formatting via `.editorconfig`.
-A standard check is:
+Code conventions are enforced by the build: .NET analyzers and XML documentation (`Directory.Build.props`)
+and code style from `.editorconfig` (`EnforceCodeStyleInBuild`). See `docs/code-conventions.md`.
+Release builds treat warnings as errors, the same as CI:
 ```bash
-dotnet build PriceCrawler.sln
+dotnet build PriceCrawler.sln -c Release
+dotnet format style PriceCrawler.sln --verify-no-changes
 ```
 
 ## Pull requests
