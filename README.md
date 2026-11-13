@@ -9,7 +9,9 @@ Stage releases deploy only through `Scripts/deploy-stage.ps1`: validated ZIP/che
 - `PriceCrawler.Domain` - доменные сущности и контракты.
 - `PriceCrawler.Application` - use-case и orchestration.
 - `PriceCrawler.Infrastructure` - Postgres-репозитории, queue pipeline, bootstrap схемы, HTTP crawler adapters.
-- `PriceCrawler.Web` - web/API хост.
+- `PriceCrawler.Web` - старый сайт (MVC + Kendo).
+- `PriceCrawler.Api` - Web API нового сайта (`docs/api.md`).
+- `PriceCrawler.Mediator` - собственный медиатор (CQRS, pipeline behaviors).
 - `PriceCrawler.Worker` - консольный запуск crawler.
 
 ## Runs Dashboard (MVC + Kendo Analytics)
