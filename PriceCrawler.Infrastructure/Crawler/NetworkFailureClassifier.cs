@@ -1,4 +1,3 @@
-using System.Net.Http;
 using System.Net.Sockets;
 
 namespace PriceCrawler.Infrastructure.Crawler;

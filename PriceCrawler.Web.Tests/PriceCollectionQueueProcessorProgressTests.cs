@@ -7,7 +7,6 @@ using PriceCrawler.Domain.Constants;
 using PriceCrawler.Domain.Enums;
 using PriceCrawler.Domain.Interfaces;
 using PriceCrawler.Domain.Models;
-using PriceCrawler.Domain.ValueObjects;
 
 namespace PriceCrawler.Web.Tests;
 

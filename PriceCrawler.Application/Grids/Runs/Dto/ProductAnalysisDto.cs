@@ -11,5 +11,5 @@ public sealed class ProductAnalysisDto
     [JsonPropertyName("analytics")] public ProductAnalyticsDto Analytics { get; init; } = new();
 
     [JsonPropertyName("history")]
-    public IReadOnlyList<ProductPriceHistoryRowDto> History { get; init; } = Array.Empty<ProductPriceHistoryRowDto>();
+    public IReadOnlyList<ProductPriceHistoryRowDto> History { get; init; } = [];
 }

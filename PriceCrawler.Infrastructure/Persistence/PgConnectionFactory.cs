@@ -1,6 +1,8 @@
-using Npgsql;
 using System.Data;
+
 using Microsoft.Extensions.Configuration;
+
+using Npgsql;
 
 namespace PriceCrawler.Infrastructure.Persistence;
 

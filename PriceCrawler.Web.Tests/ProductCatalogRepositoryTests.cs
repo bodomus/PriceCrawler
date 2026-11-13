@@ -805,7 +805,9 @@ public sealed class ProductCatalogRepositoryIntegrationTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(
                 new Dictionary<string, string?>
-                    { ["ConnectionStrings:Postgres"] = PostgresIntegrationFixture.ConnectionString })
+                {
+                    ["ConnectionStrings:Postgres"] = PostgresIntegrationFixture.ConnectionString
+                })
             .Build();
         return new PgConnectionFactory(config);
     }

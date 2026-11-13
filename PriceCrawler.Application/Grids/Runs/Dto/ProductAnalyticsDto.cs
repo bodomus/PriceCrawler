@@ -57,5 +57,5 @@ public sealed class ProductAnalyticsDto
     public decimal? ChangeFromFirstPercent { get; init; }
 
     [JsonPropertyName("points")]
-    public IReadOnlyList<ProductAnalyticsPointDto> Points { get; init; } = Array.Empty<ProductAnalyticsPointDto>();
+    public IReadOnlyList<ProductAnalyticsPointDto> Points { get; init; } = [];
 }
