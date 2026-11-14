@@ -119,3 +119,50 @@ jobs:
         env:
           ConnectionStrings__Postgres: Host=localhost;Port=55432;Database=varprice;Username=var;Password=myPassword
         run: dotnet test --configuration Release --no-build --filter "Platform!=Windows"
+
+  client:
+    # MPC-100: React frontend (PriceCrawler.Client). Independent of the .NET job.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: PriceCrawler.Client
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: PriceCrawler.Client/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: API types are up to date with the OpenAPI file
+        run: |
+          npm run api:types
+          git diff --exit-code -- src/api/schema.ts || {
+            echo "src/api/schema.ts is stale: run 'npm run api:types' in PriceCrawler.Client and commit it." >&2
+            exit 1
+          }
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format
+        run: npm run format:check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke test (Playwright)
+        run: npx playwright test --trace off

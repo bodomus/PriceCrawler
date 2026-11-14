@@ -37,6 +37,7 @@ docker compose up -d postgres                 # контейнер var_postgres,
 - Интеграционные тесты используют `varprice_test` (`PriceCrawler.Web.Tests/PostgresIntegrationFixture.cs`), не рабочую базу.
 - Worker локально: `PriceCrawler.Worker\bin\Debug\net10.0\run-dev.bat <collect-prices|catalog-refresh|vegetables|--help>` (окружение Development). Web: `dotnet run --project PriceCrawler.Web`.
 - Новый Web API: `dotnet run --project PriceCrawler.Api` (http://localhost:5280/scalar). Слои, свой медиатор и как добавить сценарий — `docs/api.md`. Новые сценарии — `PriceCrawler.Application/Features/<Область>/` (запрос + обработчик + валидатор), MediatR не используем.
+- Фронтенд нового сайта: `PriceCrawler.Client` (React + shadcn/ui, `docs/frontend.md`): `npm install`, `npm run dev` (http://localhost:5173, проксирует `/api` на API), `npm run lint`, `npm test`, `npm run e2e`. Поменял контракт API — `npm run api:types` и закоммить `src/api/schema.ts`. Тексты UI — только в `src/i18n/ru.ts`.
 - Личные отладочные настройки — только в `appsettings.Local.json` (git-ignored, только Development). **Не редактируй файлы в `bin/`.**
 
 ## Базы данных (решение от 23.10.2026)
