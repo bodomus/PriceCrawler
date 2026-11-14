@@ -23,7 +23,12 @@ builder.Services.AddOpenApi();
 builder.Services.AddApiCors(builder.Configuration);
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("database", tags: [DatabaseHealthCheck.ReadyTag]);
-builder.Services.AddHostedService<DatabaseSchemaStartupService>();
+// Build-time OpenAPI generation (GetDocument.Insider) starts the host without a database:
+// skip the schema check there, it would fail the build.
+if (!BuildTimeDocument.IsGenerating)
+{
+    builder.Services.AddHostedService<DatabaseSchemaStartupService>();
+}
 
 WebApplication app = builder.Build();
 
