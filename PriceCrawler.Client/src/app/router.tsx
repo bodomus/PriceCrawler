@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { t } from "@/i18n";
 import { ComingSoonPage } from "@/pages/coming-soon-page";
 import { NotFoundPage } from "@/pages/not-found-page";
-import { ProductsPage } from "@/pages/products-page";
+import { ProductsPage } from "@/pages/products/products-page";
 
 /** Route table of the site; every page renders inside {@link AppLayout}. */
 export const routes = [

@@ -17,6 +17,15 @@ export type Schemas = components["schemas"];
 /** One node of a store's category tree. */
 export type CategoryNode = Schemas["CategoryNodeDto"];
 
+/** One product row with its latest price, day change and trend. */
+export type ProductItem = Schemas["ProductListItemDto"];
+
+/** One page of the product list with its groups. */
+export type ProductPage = Schemas["ProductPageDto"];
+
+/** One group of a grouped product list. */
+export type ProductGroup = Schemas["ProductGroupDto"];
+
 /** Error thrown by query functions when the API answers with a non-success status. */
 export class ApiError extends Error {
   /** HTTP status code, 0 when the request did not reach the API. */

@@ -23,14 +23,16 @@ export function renderApp(path = "/"): RenderResult {
 
 /**
  * Replaces `fetch` with a stub that answers by URL path.
- * @param handlers Map of path (without query string) to JSON body; unknown paths answer 404.
+ * @param handlers Map of path (without query string) to a JSON body or a function of the URL that returns one;
+ * unknown paths answer 404.
  * @returns The mock, to inspect calls.
  */
 export function stubFetch(handlers: Record<string, unknown>) {
   const mock = vi.fn((input: RequestInfo | URL) => {
     const raw = typeof input === "string" ? input : "url" in input ? input.url : input.href;
     const url = new URL(raw, "http://localhost");
-    const body = handlers[url.pathname];
+    const handler = handlers[url.pathname];
+    const body: unknown = typeof handler === "function" ? (handler as (url: URL) => unknown)(url) : handler;
     return Promise.resolve(
       body === undefined
         ? new Response(JSON.stringify({ title: "Not Found", status: 404 }), {

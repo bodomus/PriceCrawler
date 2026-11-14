@@ -5,6 +5,9 @@ namespace PriceCrawler.Application.Features.Products;
 /// <summary>Checks the store, the category and the list parameters of <see cref="GetProductsQuery"/>.</summary>
 public sealed class GetProductsQueryValidator : IRequestValidator<GetProductsQuery>
 {
+    /// <summary>Message for an unknown <c>groupBy</c> value.</summary>
+    public const string GroupByMessage = "Unknown grouping. Use one of: " + ProductGroupings.Names + ".";
+
     /// <inheritdoc/>
     public IEnumerable<ValidationFailure> Validate(GetProductsQuery request)
     {
@@ -19,6 +22,11 @@ public sealed class GetProductsQueryValidator : IRequestValidator<GetProductsQue
         if (request.CategoryId is <= 0)
         {
             failures.Add(new ValidationFailure(nameof(request.CategoryId), "Category id must be a positive number."));
+        }
+
+        if (!ProductGroupings.TryParse(request.GroupBy, out _))
+        {
+            failures.Add(new ValidationFailure(nameof(request.GroupBy), GroupByMessage));
         }
 
         request.List.TryResolve(ProductListFields.Set, out IReadOnlyList<ValidationFailure> listFailures);

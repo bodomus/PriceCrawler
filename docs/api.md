@@ -23,7 +23,7 @@ dotnet run --project PriceCrawler.Api          # http://localhost:5280, окру
 | Метод и путь | Что делает |
 |---|---|
 | `GET /api/v1/stores/{store}/categories?parentId=` | Один уровень дерева категорий магазина: без `parentId` — корни, с ним — дети. Только активные, в порядке сайта, с `hasChildren` и числом товаров в поддереве. |
-| `GET /api/v1/stores/{store}/products?categoryId=&page=&pageSize=&sort=&filter=` | Страница активных товаров магазина с последней ценой (см. ниже). `categoryId` — категория вместе со всеми подкатегориями. |
+| `GET /api/v1/stores/{store}/products?categoryId=&groupBy=&page=&pageSize=&sort=&filter=` | Страница активных товаров магазина с последней ценой, изменением за день и 30-дневным трендом (см. ниже). `categoryId` — категория вместе со всеми подкатегориями. |
 | `GET /health` | Процесс жив (зависимости не проверяются). |
 | `GET /health/ready` | База отвечает (`select 1`). |
 
@@ -62,8 +62,33 @@ dotnet run --project PriceCrawler.Api          # http://localhost:5280, окру
 превращается только через белый список колонок (`SqlListBuilder`), значения всегда идут параметрами.
 
 Поля списка товаров: `name`, `externalId` (только фильтр), `price`, `oldPrice`, `isPromo`, `inStock`,
-`capturedAt`. Товар попадает в список, если его строка `product_catalog` активна и он хотя бы раз собран
+`capturedAt`, `priceChange`, `priceChangePercent`. Товар попадает в список, если его строка `product_catalog` активна и он хотя бы раз собран
 (`product.url = product_catalog.normalized_url`); цена — из последнего `price_snapshot`.
+
+### Товары: изменение за день, тренд, группировка (MPC-102)
+
+- **Изменение за день.** `previousPrice` — последняя цена, наблюдённая до начала киевских суток последнего
+  наблюдения (то есть цена закрытия предыдущего дня; снимки того же дня не считаются). `priceChange` =
+  `price − previousPrice`, `priceChangePercent` — в процентах от `previousPrice` с точностью 0,01. Нет текущей
+  или прошлой цены — `null`. По обоим полям можно сортировать и фильтровать: `sort=priceChange`,
+  `filter=priceChange:lt:0` (подешевевшие).
+- **Тренд.** `trend` — цены закрытия (последний снимок каждых киевских суток) за 30 дней до последнего
+  наблюдения товара, от старых к новым; дни без снимков пропускаются. Считается одним запросом только для
+  строк текущей страницы.
+- **Группировка.** `groupBy=category|promo|stock|change`. Сервер сортирует сначала по группе, потом по `sort`;
+  у строк есть `groupKey`, а в ответе — `groups` (все группы по всем страницам, в порядке показа, с числом товаров):
+
+  | `groupBy` | Группы (`key`) |
+  |---|---|
+  | `category` | прямые подкатегории `categoryId` (без него — категории верхнего уровня), `key` = id, `name` = название; товары, лежащие прямо в категории, — `none` |
+  | `promo` | `promo`, `regular` |
+  | `stock` | `inStock`, `outOfStock` |
+  | `change` | `down`, `up`, `same`, `unknown` (нет цены за прошлый день) |
+
+  Названия групп, кроме категорий, даёт клиент (`src/i18n/ru.ts`). Товар из нескольких подкатегорий попадает в
+  первую по порядку сайта.
+
+Ответ — `ProductPageDto`: `items`, `page`, `pageSize`, `totalCount`, `totalPages`, `groups`.
 
 ## OpenAPI и типы для фронтенда
 
