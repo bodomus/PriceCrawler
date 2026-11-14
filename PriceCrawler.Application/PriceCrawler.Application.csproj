@@ -5,6 +5,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PriceCrawler.Domain\PriceCrawler.Domain.csproj" />
+    <ProjectReference Include="..\PriceCrawler.Mediator\PriceCrawler.Mediator.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
   </ItemGroup>
 </Project>

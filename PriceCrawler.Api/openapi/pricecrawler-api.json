@@ -1,0 +1,376 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "PriceCrawler.Api | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/stores/{store}/categories": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "Returns one level of a store's category tree.",
+        "description": "Without parentId returns the top-level categories; with parentId returns the children of that category. Only active categories are returned, in the order the store site shows them.",
+        "operationId": "GetCategoryChildren",
+        "parameters": [
+          {
+            "name": "store",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryNodeDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stores/{store}/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Returns a page of a store's products with their latest prices.",
+        "description": "Paging: page (from 1), pageSize (1-200, default 50). Sorting: sort=-price,name (minus for descending; fields: name, price, oldPrice, isPromo, inStock, capturedAt; default name). Filtering: repeat filter=field:operator:value, all must hold, e.g. filter=name:contains:молоко&filter=price:lte:50. Operators: text eq, ne, contains, startswith; numbers and dates eq, ne, gt, gte, lt, lte; booleans eq, ne. categoryId limits the list to a category and all its subcategories.",
+        "operationId": "GetProducts",
+        "parameters": [
+          {
+            "name": "store",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultOfProductListItemDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CategoryNodeDto": {
+        "required": [
+          "id",
+          "externalId",
+          "name",
+          "url",
+          "parentId",
+          "hasChildren",
+          "productCount"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Category id; pass it as `parentId` to load the children.",
+            "format": "int64"
+          },
+          "externalId": {
+            "type": "string",
+            "description": "Key of the category on the store site."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "url": {
+            "type": "string",
+            "description": "Category page on the store site."
+          },
+          "parentId": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "Parent id, or `null` for a top-level category.",
+            "format": "int64"
+          },
+          "hasChildren": {
+            "type": "boolean",
+            "description": "Whether the category has active subcategories."
+          },
+          "productCount": {
+            "type": "integer",
+            "description": "Active products in the category and all its subcategories.",
+            "format": "int32"
+          }
+        },
+        "description": "One category of a store tree as the API returns it."
+      },
+      "HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "PagedResultOfProductListItemDto": {
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductListItemDto"
+            },
+            "description": "Rows of the page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Requested rows per page.",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "description": "Rows matching the filter on all pages.",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Number of pages; 0 when nothing matches.",
+            "format": "int64"
+          }
+        },
+        "description": "One page of a list with the total count of matching rows."
+      },
+      "ProductListItemDto": {
+        "required": [
+          "productId",
+          "externalId",
+          "name",
+          "url",
+          "packValue",
+          "packUnit",
+          "price",
+          "oldPrice",
+          "isPromo",
+          "inStock",
+          "capturedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "description": "Product id; history and analytics endpoints use it.",
+            "format": "int64"
+          },
+          "externalId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Product key on the store site (SKU), when known."
+          },
+          "name": {
+            "type": "string",
+            "description": "Product name."
+          },
+          "url": {
+            "type": "string",
+            "description": "Product page on the store site."
+          },
+          "packValue": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "description": "Pack size, e.g. `0.5`, when known.",
+            "format": "double"
+          },
+          "packUnit": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Pack unit, e.g. `л`, when known."
+          },
+          "price": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "description": "Latest price, or `null` when the last check found none.",
+            "format": "double"
+          },
+          "oldPrice": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "description": "Regular price before a promotion, when there is one.",
+            "format": "double"
+          },
+          "isPromo": {
+            "type": "boolean",
+            "description": "Whether the latest price is a promotion."
+          },
+          "inStock": {
+            "type": "boolean",
+            "description": "Whether the product was in stock at the latest check."
+          },
+          "capturedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "When the latest price was observed, or `null` without observations.",
+            "format": "date-time"
+          }
+        },
+        "description": "One product of a store list with its latest observed price."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Categories"
+    },
+    {
+      "name": "Products"
+    }
+  ]
+}

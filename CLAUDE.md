@@ -36,6 +36,7 @@ docker compose up -d postgres                 # контейнер var_postgres,
 - Тесты с `[Trait("Platform", "Windows")]` запускают PowerShell-скрипты деплоя; в CI (Linux) они исключены фильтром `Platform!=Windows`, локально на Windows — выполняются.
 - Интеграционные тесты используют `varprice_test` (`PriceCrawler.Web.Tests/PostgresIntegrationFixture.cs`), не рабочую базу.
 - Worker локально: `PriceCrawler.Worker\bin\Debug\net10.0\run-dev.bat <collect-prices|catalog-refresh|vegetables|--help>` (окружение Development). Web: `dotnet run --project PriceCrawler.Web`.
+- Новый Web API: `dotnet run --project PriceCrawler.Api` (http://localhost:5280/scalar). Слои, свой медиатор и как добавить сценарий — `docs/api.md`. Новые сценарии — `PriceCrawler.Application/Features/<Область>/` (запрос + обработчик + валидатор), MediatR не используем.
 - Личные отладочные настройки — только в `appsettings.Local.json` (git-ignored, только Development). **Не редактируй файлы в `bin/`.**
 
 ## Базы данных (решение от 23.10.2026)
