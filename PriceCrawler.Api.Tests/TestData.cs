@@ -5,7 +5,9 @@ namespace PriceCrawler.Api.Tests;
 /// <summary>
 /// A small catalog for the integration tests. Store "varus": category Овочі (1) with child
 /// Картопля (2), five products; one inactive product and one product never observed. Store
-/// "other": one category and one product.
+/// "other": one category and one product. Day changes on 12.11 (Kyiv, UTC+2): Картопля біла 30.00 -> 25.50
+/// (down), Картопля рожева 33.00 -> 34.90 (up), Молоко 2,5% 50.00 -> 48.20 (down; 11.11 22:00 Kyiv),
+/// Молоко пробне_100 has no previous day (its 59.00 is 12.11 01:00 Kyiv), Морква has no current price.
 /// </summary>
 // Names are chosen so their order is the same under the C and the en_US collations.
 internal static class TestData
@@ -55,6 +57,12 @@ internal static class TestData
 
         insert into price_snapshot (id, run_id, product_id, captured_at, price, old_price, promo_flag, in_stock) values
             (1001, 1, 101, '2026-11-10T08:00:00Z', 30.00, null, false, true),
+            (1009, 1, 101, '2026-10-01T08:00:00Z', 40.00, null, false, true),
+            (1010, 1, 101, '2026-11-10T06:00:00Z', 31.00, null, false, true),
+            (1011, 1, 102, '2026-11-11T08:00:00Z', 33.00, null, false, true),
+            (1012, 1, 104, '2026-11-11T20:00:00Z', 50.00, null, false, true),
+            (1013, 1, 105, '2026-11-11T23:00:00Z', 59.00, null, false, true),
+            (1014, 1, 103, '2026-11-11T08:00:00Z', 12.00, null, false, true),
             (1002, 2, 101, '2026-11-12T08:00:00Z', 25.50, 30.00, true, true),
             (1003, 2, 102, '2026-11-12T08:00:00Z', 34.90, null, false, false),
             (1004, 2, 103, '2026-11-12T08:00:00Z', null, null, false, false),

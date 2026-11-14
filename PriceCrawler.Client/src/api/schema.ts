@@ -33,7 +33,7 @@ export interface paths {
     };
     /**
      * Returns a page of a store's products with their latest prices.
-     * @description Paging: page (from 1), pageSize (1-200, default 50). Sorting: sort=-price,name (minus for descending; fields: name, price, oldPrice, isPromo, inStock, capturedAt; default name). Filtering: repeat filter=field:operator:value, all must hold, e.g. filter=name:contains:молоко&filter=price:lte:50. Operators: text eq, ne, contains, startswith; numbers and dates eq, ne, gt, gte, lt, lte; booleans eq, ne. categoryId limits the list to a category and all its subcategories.
+     * @description Paging: page (from 1), pageSize (1-200, default 50). Sorting: sort=-price,name (minus for descending; fields: name, price, oldPrice, isPromo, inStock, capturedAt, priceChange, priceChangePercent; default name). Filtering: repeat filter=field:operator:value, all must hold, e.g. filter=name:contains:молоко&filter=price:lte:50. Operators: text eq, ne, contains, startswith; numbers and dates eq, ne, gt, gte, lt, lte; booleans eq, ne. categoryId limits the list to a category and all its subcategories. Day change: previousPrice is the last price before the Kyiv day of the latest observation began; priceChange and priceChangePercent (sortable and filterable) compare the latest price with it. trend holds the daily closing prices of the 30 days up to the latest observation, for the mini chart. groupBy=category, promo, stock, change sorts by the group first, marks rows with groupKey and returns all groups with counts.
      */
     get: operations["GetProducts"];
     put?: never;
@@ -85,30 +85,20 @@ export interface components {
         [key: string]: string[];
       };
     };
-    /** @description One page of a list with the total count of matching rows. */
-    PagedResultOfProductListItemDto: {
-      /** @description Rows of the page. */
-      items: components["schemas"]["ProductListItemDto"][];
+    /** @description One group of a grouped product list, over all pages. */
+    ProductGroupDto: {
       /**
-       * Format: int32
-       * @description 1-based page number.
+       * @description Group key that rows carry in string? ProductListItemDto.GroupKey: a category id for
+       *     ProductGrouping.Category, otherwise one of the ProductGroupings keys.
        */
-      page: number;
-      /**
-       * Format: int32
-       * @description Requested rows per page.
-       */
-      pageSize: number;
+      key: string;
+      /** @description Category name for category groups, otherwise `null` (the client names the group). */
+      name: null | string;
       /**
        * Format: int64
-       * @description Rows matching the filter on all pages.
+       * @description Products of the group matching the filter.
        */
-      totalCount: number;
-      /**
-       * Format: int64
-       * @description Number of pages; 0 when nothing matches.
-       */
-      totalPages?: number;
+      count: number;
     };
     /** @description One product of a store list with its latest observed price. */
     ProductListItemDto: {
@@ -149,6 +139,56 @@ export interface components {
        * @description When the latest price was observed, or `null` without observations.
        */
       capturedAt: null | string;
+      /**
+       * Format: double
+       * @description Last price observed before the Kyiv day of CapturedAt began (the previous day's close),
+       *     or `null` when there is none.
+       */
+      previousPrice: null | number;
+      /**
+       * Format: double
+       * @description Price minus PreviousPrice, when both are known.
+       */
+      priceChange: null | number;
+      /**
+       * Format: double
+       * @description The change in percent of PreviousPrice, rounded to 0.01.
+       */
+      priceChangePercent: null | number;
+      /**
+       * @description Daily closing prices (last observation of each Kyiv day) of the 30 days up to CapturedAt,
+       *     oldest first; days without observations are skipped. For the mini chart.
+       */
+      trend: number[];
+      /** @description Key of the row's group when the list is grouped, otherwise `null`. */
+      groupKey: null | string;
+    };
+    /** @description One page of a store's product list. */
+    ProductPageDto: {
+      /** @description Rows of the page; when grouped, rows of one group are contiguous and groups follow Groups. */
+      items: components["schemas"]["ProductListItemDto"][];
+      /**
+       * Format: int32
+       * @description 1-based page number.
+       */
+      page: number;
+      /**
+       * Format: int32
+       * @description Requested rows per page.
+       */
+      pageSize: number;
+      /**
+       * Format: int64
+       * @description Products matching the filter on all pages.
+       */
+      totalCount: number;
+      /** @description All groups in display order when the list is grouped, otherwise empty. */
+      groups: components["schemas"]["ProductGroupDto"][];
+      /**
+       * Format: int64
+       * @description Number of pages; 0 when nothing matches.
+       */
+      totalPages?: number;
     };
   };
   responses: never;
@@ -198,6 +238,7 @@ export interface operations {
         categoryId?: number;
         page?: number;
         pageSize?: number;
+        groupBy?: string;
         sort?: string;
         filter?: string[];
       };
@@ -215,7 +256,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["PagedResultOfProductListItemDto"];
+          "application/json": components["schemas"]["ProductPageDto"];
         };
       };
       /** @description Bad Request */

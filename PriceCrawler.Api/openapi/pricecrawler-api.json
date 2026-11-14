@@ -64,7 +64,7 @@
           "Products"
         ],
         "summary": "Returns a page of a store's products with their latest prices.",
-        "description": "Paging: page (from 1), pageSize (1-200, default 50). Sorting: sort=-price,name (minus for descending; fields: name, price, oldPrice, isPromo, inStock, capturedAt; default name). Filtering: repeat filter=field:operator:value, all must hold, e.g. filter=name:contains:молоко&filter=price:lte:50. Operators: text eq, ne, contains, startswith; numbers and dates eq, ne, gt, gte, lt, lte; booleans eq, ne. categoryId limits the list to a category and all its subcategories.",
+        "description": "Paging: page (from 1), pageSize (1-200, default 50). Sorting: sort=-price,name (minus for descending; fields: name, price, oldPrice, isPromo, inStock, capturedAt, priceChange, priceChangePercent; default name). Filtering: repeat filter=field:operator:value, all must hold, e.g. filter=name:contains:молоко&filter=price:lte:50. Operators: text eq, ne, contains, startswith; numbers and dates eq, ne, gt, gte, lt, lte; booleans eq, ne. categoryId limits the list to a category and all its subcategories. Day change: previousPrice is the last price before the Kyiv day of the latest observation began; priceChange and priceChangePercent (sortable and filterable) compare the latest price with it. trend holds the daily closing prices of the 30 days up to the latest observation, for the mini chart. groupBy=category, promo, stock, change sorts by the group first, marks rows with groupKey and returns all groups with counts.",
         "operationId": "GetProducts",
         "parameters": [
           {
@@ -100,6 +100,13 @@
             }
           },
           {
+            "name": "groupBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "sort",
             "in": "query",
             "schema": {
@@ -123,7 +130,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PagedResultOfProductListItemDto"
+                  "$ref": "#/components/schemas/ProductPageDto"
                 }
               }
             }
@@ -238,44 +245,32 @@
           }
         }
       },
-      "PagedResultOfProductListItemDto": {
+      "ProductGroupDto": {
         "required": [
-          "items",
-          "page",
-          "pageSize",
-          "totalCount"
+          "key",
+          "name",
+          "count"
         ],
         "type": "object",
         "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductListItemDto"
-            },
-            "description": "Rows of the page."
+          "key": {
+            "type": "string",
+            "description": "Group key that rows carry in string? ProductListItemDto.GroupKey: a category id for\nProductGrouping.Category, otherwise one of the ProductGroupings keys."
           },
-          "page": {
-            "type": "integer",
-            "description": "1-based page number.",
-            "format": "int32"
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Category name for category groups, otherwise `null` (the client names the group)."
           },
-          "pageSize": {
+          "count": {
             "type": "integer",
-            "description": "Requested rows per page.",
-            "format": "int32"
-          },
-          "totalCount": {
-            "type": "integer",
-            "description": "Rows matching the filter on all pages.",
-            "format": "int64"
-          },
-          "totalPages": {
-            "type": "integer",
-            "description": "Number of pages; 0 when nothing matches.",
+            "description": "Products of the group matching the filter.",
             "format": "int64"
           }
         },
-        "description": "One page of a list with the total count of matching rows."
+        "description": "One group of a grouped product list, over all pages."
       },
       "ProductListItemDto": {
         "required": [
@@ -289,7 +284,12 @@
           "oldPrice",
           "isPromo",
           "inStock",
-          "capturedAt"
+          "capturedAt",
+          "previousPrice",
+          "priceChange",
+          "priceChangePercent",
+          "trend",
+          "groupKey"
         ],
         "type": "object",
         "properties": {
@@ -359,9 +359,95 @@
             ],
             "description": "When the latest price was observed, or `null` without observations.",
             "format": "date-time"
+          },
+          "previousPrice": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "description": "Last price observed before the Kyiv day of CapturedAt began (the previous day's close),\nor `null` when there is none.",
+            "format": "double"
+          },
+          "priceChange": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "description": "Price minus PreviousPrice, when both are known.",
+            "format": "double"
+          },
+          "priceChangePercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "description": "The change in percent of PreviousPrice, rounded to 0.01.",
+            "format": "double"
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "Daily closing prices (last observation of each Kyiv day) of the 30 days up to CapturedAt,\noldest first; days without observations are skipped. For the mini chart."
+          },
+          "groupKey": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Key of the row's group when the list is grouped, otherwise `null`."
           }
         },
         "description": "One product of a store list with its latest observed price."
+      },
+      "ProductPageDto": {
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "totalCount",
+          "groups"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductListItemDto"
+            },
+            "description": "Rows of the page; when grouped, rows of one group are contiguous and groups follow Groups."
+          },
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Requested rows per page.",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "description": "Products matching the filter on all pages.",
+            "format": "int64"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductGroupDto"
+            },
+            "description": "All groups in display order when the list is grouped, otherwise empty."
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Number of pages; 0 when nothing matches.",
+            "format": "int64"
+          }
+        },
+        "description": "One page of a store's product list."
       }
     }
   },

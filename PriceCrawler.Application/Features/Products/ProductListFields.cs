@@ -26,8 +26,14 @@ public static class ProductListFields
     /// <summary>When the latest price was observed.</summary>
     public static readonly ListField CapturedAt = new("capturedAt", ListFieldKind.DateTime);
 
+    /// <summary>Price change since the previous day (absolute).</summary>
+    public static readonly ListField PriceChange = new("priceChange", ListFieldKind.Number);
+
+    /// <summary>Price change since the previous day in percent.</summary>
+    public static readonly ListField PriceChangePercent = new("priceChangePercent", ListFieldKind.Number);
+
     /// <summary>The field set; default order is by name.</summary>
     public static readonly ListFieldSet Set = new(
-        [Name, ExternalId, Price, OldPrice, IsPromo, InStock, CapturedAt],
+        [Name, ExternalId, Price, OldPrice, IsPromo, InStock, CapturedAt, PriceChange, PriceChangePercent],
         [new SortTerm(Name, SortDirection.Ascending)]);
 }

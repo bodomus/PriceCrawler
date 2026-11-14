@@ -2,20 +2,10 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CategoryNode } from "@/api/client";
+import { category, page, product } from "@/test/fixtures";
 import { renderApp, stubFetch } from "@/test/render";
 
-const categories: CategoryNode[] = [
-  {
-    id: 1,
-    externalId: "1",
-    name: "Молочные продукты",
-    url: "https://varus.ua/moloko",
-    parentId: null,
-    hasChildren: true,
-    productCount: 1234,
-  },
-];
+const categories = [category(1, "Молочные продукты", { hasChildren: true, productCount: 1234 })];
 
 describe("app shell", () => {
   beforeEach(() => {
@@ -35,14 +25,17 @@ describe("app shell", () => {
     vi.unstubAllGlobals();
   });
 
-  it("redirects / to products and lists top-level categories from the API", async () => {
-    const fetchMock = stubFetch({ "/health": "Healthy", "/api/v1/stores/varus/categories": categories });
+  it("redirects / to products with the category tree and the product table", async () => {
+    stubFetch({
+      "/health": "Healthy",
+      "/api/v1/stores/varus/categories": categories,
+      "/api/v1/stores/varus/products": page([product(1, "Молоко 2,5%")]),
+    });
     renderApp("/");
 
     expect(await screen.findByText("Молочные продукты")).toBeInTheDocument();
-    expect(screen.getByText("1 234 товара")).toBeInTheDocument();
+    expect(await screen.findByText("Молоко 2,5%")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Товары" })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalled();
   });
 
   it("shows the four sections in the side menu", () => {
@@ -66,7 +59,7 @@ describe("app shell", () => {
   it("shows an error with retry when the API fails", async () => {
     stubFetch({});
     renderApp("/products");
-    expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось загрузить данные");
+    expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent("Не удалось загрузить данные");
   });
 
   it("shows 404 for an unknown address", () => {

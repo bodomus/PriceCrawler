@@ -18,13 +18,72 @@ test.beforeEach(async ({ page }) => {
       ],
     }),
   );
+  await page.route("**/api/v1/stores/varus/categories?parentId=1", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 11,
+          externalId: "11",
+          name: "Картофель",
+          url: "https://varus.ua/kartoplia",
+          parentId: 1,
+          hasChildren: false,
+          productCount: 2,
+        },
+      ],
+    }),
+  );
+  await page.route("**/api/v1/stores/varus/products**", (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            productId: 1,
+            externalId: "1001",
+            name: "Картофель белый",
+            url: "https://varus.ua/kartoplia-bila",
+            packValue: 1,
+            packUnit: "кг",
+            price: 25.5,
+            oldPrice: 30,
+            isPromo: true,
+            inStock: true,
+            capturedAt: "2026-11-14T06:00:00Z",
+            previousPrice: 30,
+            priceChange: -4.5,
+            priceChangePercent: -15,
+            trend: [30, 31, 25.5],
+            groupKey: null,
+          },
+        ],
+        page: 1,
+        pageSize: 50,
+        totalCount: 1,
+        totalPages: 1,
+        groups: [],
+      },
+    }),
+  );
+});
+
+test("shows products with day change and opens a category", async ({ page }) => {
+  await page.goto("/products");
+
+  const row = page.getByRole("row", { name: /Картофель белый/ });
+  await expect(row).toContainText("25,50");
+  await expect(row.getByTitle("Цена снизилась")).toBeVisible();
+  await expect(row.getByText("Акция")).toBeVisible();
+
+  await page.getByRole("treeitem", { name: /Овощи и фрукты/ }).click();
+  await expect(page.getByRole("treeitem", { name: /Картофель/ })).toBeVisible();
+  await expect(page).toHaveURL(/category=1/);
 });
 
 test("opens products, switches section and theme", async ({ page }) => {
   await page.goto("/");
 
   await expect(page).toHaveURL(/\/products$/);
-  await expect(page.getByText("Овощи и фрукты")).toBeVisible();
+  await expect(page.getByText("Овощи и фрукты").first()).toBeVisible();
   await expect(page.getByTestId("kyiv-clock")).toContainText("Киев");
   await expect(page.getByRole("status", { name: "API работает" })).toBeVisible();
 
@@ -41,7 +100,7 @@ test("opens products, switches section and theme", async ({ page }) => {
 
 test("page itself does not scroll, only the content panel", async ({ page }) => {
   await page.goto("/products");
-  await expect(page.getByText("Овощи и фрукты")).toBeVisible();
+  await expect(page.getByText("Овощи и фрукты").first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
   expect(overflow).toBeLessThanOrEqual(0);
 });
