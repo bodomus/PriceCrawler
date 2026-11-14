@@ -48,7 +48,7 @@ public sealed class PostgresIntegrationTests(PostgresApiFactory factory) : IClas
         PagedResult<ProductListItemDto> page = await GetProductsAsync("");
 
         Assert.Equal(5, page.TotalCount);
-        Assert.Equal(["Картопля біла", "Картопля рожева", "Молоко 2,5%", "Молоко_100 пробне", "Морква"], Names(page));
+        Assert.Equal(["Картопля біла", "Картопля рожева", "Молоко 2,5%", "Молоко пробне_100", "Морква"], Names(page));
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class PostgresIntegrationTests(PostgresApiFactory factory) : IClas
         PagedResult<ProductListItemDto> second = await GetProductsAsync("page=2&pageSize=2");
         PagedResult<ProductListItemDto> beyond = await GetProductsAsync("page=9&pageSize=2");
 
-        Assert.Equal(["Молоко 2,5%", "Молоко_100 пробне"], Names(second));
+        Assert.Equal(["Молоко 2,5%", "Молоко пробне_100"], Names(second));
         Assert.Equal(3, second.TotalPages);
         Assert.Empty(beyond.Items);
         Assert.Equal(5, beyond.TotalCount);
@@ -89,13 +89,13 @@ public sealed class PostgresIntegrationTests(PostgresApiFactory factory) : IClas
     {
         PagedResult<ProductListItemDto> page = await GetProductsAsync("sort=-inStock,name");
 
-        Assert.Equal(["Картопля біла", "Молоко 2,5%", "Молоко_100 пробне", "Картопля рожева", "Морква"], Names(page));
+        Assert.Equal(["Картопля біла", "Молоко 2,5%", "Молоко пробне_100", "Картопля рожева", "Морква"], Names(page));
     }
 
     [Theory]
-    [InlineData(new[] { "name:contains:МОЛОКО" }, new[] { "Молоко 2,5%", "Молоко_100 пробне" })]
+    [InlineData(new[] { "name:contains:МОЛОКО" }, new[] { "Молоко 2,5%", "Молоко пробне_100" })]
     [InlineData(new[] { "name:startswith:карт" }, new[] { "Картопля біла", "Картопля рожева" })]
-    [InlineData(new[] { "name:contains:_" }, new[] { "Молоко_100 пробне" })]
+    [InlineData(new[] { "name:contains:_" }, new[] { "Молоко пробне_100" })]
     [InlineData(new[] { "name:contains:2,5%" }, new[] { "Молоко 2,5%" })]
     [InlineData(new[] { "price:gte:30", "price:lt:60" }, new[] { "Картопля рожева", "Молоко 2,5%" })]
     [InlineData(new[] { "isPromo:eq:true" }, new[] { "Картопля біла", "Молоко 2,5%" })]

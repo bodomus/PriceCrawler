@@ -7,6 +7,7 @@ namespace PriceCrawler.Api.Tests;
 /// Картопля (2), five products; one inactive product and one product never observed. Store
 /// "other": one category and one product.
 /// </summary>
+// Names are chosen so their order is the same under the C and the en_US collations.
 internal static class TestData
 {
     public static async Task SeedAsync(string connectionString)
@@ -46,7 +47,7 @@ internal static class TestData
             (102, '1002', 'Картопля рожева', 'https://varus.ua/kartoplia-rozheva', 1, 'кг', now()),
             (103, '1003', 'Морква', 'https://varus.ua/morkva', null, null, now()),
             (104, '1004', 'Молоко 2,5%', 'https://varus.ua/moloko-25', 0.9, 'л', now()),
-            (105, '1005', 'Молоко_100 пробне', 'https://varus.ua/moloko_100', 1, 'л', now()),
+            (105, '1005', 'Молоко пробне_100', 'https://varus.ua/moloko_100', 1, 'л', now()),
             (106, '1006', 'Старий товар', 'https://varus.ua/staryi', null, null, now()),
             (107, '2001', 'Apple', 'https://other.example/apple', null, null, now());
 
