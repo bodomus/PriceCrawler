@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>PriceCrawler</title>
+        <script>
+            // Apply the saved theme before the first paint so the page never flashes light.
+            try {
+                const t = localStorage.getItem("pricecrawler.theme") ?? "system";
+                const dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+                document.documentElement.classList.toggle("dark", dark);
+            } catch {}
+        </script>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>
