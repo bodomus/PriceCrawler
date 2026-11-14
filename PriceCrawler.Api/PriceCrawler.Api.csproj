@@ -7,10 +7,20 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>PriceCrawler.Api</RootNamespace>
     <UserSecretsId>pricecrawler-api-6f1c2d3e</UserSecretsId>
+    <!--
+      The OpenAPI document is written to openapi/ on every build and committed, so the frontend can
+      generate its TypeScript types from it without running the API (MPC-100).
+    -->
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/openapi</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name pricecrawler-api</OpenApiGenerateDocumentsOptions>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.14">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Scalar.AspNetCore" Version="2.20.0" />
   </ItemGroup>
 

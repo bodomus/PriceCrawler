@@ -4,10 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using PriceCrawler.Application.Abstractions;
+using PriceCrawler.Application.Features.Products;
 using PriceCrawler.Application.Models;
 using PriceCrawler.Domain.Interfaces;
 using PriceCrawler.Infrastructure.Crawler;
 using PriceCrawler.Infrastructure.Persistence;
+using PriceCrawler.Infrastructure.Queries.Products;
 
 namespace PriceCrawler.Infrastructure.DependencyInjection;
 
@@ -98,6 +100,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<PgRoutineExecutor>();
 
         services.AddScoped<ICategoryRepository, PgCategoryRepository>();
+        services.AddScoped<IProductListReader, PgProductListReader>();
         return services;
     }
 }

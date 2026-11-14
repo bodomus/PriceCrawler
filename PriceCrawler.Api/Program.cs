@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 using PriceCrawler.Api.Endpoints;
 using PriceCrawler.Api.ErrorHandling;
 using PriceCrawler.Api.Health;
@@ -12,6 +14,9 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddPriceCrawlerPersistence(builder.Configuration);
 builder.Services.AddPriceCrawlerFeatures();
 
+// Strict numbers: the OpenAPI schema then says "integer", not "integer | string", so the
+// generated TypeScript types are plain numbers.
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddOpenApi();
@@ -36,6 +41,7 @@ app.MapApiHealthChecks();
 
 RouteGroupBuilder api = app.MapGroup("/api/v1");
 api.MapCategoryEndpoints();
+api.MapProductEndpoints();
 
 await app.RunAsync();
 
